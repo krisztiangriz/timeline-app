@@ -155,6 +155,23 @@ async function importData(jsonString: string): Promise<void> {
     throw new Error('Invalid export file: missing required data tables')
   }
 
+  // Rehydrate date fields (JSON.parse returns strings, not Date objects)
+  const pages = (data.pages as Record<string, unknown>[]).map((p) => ({
+    ...p,
+    createdAt: new Date(p.createdAt as string),
+    updatedAt: new Date(p.updatedAt as string),
+  }))
+  const entries = (data.timelineEntries as Record<string, unknown>[]).map((e) => ({
+    ...e,
+    date: new Date(e.date as string),
+    createdAt: new Date(e.createdAt as string),
+    updatedAt: new Date(e.updatedAt as string),
+  }))
+  const feedbacks = (data.feedbacks as Record<string, unknown>[]).map((f) => ({
+    ...f,
+    createdAt: new Date(f.createdAt as string),
+  }))
+
   // Run everything in a transaction so failure rolls back
   await db.transaction('rw',
     [db.tags, db.pages, db.layouts, db.blocks, db.timelineEntries, db.feedbacks, db.categories, db.dimensions, db.pageSettings, db.chartConfigs],
@@ -166,11 +183,11 @@ async function importData(jsonString: string): Promise<void> {
       ])
       await Promise.all([
         db.tags.bulkAdd(data.tags as never[]),
-        db.pages.bulkAdd(data.pages as never[]),
+        db.pages.bulkAdd(pages as never[]),
         db.layouts.bulkAdd(data.layouts as never[]),
         data.blocks?.length ? db.blocks.bulkAdd(data.blocks as never[]) : Promise.resolve(),
-        db.timelineEntries.bulkAdd(data.timelineEntries as never[]),
-        db.feedbacks.bulkAdd(data.feedbacks as never[]),
+        db.timelineEntries.bulkAdd(entries as never[]),
+        db.feedbacks.bulkAdd(feedbacks as never[]),
         data.categories?.length ? db.categories.bulkAdd(data.categories as never[]) : Promise.resolve(),
         db.dimensions.bulkAdd(data.dimensions as never[]),
         data.pageSettings?.length ? db.pageSettings.bulkAdd(data.pageSettings as never[]) : Promise.resolve(),
