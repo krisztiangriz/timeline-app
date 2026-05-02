@@ -196,7 +196,7 @@ export default function App() {
   useEnsureDefaults()
 
   return (
-    <BrowserRouter>
+    <BrowserRouter basename="/timeline-app">
       <AppProvider>
         <AutocompleteProvider>
         <Routes>
