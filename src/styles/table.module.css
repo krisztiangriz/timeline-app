@@ -1,0 +1,159 @@
+/* Shared table styles — used by RootPage and BlockRenderer's TableBlock */
+
+.table {
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-sm) 0;
+  background: var(--color-surface);
+}
+
+.tableHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xl);
+  justify-content: flex-end;
+  padding-bottom: var(--space-sm);
+}
+
+.th {
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2xs);
+}
+
+.sortArrow {
+  font-size: 10px;
+  color: var(--color-text-tertiary);
+}
+
+.thName {
+  composes: th;
+  flex: 1;
+  min-width: 0;
+}
+
+.thDate {
+  composes: th;
+  width: 88px;
+  justify-content: flex-end;
+  flex-shrink: 0;
+}
+
+.thType {
+  composes: th;
+  width: 48px;
+  flex-shrink: 0;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xl);
+  justify-content: flex-end;
+  height: 20px;
+  cursor: pointer;
+  position: relative;
+  padding: var(--space-sm) 0;
+}
+
+.row::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  left: -8px;
+  right: -8px;
+  border-radius: var(--radius-sm);
+}
+
+.row:hover::before {
+  background: var(--color-surface-hover);
+}
+
+.nameCell {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  position: relative;
+  z-index: 1;
+}
+
+.dragHandle {
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-tertiary);
+  flex-shrink: 0;
+  cursor: grab;
+  opacity: 0;
+}
+
+.dragHandle:active {
+  cursor: grabbing;
+}
+
+.row:hover .dragHandle {
+  opacity: 1;
+}
+
+.rowName {
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-base);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  position: relative;
+  z-index: 1;
+}
+
+.row:hover .rowName {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.dateCell {
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-base);
+  font-weight: var(--font-weight-medium);
+  width: 88px;
+  text-align: right;
+  flex-shrink: 0;
+  white-space: nowrap;
+  position: relative;
+  z-index: 1;
+}
+
+.typeCell {
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-base);
+  font-weight: var(--font-weight-medium);
+  width: 48px;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+}
+
+.rowDragging {
+  opacity: 0.4;
+}
+
+.rowDropTargetActive {
+  background: var(--color-surface-hover);
+  border-radius: var(--radius-sm);
+  outline: 1.5px dashed var(--color-text-body);
+  outline-offset: -1.5px;
+}
+
+.rowArchived {
+  opacity: 0.4;
+}

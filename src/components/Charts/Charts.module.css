@@ -1,0 +1,236 @@
+/* ---- Viz controls ---- */
+
+.vizControls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: var(--space-lg);
+}
+
+/* ---- Range toggle ---- */
+
+.rangeToggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.rangeSeparator {
+  width: 1px;
+  height: 12px;
+  background: var(--color-text-placeholder);
+  flex-shrink: 0;
+}
+  
+.rangeButton {
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-base);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-tertiary);
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+}
+
+.rangeButton:hover {
+  color: var(--color-text-primary);
+}
+
+.rangeButtonActive {
+  composes: rangeButton;
+  color: var(--color-text-primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* ---- Chart pair (time + pie side by side) ---- */
+
+.chartPair {
+  display: flex;
+  gap: var(--space-xl);
+  align-self: stretch;
+  padding-bottom: var(--space-xl);
+}
+
+.chartPairLeft {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.chartPairRight {
+  width: 200px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+/* ---- Chart sections ---- */
+
+.chartSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  align-self: stretch;
+  padding-bottom: var(--space-xl);
+}
+
+.chartTitle {
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-secondary);
+}
+
+.chartContainer {
+  width: 100%;
+  height: 220px;
+}
+
+.chartContainerPie {
+  width: 100%;
+  height: 200px;
+}
+
+.vizPage {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  align-self: stretch;
+}
+
+/* ---- Chart card with controls ---- */
+
+.chartCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  position: relative;
+}
+
+.chartCardHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.chartCardActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  margin-left: auto;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.chartCard:hover .chartCardActions {
+  opacity: 1;
+}
+
+/* Edit button — matches Breadcrumb actionButton */
+.chartEditBtn {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-secondary);
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.chartEditBtn:hover {
+  background: var(--color-border-light);
+  color: var(--color-text-primary);
+}
+
+/* Delete button — matches Settings deleteButton */
+.chartDeleteBtn {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-tertiary);
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.chartDeleteBtn:hover {
+  color: var(--color-negative);
+}
+
+/* ---- Add chart modal form ---- */
+
+.addChartForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xl);
+}
+
+.formSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.formLabel {
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-secondary);
+}
+
+.radioRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-lg);
+  align-items: center;
+}
+
+/* ---- Form inputs ---- */
+
+.formInput {
+  font-family: var(--font-family);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-base);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+  background: var(--color-input-bg);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  padding: var(--space-xs) var(--space-sm);
+  height: 32px;
+  width: 100%;
+  outline: none;
+}
+
+.formInput:focus {
+  border-color: var(--color-input-border);
+}
+
+.formSelect {
+  font-family: var(--font-family);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-base);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+  background: var(--color-input-bg);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  padding: var(--space-xs) var(--space-sm);
+  height: 32px;
+  cursor: pointer;
+  outline: none;
+  width: 100%;
+}
+
+.formSelect:focus {
+  border-color: var(--color-input-border);
+}

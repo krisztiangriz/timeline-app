@@ -1,0 +1,116 @@
+.container {
+  position: relative;
+  align-self: stretch;
+  z-index: 100;
+}
+
+.inputWrapper {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: 0 var(--space-md);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  background: var(--color-input-bg);
+  height: 32px;
+}
+
+.inputWrapper:focus-within {
+  border-color: var(--color-input-border);
+}
+
+.icon {
+  flex-shrink: 0;
+  color: var(--color-text-primary);
+}
+
+.input {
+  flex: 1;
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-base);
+  min-width: 0;
+  height: 100%;
+}
+
+.clearButton {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-tertiary);
+  flex-shrink: 0;
+  border-radius: var(--radius-sm);
+}
+
+.clearButton:hover {
+  color: var(--color-text-secondary);
+}
+
+.dropdown {
+  position: absolute;
+  top: calc(100% + var(--space-xs));
+  left: 0;
+  right: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-dropdown);
+  overflow: hidden;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.result {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-base);
+  color: var(--color-text-primary);
+  text-align: left;
+}
+
+.result:hover {
+  background: var(--color-border-light);
+}
+
+.resultActive {
+  composes: result;
+  background: var(--color-border-light);
+}
+
+.resultDate {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-tertiary);
+  flex-shrink: 0;
+}
+
+.addNew {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  font-size: var(--font-size-base);
+  color: var(--color-text-secondary);
+  text-align: left;
+}
+
+.addNew:hover {
+  background: var(--color-border-light);
+}
+
+.addNewActive {
+  composes: addNew;
+  background: var(--color-border-light);
+}
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 99;
+}

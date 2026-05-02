@@ -1,0 +1,148 @@
+/* ---- Feedback list ---- */
+
+.feedbackList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  align-self: stretch;
+}
+
+.feedbackItem {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  padding: var(--space-sm) 0;
+}
+
+.feedbackHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-base);
+}
+
+.feedbackIndicator {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.feedbackIndicatorPositive {
+  composes: feedbackIndicator;
+  background: var(--color-accent-green);
+}
+
+.feedbackIndicatorNeutral {
+  composes: feedbackIndicator;
+  background: var(--color-surface-hover);
+}
+
+.feedbackIndicatorNegative {
+  composes: feedbackIndicator;
+  background: var(--color-negative);
+}
+
+.feedbackDimension {
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-base);
+  color: var(--color-text-tertiary);
+  font-weight: var(--font-weight-medium);
+}
+
+.feedbackDate {
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-base);
+  color: var(--color-text-tertiary);
+}
+
+.feedbackSeparator {
+  width: 1px;
+  height: 12px;
+  background: var(--color-text-placeholder);
+  flex-shrink: 0;
+}
+
+.feedbackDescription {
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-base);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+  white-space: pre-wrap;
+}
+
+/* ---- Candidate status ---- */
+
+.titleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.statusDropdown {
+  position: relative;
+}
+
+.statusButton {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius-sm);
+  height: 32px;
+  cursor: pointer;
+}
+
+.statusButton:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-text-primary);
+}
+
+.statusMenu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  min-width: 140px;
+  padding: var(--space-sm) var(--space-md);
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: 0px 2px 8px var(--color-shadow);
+  animation: statusMenuIn 0.12s ease-out;
+}
+
+.statusMenuItem {
+  display: flex;
+  align-items: center;
+  height: 32px;
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-base);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.statusMenuItem:hover {
+  color: var(--color-text-primary);
+}
+
+.statusMenuItem[data-active] {
+  color: var(--color-text-primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+@keyframes statusMenuIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}

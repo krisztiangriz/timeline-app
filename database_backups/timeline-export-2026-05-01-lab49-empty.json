@@ -1,0 +1,1037 @@
+{
+  "version": 10,
+  "exportedAt": "2026-05-01T12:21:08.437Z",
+  "tags": [],
+  "pages": [
+    {
+      "description": "",
+      "createdAt": "2026-05-01T12:00:16.568Z",
+      "updatedAt": "2026-05-01T12:00:16.568Z",
+      "editCount": 0,
+      "name": "Timeline",
+      "type": "general",
+      "role": "main-timeline",
+      "id": 1
+    },
+    {
+      "description": "",
+      "createdAt": "2026-05-01T12:00:16.568Z",
+      "updatedAt": "2026-05-01T12:00:16.568Z",
+      "editCount": 0,
+      "name": "People",
+      "type": "hub",
+      "role": "colleague-hub",
+      "mentionTrigger": "@",
+      "id": 2
+    },
+    {
+      "description": "",
+      "createdAt": "2026-05-01T12:00:16.568Z",
+      "updatedAt": "2026-05-01T12:00:16.568Z",
+      "editCount": 0,
+      "name": "Projects",
+      "type": "hub",
+      "role": "project-hub",
+      "mentionTrigger": "#",
+      "id": 3
+    },
+    {
+      "description": "",
+      "createdAt": "2026-05-01T12:00:16.568Z",
+      "updatedAt": "2026-05-01T12:00:16.568Z",
+      "editCount": 0,
+      "name": "Candidates",
+      "type": "hub",
+      "role": "candidate-hub",
+      "mentionTrigger": "%",
+      "id": 4
+    },
+    {
+      "description": "",
+      "createdAt": "2026-05-01T12:00:16.568Z",
+      "updatedAt": "2026-05-01T12:00:16.568Z",
+      "editCount": 0,
+      "name": "Meetings",
+      "type": "hub",
+      "mentionTrigger": "!",
+      "id": 5
+    },
+    {
+      "description": "",
+      "createdAt": "2026-05-01T12:00:16.568Z",
+      "updatedAt": "2026-05-01T12:00:16.568Z",
+      "editCount": 0,
+      "name": "Admin",
+      "type": "general",
+      "mentionTrigger": "^",
+      "id": 6
+    },
+    {
+      "description": "",
+      "createdAt": "2026-05-01T12:00:16.568Z",
+      "updatedAt": "2026-05-01T12:00:16.568Z",
+      "editCount": 0,
+      "name": "Visualization",
+      "type": "general",
+      "id": 7
+    },
+    {
+      "name": "Project journey",
+      "type": "project",
+      "parentId": 3,
+      "description": "",
+      "createdAt": "2026-05-01T12:00:31.451Z",
+      "updatedAt": "2026-05-01T12:00:31.451Z",
+      "editCount": 0,
+      "id": 8
+    },
+    {
+      "name": "Data quality initative",
+      "type": "project",
+      "parentId": 3,
+      "description": "",
+      "createdAt": "2026-05-01T12:00:43.804Z",
+      "updatedAt": "2026-05-01T12:00:43.804Z",
+      "editCount": 0,
+      "id": 9
+    },
+    {
+      "name": "Component library",
+      "type": "project",
+      "parentId": 3,
+      "description": "",
+      "createdAt": "2026-05-01T12:00:51.621Z",
+      "updatedAt": "2026-05-01T12:00:51.621Z",
+      "editCount": 0,
+      "id": 10
+    },
+    {
+      "name": "Client meeting",
+      "type": "general",
+      "parentId": 5,
+      "description": "",
+      "createdAt": "2026-05-01T12:01:08.212Z",
+      "updatedAt": "2026-05-01T12:01:08.212Z",
+      "editCount": 0,
+      "id": 11
+    },
+    {
+      "name": "External meeting",
+      "type": "general",
+      "parentId": 5,
+      "description": "",
+      "createdAt": "2026-05-01T12:01:17.092Z",
+      "updatedAt": "2026-05-01T12:01:17.092Z",
+      "editCount": 0,
+      "id": 12
+    },
+    {
+      "name": "Internal meeting",
+      "type": "general",
+      "parentId": 5,
+      "description": "",
+      "createdAt": "2026-05-01T12:01:23.383Z",
+      "updatedAt": "2026-05-01T12:01:23.383Z",
+      "editCount": 0,
+      "id": 13
+    },
+    {
+      "name": "Anna",
+      "type": "colleague",
+      "parentId": 2,
+      "description": "",
+      "createdAt": "2026-05-01T12:01:33.392Z",
+      "updatedAt": "2026-05-01T12:01:33.392Z",
+      "editCount": 0,
+      "id": 14
+    },
+    {
+      "name": "Marci",
+      "type": "colleague",
+      "parentId": 2,
+      "description": "",
+      "createdAt": "2026-05-01T12:01:44.154Z",
+      "updatedAt": "2026-05-01T12:01:44.154Z",
+      "editCount": 0,
+      "id": 15
+    },
+    {
+      "name": "Nora",
+      "type": "colleague",
+      "parentId": 2,
+      "description": "",
+      "createdAt": "2026-05-01T12:01:55.212Z",
+      "updatedAt": "2026-05-01T12:01:55.212Z",
+      "editCount": 0,
+      "id": 16
+    },
+    {
+      "name": "Patrik",
+      "type": "colleague",
+      "parentId": 2,
+      "description": "",
+      "createdAt": "2026-05-01T12:02:04.762Z",
+      "updatedAt": "2026-05-01T12:02:04.762Z",
+      "editCount": 0,
+      "id": 17
+    },
+    {
+      "name": "Peter",
+      "type": "colleague",
+      "parentId": 2,
+      "description": "",
+      "createdAt": "2026-05-01T12:02:19.371Z",
+      "updatedAt": "2026-05-01T12:02:19.371Z",
+      "editCount": 0,
+      "id": 18
+    },
+    {
+      "name": "Viktor",
+      "type": "colleague",
+      "parentId": 2,
+      "description": "",
+      "createdAt": "2026-05-01T12:02:31.083Z",
+      "updatedAt": "2026-05-01T12:02:31.083Z",
+      "editCount": 0,
+      "id": 19
+    },
+    {
+      "name": "Vince",
+      "type": "colleague",
+      "parentId": 2,
+      "description": "",
+      "createdAt": "2026-05-01T12:02:41.458Z",
+      "updatedAt": "2026-05-01T12:02:41.458Z",
+      "editCount": 0,
+      "id": 20
+    },
+    {
+      "name": "Zita",
+      "type": "colleague",
+      "parentId": 2,
+      "description": "",
+      "createdAt": "2026-05-01T12:02:50.541Z",
+      "updatedAt": "2026-05-01T12:02:50.541Z",
+      "editCount": 0,
+      "id": 21
+    },
+    {
+      "name": "Tunde",
+      "type": "colleague",
+      "parentId": 2,
+      "description": "",
+      "createdAt": "2026-05-01T12:03:19.340Z",
+      "updatedAt": "2026-05-01T12:03:19.340Z",
+      "editCount": 0,
+      "id": 22
+    }
+  ],
+  "layouts": [
+    {
+      "pageId": 8,
+      "type": "tab",
+      "name": "Timeline",
+      "order": 0,
+      "id": 1
+    },
+    {
+      "pageId": 8,
+      "type": "tab",
+      "name": "Feedback",
+      "order": 1,
+      "id": 2
+    },
+    {
+      "pageId": 8,
+      "type": "tab",
+      "name": "Visualization",
+      "order": 2,
+      "id": 3
+    },
+    {
+      "pageId": 9,
+      "type": "tab",
+      "name": "Timeline",
+      "order": 0,
+      "id": 4
+    },
+    {
+      "pageId": 9,
+      "type": "tab",
+      "name": "Feedback",
+      "order": 1,
+      "id": 5
+    },
+    {
+      "pageId": 9,
+      "type": "tab",
+      "name": "Visualization",
+      "order": 2,
+      "id": 6
+    },
+    {
+      "pageId": 10,
+      "type": "tab",
+      "name": "Timeline",
+      "order": 0,
+      "id": 7
+    },
+    {
+      "pageId": 10,
+      "type": "tab",
+      "name": "Feedback",
+      "order": 1,
+      "id": 8
+    },
+    {
+      "pageId": 10,
+      "type": "tab",
+      "name": "Visualization",
+      "order": 2,
+      "id": 9
+    },
+    {
+      "pageId": 14,
+      "type": "tab",
+      "name": "Timeline",
+      "order": 0,
+      "id": 10
+    },
+    {
+      "pageId": 14,
+      "type": "tab",
+      "name": "Feedback",
+      "order": 1,
+      "id": 11
+    },
+    {
+      "pageId": 14,
+      "type": "tab",
+      "name": "Visualization",
+      "order": 2,
+      "id": 12
+    },
+    {
+      "pageId": 15,
+      "type": "tab",
+      "name": "Timeline",
+      "order": 0,
+      "id": 13
+    },
+    {
+      "pageId": 15,
+      "type": "tab",
+      "name": "Feedback",
+      "order": 1,
+      "id": 14
+    },
+    {
+      "pageId": 15,
+      "type": "tab",
+      "name": "Visualization",
+      "order": 2,
+      "id": 15
+    },
+    {
+      "pageId": 15,
+      "type": "tab",
+      "name": "Review",
+      "order": 3,
+      "id": 16
+    },
+    {
+      "pageId": 16,
+      "type": "tab",
+      "name": "Timeline",
+      "order": 0,
+      "id": 17
+    },
+    {
+      "pageId": 16,
+      "type": "tab",
+      "name": "Feedback",
+      "order": 1,
+      "id": 18
+    },
+    {
+      "pageId": 16,
+      "type": "tab",
+      "name": "Visualization",
+      "order": 2,
+      "id": 19
+    },
+    {
+      "pageId": 16,
+      "type": "tab",
+      "name": "Review",
+      "order": 3,
+      "id": 20
+    },
+    {
+      "pageId": 17,
+      "type": "tab",
+      "name": "Timeline",
+      "order": 0,
+      "id": 21
+    },
+    {
+      "pageId": 17,
+      "type": "tab",
+      "name": "Feedback",
+      "order": 1,
+      "id": 22
+    },
+    {
+      "pageId": 17,
+      "type": "tab",
+      "name": "Visualization",
+      "order": 2,
+      "id": 23
+    },
+    {
+      "pageId": 17,
+      "type": "tab",
+      "name": "Review",
+      "order": 3,
+      "id": 24
+    },
+    {
+      "pageId": 18,
+      "type": "tab",
+      "name": "Timeline",
+      "order": 0,
+      "id": 25
+    },
+    {
+      "pageId": 18,
+      "type": "tab",
+      "name": "Feedback",
+      "order": 1,
+      "id": 26
+    },
+    {
+      "pageId": 18,
+      "type": "tab",
+      "name": "Visualization",
+      "order": 2,
+      "id": 27
+    },
+    {
+      "pageId": 18,
+      "type": "tab",
+      "name": "Review",
+      "order": 3,
+      "id": 28
+    },
+    {
+      "pageId": 18,
+      "type": "tab",
+      "name": "Pip",
+      "order": 4,
+      "id": 29
+    },
+    {
+      "pageId": 19,
+      "type": "tab",
+      "name": "Timeline",
+      "order": 0,
+      "id": 30
+    },
+    {
+      "pageId": 19,
+      "type": "tab",
+      "name": "Feedback",
+      "order": 1,
+      "id": 31
+    },
+    {
+      "pageId": 19,
+      "type": "tab",
+      "name": "Visualization",
+      "order": 2,
+      "id": 32
+    },
+    {
+      "pageId": 19,
+      "type": "tab",
+      "name": "Review",
+      "order": 3,
+      "id": 33
+    },
+    {
+      "pageId": 20,
+      "type": "tab",
+      "name": "Timeline",
+      "order": 0,
+      "id": 34
+    },
+    {
+      "pageId": 20,
+      "type": "tab",
+      "name": "Feedback",
+      "order": 1,
+      "id": 35
+    },
+    {
+      "pageId": 20,
+      "type": "tab",
+      "name": "Visualization",
+      "order": 2,
+      "id": 36
+    },
+    {
+      "pageId": 20,
+      "type": "tab",
+      "name": "Review",
+      "order": 3,
+      "id": 37
+    },
+    {
+      "pageId": 21,
+      "type": "tab",
+      "name": "Timeline",
+      "order": 0,
+      "id": 38
+    },
+    {
+      "pageId": 21,
+      "type": "tab",
+      "name": "Feedback",
+      "order": 1,
+      "id": 39
+    },
+    {
+      "pageId": 21,
+      "type": "tab",
+      "name": "Visualization",
+      "order": 2,
+      "id": 40
+    },
+    {
+      "pageId": 21,
+      "type": "tab",
+      "name": "Review",
+      "order": 3,
+      "id": 41
+    },
+    {
+      "pageId": 22,
+      "type": "tab",
+      "name": "Timeline",
+      "order": 0,
+      "id": 42
+    },
+    {
+      "pageId": 22,
+      "type": "tab",
+      "name": "Feedback",
+      "order": 1,
+      "id": 43
+    },
+    {
+      "pageId": 22,
+      "type": "tab",
+      "name": "Visualization",
+      "order": 2,
+      "id": 44
+    },
+    {
+      "pageId": 22,
+      "type": "tab",
+      "name": "Review",
+      "order": 3,
+      "id": 45
+    }
+  ],
+  "timelineEntries": [],
+  "feedbacks": [],
+  "categories": [],
+  "dimensions": [
+    {
+      "name": "Observation",
+      "order": 0,
+      "id": 1
+    },
+    {
+      "name": "Project delivery",
+      "order": 1,
+      "id": 2
+    },
+    {
+      "name": "Sales participation",
+      "order": 2,
+      "id": 3
+    },
+    {
+      "name": "Continuous learning",
+      "order": 3,
+      "id": 4
+    },
+    {
+      "name": "Practice development",
+      "order": 4,
+      "id": 5
+    }
+  ],
+  "pageSettings": [
+    {
+      "pageKey": "root",
+      "sortKey": "name",
+      "sortDir": "asc",
+      "id": 1
+    },
+    {
+      "pageKey": "page-5-table",
+      "sortKey": "name",
+      "sortDir": "asc",
+      "id": 2
+    },
+    {
+      "pageKey": "page-11-table",
+      "sortKey": "name",
+      "sortDir": "asc",
+      "id": 3
+    },
+    {
+      "pageKey": "page-2-table",
+      "sortKey": "name",
+      "sortDir": "asc",
+      "id": 4
+    }
+  ],
+  "blocks": [
+    {
+      "pageId": 1,
+      "type": "timeline",
+      "order": 0,
+      "id": 1
+    },
+    {
+      "pageId": 2,
+      "type": "visualization",
+      "order": 0,
+      "id": 2
+    },
+    {
+      "pageId": 2,
+      "type": "table",
+      "order": 1,
+      "id": 3
+    },
+    {
+      "pageId": 3,
+      "type": "visualization",
+      "order": 0,
+      "id": 4
+    },
+    {
+      "pageId": 3,
+      "type": "table",
+      "order": 1,
+      "id": 5
+    },
+    {
+      "pageId": 4,
+      "type": "visualization",
+      "order": 0,
+      "id": 6
+    },
+    {
+      "pageId": 4,
+      "type": "table",
+      "order": 1,
+      "id": 7
+    },
+    {
+      "pageId": 5,
+      "type": "visualization",
+      "order": 0,
+      "id": 8
+    },
+    {
+      "pageId": 5,
+      "type": "table",
+      "order": 1,
+      "id": 9
+    },
+    {
+      "pageId": 6,
+      "type": "visualization",
+      "order": 0,
+      "id": 10
+    },
+    {
+      "pageId": 6,
+      "type": "timeline",
+      "order": 1,
+      "id": 11
+    },
+    {
+      "pageId": 7,
+      "type": "visualization",
+      "order": 0,
+      "id": 12
+    },
+    {
+      "pageId": 8,
+      "tabId": 1,
+      "type": "timeline",
+      "order": 0,
+      "id": 13
+    },
+    {
+      "pageId": 8,
+      "tabId": 2,
+      "type": "feedback",
+      "order": 0,
+      "id": 14
+    },
+    {
+      "pageId": 8,
+      "tabId": 3,
+      "type": "visualization",
+      "order": 0,
+      "id": 15
+    },
+    {
+      "pageId": 9,
+      "tabId": 4,
+      "type": "timeline",
+      "order": 0,
+      "id": 16
+    },
+    {
+      "pageId": 9,
+      "tabId": 5,
+      "type": "feedback",
+      "order": 0,
+      "id": 17
+    },
+    {
+      "pageId": 9,
+      "tabId": 6,
+      "type": "visualization",
+      "order": 0,
+      "id": 18
+    },
+    {
+      "pageId": 10,
+      "tabId": 7,
+      "type": "timeline",
+      "order": 0,
+      "id": 19
+    },
+    {
+      "pageId": 10,
+      "tabId": 8,
+      "type": "feedback",
+      "order": 0,
+      "id": 20
+    },
+    {
+      "pageId": 10,
+      "tabId": 9,
+      "type": "visualization",
+      "order": 0,
+      "id": 21
+    },
+    {
+      "pageId": 11,
+      "type": "visualization",
+      "order": 0,
+      "id": 22
+    },
+    {
+      "pageId": 11,
+      "type": "timeline",
+      "order": 1,
+      "id": 23
+    },
+    {
+      "pageId": 12,
+      "type": "visualization",
+      "order": 0,
+      "id": 24
+    },
+    {
+      "pageId": 12,
+      "type": "timeline",
+      "order": 1,
+      "id": 25
+    },
+    {
+      "pageId": 13,
+      "type": "visualization",
+      "order": 0,
+      "id": 26
+    },
+    {
+      "pageId": 13,
+      "type": "timeline",
+      "order": 1,
+      "id": 27
+    },
+    {
+      "pageId": 14,
+      "tabId": 10,
+      "type": "timeline",
+      "order": 0,
+      "id": 28
+    },
+    {
+      "pageId": 14,
+      "tabId": 11,
+      "type": "feedback",
+      "order": 0,
+      "id": 29
+    },
+    {
+      "pageId": 14,
+      "tabId": 12,
+      "type": "visualization",
+      "order": 0,
+      "id": 30
+    },
+    {
+      "pageId": 15,
+      "tabId": 13,
+      "type": "timeline",
+      "order": 0,
+      "id": 31
+    },
+    {
+      "pageId": 15,
+      "tabId": 14,
+      "type": "feedback",
+      "order": 0,
+      "id": 32
+    },
+    {
+      "pageId": 15,
+      "tabId": 15,
+      "type": "visualization",
+      "order": 0,
+      "id": 33
+    },
+    {
+      "pageId": 15,
+      "tabId": 16,
+      "type": "text",
+      "content": "",
+      "order": 0,
+      "id": 34
+    },
+    {
+      "pageId": 16,
+      "tabId": 17,
+      "type": "timeline",
+      "order": 0,
+      "id": 35
+    },
+    {
+      "pageId": 16,
+      "tabId": 18,
+      "type": "feedback",
+      "order": 0,
+      "id": 36
+    },
+    {
+      "pageId": 16,
+      "tabId": 19,
+      "type": "visualization",
+      "order": 0,
+      "id": 37
+    },
+    {
+      "pageId": 16,
+      "tabId": 20,
+      "type": "text",
+      "content": "",
+      "order": 0,
+      "id": 38
+    },
+    {
+      "pageId": 17,
+      "tabId": 21,
+      "type": "timeline",
+      "order": 0,
+      "id": 39
+    },
+    {
+      "pageId": 17,
+      "tabId": 22,
+      "type": "feedback",
+      "order": 0,
+      "id": 40
+    },
+    {
+      "pageId": 17,
+      "tabId": 23,
+      "type": "visualization",
+      "order": 0,
+      "id": 41
+    },
+    {
+      "pageId": 17,
+      "tabId": 24,
+      "type": "text",
+      "content": "",
+      "order": 0,
+      "id": 42
+    },
+    {
+      "pageId": 18,
+      "tabId": 25,
+      "type": "timeline",
+      "order": 0,
+      "id": 43
+    },
+    {
+      "pageId": 18,
+      "tabId": 26,
+      "type": "feedback",
+      "order": 0,
+      "id": 44
+    },
+    {
+      "pageId": 18,
+      "tabId": 27,
+      "type": "visualization",
+      "order": 0,
+      "id": 45
+    },
+    {
+      "pageId": 18,
+      "tabId": 28,
+      "type": "text",
+      "content": "",
+      "order": 0,
+      "id": 46
+    },
+    {
+      "pageId": 18,
+      "tabId": 29,
+      "type": "text",
+      "content": "",
+      "order": 0,
+      "id": 47
+    },
+    {
+      "pageId": 19,
+      "tabId": 30,
+      "type": "timeline",
+      "order": 0,
+      "id": 48
+    },
+    {
+      "pageId": 19,
+      "tabId": 31,
+      "type": "feedback",
+      "order": 0,
+      "id": 49
+    },
+    {
+      "pageId": 19,
+      "tabId": 32,
+      "type": "visualization",
+      "order": 0,
+      "id": 50
+    },
+    {
+      "pageId": 19,
+      "tabId": 33,
+      "type": "text",
+      "content": "",
+      "order": 0,
+      "id": 51
+    },
+    {
+      "pageId": 20,
+      "tabId": 34,
+      "type": "timeline",
+      "order": 0,
+      "id": 52
+    },
+    {
+      "pageId": 20,
+      "tabId": 35,
+      "type": "feedback",
+      "order": 0,
+      "id": 53
+    },
+    {
+      "pageId": 20,
+      "tabId": 36,
+      "type": "visualization",
+      "order": 0,
+      "id": 54
+    },
+    {
+      "pageId": 20,
+      "tabId": 37,
+      "type": "text",
+      "content": "",
+      "order": 0,
+      "id": 55
+    },
+    {
+      "pageId": 21,
+      "tabId": 38,
+      "type": "timeline",
+      "order": 0,
+      "id": 56
+    },
+    {
+      "pageId": 21,
+      "tabId": 39,
+      "type": "feedback",
+      "order": 0,
+      "id": 57
+    },
+    {
+      "pageId": 21,
+      "tabId": 40,
+      "type": "visualization",
+      "order": 0,
+      "id": 58
+    },
+    {
+      "pageId": 21,
+      "tabId": 41,
+      "type": "text",
+      "content": "",
+      "order": 0,
+      "id": 59
+    },
+    {
+      "pageId": 22,
+      "tabId": 42,
+      "type": "timeline",
+      "order": 0,
+      "id": 60
+    },
+    {
+      "pageId": 22,
+      "tabId": 43,
+      "type": "feedback",
+      "order": 0,
+      "id": 61
+    },
+    {
+      "pageId": 22,
+      "tabId": 44,
+      "type": "visualization",
+      "order": 0,
+      "id": 62
+    },
+    {
+      "pageId": 22,
+      "tabId": 45,
+      "type": "text",
+      "content": "",
+      "order": 0,
+      "id": 63
+    }
+  ],
+  "chartConfigs": []
+}

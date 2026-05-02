@@ -1,0 +1,59 @@
+.title {
+  font-size: var(--font-size-h1);
+  line-height: 24px;
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+  padding: var(--space-md) 0 var(--space-xs);
+  cursor: text;
+}
+
+.titleInput {
+  font-size: var(--font-size-h1);
+  line-height: 24px;
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+  font-family: var(--font-family);
+  border: none;
+  outline: none;
+  background: none;
+  padding: var(--space-md) 0 var(--space-xs);
+  width: 100%;
+  caret-color: var(--color-text-primary);
+}
+
+.tabGroup {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding-bottom: var(--space-sm);
+}
+
+.tab {
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-base);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.tabInactive {
+  composes: tab;
+  color: var(--color-text-tertiary);
+  text-decoration: none;
+}
+.tabInactive:hover {
+  color: var(--color-text-primary);
+}
+
+.tabSeparator {
+  width: 1px;
+  height: 12px;
+  background: var(--color-text-placeholder);
+  flex-shrink: 0;
+}

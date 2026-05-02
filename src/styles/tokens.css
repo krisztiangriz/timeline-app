@@ -1,0 +1,74 @@
+:root {
+  /* Colors — Neutral scale */
+  --color-bg: #FFFFFF;
+  --color-surface: #FFFFFF;
+  --color-text-primary: #334055;       /* N900 */
+  --color-text-secondary: #5E6E8C;     /* N600 */
+  --color-text-body: #485670;          /* N700 */
+  --color-text-tertiary: #5E6E8C;      /* N600 — same as secondary */
+  --color-text-placeholder: #B8C5DB;   /* N300 */
+  --color-border: #B8C5DB;             /* N300 */
+  --color-border-light: #ECF1F9;       /* N100 */
+  --color-surface-hover: #ECF1F9;      /* N100 */
+  --color-input-bg: #F8F9FD;           /* N50 */
+  --color-input-border: #B8C5DB;       /* N300 */
+
+  /* Semantic — used in visualizations & feedback only */
+  --color-accent-blue: #6699FF;        /* Primary */
+  --color-accent-green: #45C9A1;       /* Success */
+  --color-positive: #34D399;           /* Success (alt) */
+  --color-negative: #FF6363;           /* Error */
+  --color-neutral: #5E6E8C;           /* N600 — feedback neutral */
+  --color-primary-soft: #E8F0FF;       /* Primary background */
+  --color-success-soft: #E6F7F2;       /* Success background */
+  --color-error-soft: #FFECEC;         /* Error background */
+
+  /* Overlays & shadows */
+  --color-shadow: #5E6E8C33;
+  --color-overlay: rgba(51, 64, 85, 0.3);
+  --color-overlay-light: rgba(255, 255, 255, 0.75);
+
+  /* Typography */
+  --font-family: "Open Sans", system-ui, sans-serif;
+  --font-size-xs: 10px;
+  --font-size-sm: 12px;
+  --font-size-base: 14px;
+  --font-size-lg: 16px;
+  --font-size-xl: 18px;
+  --font-size-h1: 18px;
+
+  --line-height-xs: 16px;
+  --line-height-sm: 20px;
+  --line-height-base: 20px;
+  --line-height-lg: 20px;
+  --line-height-xl: 40px;
+
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  /* Spacing */
+  --space-2xs: 2px;
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 24px;
+  --space-2xl: 32px;
+  --space-3xl: 40px;
+
+  /* Radius */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+
+  /* Shadows */
+  --shadow-modal: 0px 2px 24px var(--color-shadow);
+  --shadow-dropdown: 0px 1px 12px var(--color-shadow);
+
+  /* Page layout */
+  --page-padding-inline: 40px;
+  --header-padding-top: 40px;
+  --max-content-width: 640px;
+}

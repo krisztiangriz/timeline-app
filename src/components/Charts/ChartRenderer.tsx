@@ -1,0 +1,330 @@
+import { useState, useEffect, useRef, useMemo } from 'react'
+import {
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
+  PieChart, Pie, Cell, Legend, LineChart, Line, AreaChart, Area,
+} from 'recharts'
+import {
+  filterEntriesByScope, filterFeedbacksByScope,
+  useEntryCount,
+  useTicketedSummary, useEntriesByTicket,
+  useCandidatesByStatus, STATUS_COLORS,
+  useFeedbackByMonth, useFeedbackSummary,
+  useDimensionDistribution,
+  getColor,
+} from '../../hooks/useChartData'
+import type { ChartConfig, ChartScope, ChartDataSource, ChartType, TimelineEntry, Feedback, Page, Dimension } from '../../types'
+import styles from './Charts.module.css'
+
+// ---- Shared constants ----
+
+const GLOBAL_SCOPE: ChartScope = { type: 'global' }
+
+function pieLabel({ name, percent }: { name?: string; percent?: number }) {
+  return `${name ?? ''} ${((percent ?? 0) * 100).toFixed(0)}%`
+}
+
+function ChartContainer({ className, children }: { className: string; children: React.ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    if (el.clientWidth > 0 && el.clientHeight > 0) { setMounted(true); return }
+    const ro = new ResizeObserver(([entry]) => {
+      if (entry.contentRect.width > 0 && entry.contentRect.height > 0) {
+        requestAnimationFrame(() => requestAnimationFrame(() => { setMounted(true); ro.disconnect() }))
+      }
+    })
+    ro.observe(el)
+    const timeout = setTimeout(() => { setMounted(true); ro.disconnect() }, 200)
+    return () => { ro.disconnect(); clearTimeout(timeout) }
+  }, [])
+  return <div ref={ref} className={className}>{mounted && children}</div>
+}
+
+const tooltipStyle: React.CSSProperties = {
+  background: '#FFFFFF', borderRadius: 12, boxShadow: '0px 2px 8px #5E6E8C33',
+  border: 'none', padding: '8px 12px', fontSize: 12, lineHeight: '20px', color: '#5E6E8C',
+}
+const tooltipLabelStyle: React.CSSProperties = { color: '#334055', fontWeight: 600, fontSize: 12 }
+const FEEDBACK_COLORS: Record<string, string> = { Positive: '#45C9A1', Neutral: '#ECF1F9', Negative: '#FF6363' }
+const FEEDBACK_NEUTRAL_STROKE = '#B8C5DB'
+const FEEDBACK_TOOLTIP_ORDER: Record<string, number> = { Positive: 0, Neutral: 1, Negative: 2 }
+const feedbackTooltipSorter = (a: { dataKey?: unknown }) => FEEDBACK_TOOLTIP_ORDER[String(a.dataKey)] ?? 9
+const TICKET_COLORS: Record<string, string> = { Ticketed: '#334055', 'Non-ticketed': '#B8C5DB' }
+const ACCENT_BAR = '#5E6E8C'
+const FALLBACK_COLOR = '#B8C5DB'
+const cursorStyle = { fill: '#ECF1F9', stroke: '#ECF1F9' }
+const TP = { contentStyle: tooltipStyle, labelStyle: tooltipLabelStyle, cursor: cursorStyle }
+const TPfb = { ...TP, itemSorter: feedbackTooltipSorter }
+const axisStroke = '#B8C5DB'
+const tickStyle = { fontSize: 10, fill: '#485670' }
+
+// ---- Exports for AddChartModal ----
+
+export const DATA_SOURCE_LABELS: Record<string, string> = {
+  'entry-count': 'Entry count',
+  'ticket-breakdown': 'Ticket breakdown',
+  'ticketed-ratio': 'Ticketed ratio',
+  'feedback-sentiment': 'Feedback sentiment',
+  'feedback-by-dimension': 'Feedback by dimension',
+  'candidate-status': 'Candidate status',
+}
+
+export const VALID_CHART_TYPES: Record<ChartDataSource, ChartType[]> = {
+  'entry-count': ['bar', 'line', 'area', 'pie'],
+  'ticket-breakdown': ['bar', 'pie'],
+  'ticketed-ratio': ['pie'],
+  'feedback-sentiment': ['bar', 'line', 'area', 'pie'],
+  'feedback-by-dimension': ['bar', 'pie'],
+  'candidate-status': ['bar'],
+}
+
+// ---- Shared props interface ----
+
+export interface ChartRendererProps {
+  config: ChartConfig
+  monthCount?: 3 | 6 | 12
+  entries: TimelineEntry[]
+  feedbacks: Feedback[]
+  pages: Page[]
+  dimensions: Dimension[]
+  containerClass?: string
+}
+
+// ---- Dispatcher ----
+
+export function ChartRenderer(props: ChartRendererProps) {
+  switch (props.config.dataSource) {
+    case 'entry-count': return <EntryCountChart {...props} />
+    case 'ticket-breakdown': return <TicketBreakdownChart {...props} />
+    case 'ticketed-ratio': return <TicketedRatioChart {...props} />
+    case 'candidate-status': return <CandidateStatusChart {...props} />
+    case 'feedback-sentiment': return <FeedbackSentimentChart {...props} />
+    case 'feedback-by-dimension': return <FeedbackDimensionChart {...props} />
+    default: return null
+  }
+}
+
+// ---- Helper: scope-filtered data ----
+
+function useScopedData(entries: TimelineEntry[], feedbacks: Feedback[], pages: Page[], scope: ChartScope) {
+  const scopedEntries = useMemo(() => filterEntriesByScope(entries, scope, pages), [entries, scope, pages])
+  const scopedFeedbacks = useMemo(() => filterFeedbacksByScope(feedbacks, scope, pages), [feedbacks, scope, pages])
+  return { scopedEntries, scopedFeedbacks }
+}
+
+function useContainerClass(config: ChartConfig, containerClass?: string) {
+  return containerClass ?? (config.chartType === 'pie' ? styles.chartContainerPie : styles.chartContainer)
+}
+
+// ---- Per-source chart components ----
+
+function EntryCountChart({ config, monthCount = 12, entries, pages, containerClass }: ChartRendererProps) {
+  const scope = config.scope ?? GLOBAL_SCOPE
+  const { scopedEntries } = useScopedData(entries, [], pages, scope)
+  const data = useEntryCount(scopedEntries, pages, scope, monthCount)
+  const cls = useContainerClass(config, containerClass)
+  const { chartType } = config
+
+  return (
+    <ChartContainer className={cls}>
+      <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+        {chartType === 'pie' ? (
+          <PieChart>
+            <Pie data={data.summary} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={55} label={pieLabel}>
+              {data.summary.map((_: unknown, i: number) => <Cell key={i} fill={getColor(i)} />)}
+            </Pie>
+            <Tooltip {...TP} />
+          </PieChart>
+        ) : (() => {
+          const ChartComp = chartType === 'line' ? LineChart : chartType === 'area' ? AreaChart : BarChart
+          return (
+            <ChartComp data={data.data}>
+              <XAxis dataKey="month" tick={tickStyle} stroke={axisStroke} interval="preserveStartEnd" />
+              <Tooltip {...TP} />
+              {data.keys.map((key, i) =>
+                chartType === 'line' ? <Line key={key} type="monotone" dataKey={key} stroke={getColor(i)} strokeWidth={2} dot={false} />
+                : chartType === 'area' ? <Area key={key} type="monotone" dataKey={key} stackId="s" fill={getColor(i)} stroke={getColor(i)} fillOpacity={0.6} />
+                : <Bar key={key} dataKey={key} stackId="s" fill={getColor(i)} />
+              )}
+            </ChartComp>
+          )
+        })()}
+      </ResponsiveContainer>
+    </ChartContainer>
+  )
+}
+
+function TicketBreakdownChart({ config, monthCount = 12, entries, pages, containerClass }: ChartRendererProps) {
+  const scope = config.scope ?? GLOBAL_SCOPE
+  const { scopedEntries } = useScopedData(entries, [], pages, scope)
+  const data = useEntriesByTicket(scopedEntries, monthCount)
+  const cls = useContainerClass(config, containerClass)
+
+  return (
+    <ChartContainer className={cls}>
+      <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+        {config.chartType === 'pie' ? (
+          <PieChart>
+            <Pie data={data} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={55} label={pieLabel}>
+              {data.map((_: unknown, i: number) => <Cell key={i} fill={getColor(i)} />)}
+            </Pie>
+            <Tooltip {...TP} />
+          </PieChart>
+        ) : (
+          <BarChart data={data} layout="vertical">
+            <XAxis type="number" allowDecimals={false} tick={tickStyle} stroke={axisStroke} interval="preserveStartEnd" />
+            <YAxis type="category" dataKey="name" tick={tickStyle} stroke={axisStroke} width={100} />
+            <Tooltip {...TP} />
+            <Bar dataKey="value" fill={ACCENT_BAR} />
+          </BarChart>
+        )}
+      </ResponsiveContainer>
+    </ChartContainer>
+  )
+}
+
+function TicketedRatioChart({ config, monthCount = 12, entries, pages, containerClass }: ChartRendererProps) {
+  const scope = config.scope ?? GLOBAL_SCOPE
+  const { scopedEntries } = useScopedData(entries, [], pages, scope)
+  const data = useTicketedSummary(scopedEntries, monthCount)
+  const cls = useContainerClass(config, containerClass)
+
+  return (
+    <ChartContainer className={cls}>
+      <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+        <PieChart>
+          <Pie data={data} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={55} label={pieLabel}>
+            {data.map((s) => <Cell key={s.name} fill={TICKET_COLORS[s.name] ?? FALLBACK_COLOR} />)}
+          </Pie>
+          <Tooltip {...TP} />
+        </PieChart>
+      </ResponsiveContainer>
+    </ChartContainer>
+  )
+}
+
+function CandidateStatusChart({ config, pages, containerClass }: ChartRendererProps) {
+  const data = useCandidatesByStatus(pages)
+  const cls = useContainerClass(config, containerClass)
+
+  return (
+    <ChartContainer className={cls}>
+      <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+        <BarChart data={data}>
+          <XAxis dataKey="name" tick={tickStyle} stroke={axisStroke} interval={0} />
+          <Tooltip {...TP} />
+          <Bar dataKey="value">
+            {data.map((s, i) => <Cell key={s.name || i} fill={STATUS_COLORS[s.name] ?? getColor(i)} />)}
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+    </ChartContainer>
+  )
+}
+
+function FeedbackSentimentChart({ config, monthCount = 12, feedbacks, pages, containerClass }: ChartRendererProps) {
+  const scope = config.scope ?? GLOBAL_SCOPE
+  const { scopedFeedbacks } = useScopedData([], feedbacks, pages, scope)
+  const byMonth = useFeedbackByMonth(scopedFeedbacks, monthCount)
+  const summary = useFeedbackSummary(scopedFeedbacks, monthCount)
+  const cls = useContainerClass(config, containerClass)
+  const { chartType } = config
+
+  return (
+    <ChartContainer className={cls}>
+      <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+        {chartType === 'pie' ? (
+          <PieChart>
+            <Pie data={summary} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={55} label={pieLabel}>
+              {summary.map((s) => <Cell key={s.name} fill={FEEDBACK_COLORS[s.name] ?? FALLBACK_COLOR} />)}
+            </Pie>
+            <Tooltip {...TPfb} />
+          </PieChart>
+        ) : (() => {
+          const ChartComp = chartType === 'line' ? LineChart : chartType === 'area' ? AreaChart : BarChart
+          return (
+            <ChartComp data={byMonth}>
+              <XAxis dataKey="month" tick={tickStyle} stroke={axisStroke} interval="preserveStartEnd" />
+              <Tooltip {...TPfb} />
+              {chartType === 'line' ? (
+                <>
+                  <Line type="monotone" dataKey="Positive" stroke={FEEDBACK_COLORS.Positive} strokeWidth={2} dot={false} />
+                  <Line type="monotone" dataKey="Neutral" stroke={FEEDBACK_NEUTRAL_STROKE} strokeWidth={2} dot={false} />
+                  <Line type="monotone" dataKey="Negative" stroke={FEEDBACK_COLORS.Negative} strokeWidth={2} dot={false} />
+                </>
+              ) : chartType === 'area' ? (
+                <>
+                  <Area type="monotone" dataKey="Negative" stackId="fb" fill={FEEDBACK_COLORS.Negative} stroke={FEEDBACK_COLORS.Negative} fillOpacity={0.6} />
+                  <Area type="monotone" dataKey="Neutral" stackId="fb" fill={FEEDBACK_COLORS.Neutral} stroke={FEEDBACK_NEUTRAL_STROKE} fillOpacity={0.6} />
+                  <Area type="monotone" dataKey="Positive" stackId="fb" fill={FEEDBACK_COLORS.Positive} stroke={FEEDBACK_COLORS.Positive} fillOpacity={0.6} />
+                </>
+              ) : (
+                <>
+                  <Bar dataKey="Negative" stackId="fb" fill={FEEDBACK_COLORS.Negative} />
+                  <Bar dataKey="Neutral" stackId="fb" fill={FEEDBACK_COLORS.Neutral} />
+                  <Bar dataKey="Positive" stackId="fb" fill={FEEDBACK_COLORS.Positive} />
+                </>
+              )}
+            </ChartComp>
+          )
+        })()}
+      </ResponsiveContainer>
+    </ChartContainer>
+  )
+}
+
+function FeedbackDimensionChart({ config, monthCount = 12, feedbacks, pages, dimensions, containerClass }: ChartRendererProps) {
+  const scope = config.scope ?? GLOBAL_SCOPE
+  const { scopedFeedbacks } = useScopedData([], feedbacks, pages, scope)
+  const dimMap = useMemo(() => new Map(dimensions.map((d) => [d.id!, d.name])), [dimensions])
+  const data = useDimensionDistribution(scopedFeedbacks, pages, dimMap, scope, monthCount)
+  const cls = useContainerClass(config, containerClass)
+  const { chartType } = config
+
+  return (
+    <ChartContainer className={cls}>
+      <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+        {data.perChild ? (
+          chartType === 'pie' ? (() => {
+            const agg = new Map<string, number>()
+            for (const row of data.data) { for (const k of data.keys) { agg.set(k, (agg.get(k) || 0) + Number(row[k])) } }
+            const pieData = [...agg.entries()].map(([name, value]) => ({ name, value })).filter((s) => s.value > 0)
+            return (
+              <PieChart>
+                <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={55} label={pieLabel}>
+                  {pieData.map((_: unknown, i: number) => <Cell key={i} fill={getColor(i)} />)}
+                </Pie>
+                <Tooltip {...TP} />
+              </PieChart>
+            )
+          })() : (
+            <BarChart data={data.data}>
+              <XAxis dataKey="name" tick={tickStyle} stroke={axisStroke} interval={0} />
+              <Tooltip {...TP} />
+              <Legend wrapperStyle={{ fontSize: 10, color: '#485670' }} />
+              {data.keys.map((key, i) => <Bar key={key} dataKey={key} fill={getColor(i)} />)}
+            </BarChart>
+          )
+        ) : (
+          chartType === 'pie' ? (
+            <PieChart>
+              <Pie data={data.summary} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={55} label={pieLabel}>
+                {data.summary.map((_: unknown, i: number) => <Cell key={i} fill={getColor(i)} />)}
+              </Pie>
+              <Tooltip {...TP} />
+            </PieChart>
+          ) : (
+            <BarChart data={data.summary} layout="vertical">
+              <XAxis type="number" allowDecimals={false} tick={tickStyle} stroke={axisStroke} interval="preserveStartEnd" />
+              <YAxis type="category" dataKey="name" tick={tickStyle} stroke={axisStroke} width={120} />
+              <Tooltip {...TP} />
+              <Bar dataKey="value" fill={ACCENT_BAR} />
+            </BarChart>
+          )
+        )}
+      </ResponsiveContainer>
+    </ChartContainer>
+  )
+}

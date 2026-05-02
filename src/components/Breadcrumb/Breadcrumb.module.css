@@ -1,0 +1,86 @@
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--header-padding-top) 0 var(--space-xs);
+  align-self: stretch;
+}
+
+.breadcrumbs {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.crumb {
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-tertiary);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.crumb:hover {
+  color: var(--color-text-primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.crumb:focus-visible {
+  outline: none;
+  color: var(--color-text-primary);
+  text-decoration: underline;
+  text-decoration-color: var(--color-text-primary);
+  text-underline-offset: 2px;
+}
+
+.crumbCurrent {
+  composes: crumb;
+  color: var(--color-text-primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.crumbCurrent:hover {
+  text-decoration: underline;
+  color: var(--color-text-primary);
+  cursor: default;
+}
+
+.separator {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-tertiary);
+  padding: 0 var(--space-xs);
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  flex-shrink: 0;
+}
+
+.actionButton {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-secondary);
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+}
+
+.actionButton:hover {
+  background: var(--color-border-light);
+  color: var(--color-text-primary);
+}
