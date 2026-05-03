@@ -63,7 +63,7 @@ const SHORTCUTS = [
 
 export function HelpModal({ open, onClose }: HelpModalProps) {
   return (
-    <Modal title="Help" open={open} onClose={onClose}>
+    <Modal title="Help" open={open} onClose={onClose} hideFooter>
       <div className={styles.body}>
         {SHORTCUTS.map((group) => (
           <div key={group.title} className={styles.group}>

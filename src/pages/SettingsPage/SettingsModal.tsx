@@ -88,14 +88,10 @@ export function SettingsModal({ open, onClose, onToast }: SettingsModalProps) {
 
       {/* Show archived */}
       <div className={styles.section}>
-        <label className={styles.checkboxRow}>
-          <input
-            type="checkbox"
-            checked={showArchived}
-            onChange={(e) => setShowArchived(e.target.checked)}
-          />
+        <button className={styles.checkboxRow} onClick={() => setShowArchived(!showArchived)}>
+          <div className={styles.checkbox} data-checked={showArchived} />
           <span className={styles.sectionTitle}>Show archived</span>
-        </label>
+        </button>
       </div>
 
       {/* Triggers */}

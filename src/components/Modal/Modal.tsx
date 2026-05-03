@@ -9,6 +9,7 @@ interface ModalProps {
   onConfirm?: () => void
   children: ReactNode
   confirmDisabled?: boolean
+  hideFooter?: boolean
 }
 
 export function Modal({
@@ -18,6 +19,7 @@ export function Modal({
   onConfirm,
   children,
   confirmDisabled,
+  hideFooter,
 }: ModalProps) {
   const bodyRef = useRef<HTMLDivElement>(null)
   const [scrolledTop, setScrolledTop] = useState(false)
@@ -89,22 +91,24 @@ export function Modal({
 
         <div className={styles.body} ref={bodyRef} onScroll={checkOverflow}>{children}</div>
 
-        <div className={scrolledBottom ? styles.footerBorder : styles.footer}>
-          <button className={styles.footerButton} onClick={onClose} aria-label="Cancel">
-            <CloseIcon />
-          </button>
-          {onConfirm && (
-            <button
-              className={styles.footerButton}
-              onClick={onConfirm}
-              disabled={confirmDisabled}
-              aria-label="Confirm"
-              style={{ opacity: confirmDisabled ? 0.4 : 1 }}
-            >
-              <CheckIcon />
+        {!hideFooter && (
+          <div className={scrolledBottom ? styles.footerBorder : styles.footer}>
+            <button className={styles.footerButton} onClick={onClose} aria-label="Cancel">
+              <CloseIcon />
             </button>
-          )}
-        </div>
+            {onConfirm && (
+              <button
+                className={styles.footerButton}
+                onClick={onConfirm}
+                disabled={confirmDisabled}
+                aria-label="Confirm"
+                style={{ opacity: confirmDisabled ? 0.4 : 1 }}
+              >
+                <CheckIcon />
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )
