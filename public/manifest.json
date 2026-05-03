@@ -2,14 +2,14 @@
   "name": "Timeline",
   "short_name": "Timeline",
   "description": "Personal timeline app for tracking project progress, people management, and ideas",
-  "start_url": "/",
+  "start_url": "/timeline-app/",
   "display": "standalone",
   "background_color": "#FFFFFF",
   "theme_color": "#FFFFFF",
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "/favicon.svg",
+      "src": "/timeline-app/favicon.svg",
       "sizes": "any",
       "type": "image/svg+xml"
     }
