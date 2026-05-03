@@ -179,44 +179,6 @@ export function useEntryCount(
   }, [entries, pages, scope, monthCount])
 }
 
-// ---- Aggregation: ticketed vs non-ticketed ----
-
-export function useTicketedSummary(entries: TimelineEntry[], monthCount = 12) {
-  return useMemo(() => {
-    const cutoff = getCutoff(monthCount)
-    let ticketed = 0
-    let nonTicketed = 0
-    for (const e of entries) {
-      if (e.isPending) continue
-      if (new Date(e.date) < cutoff) continue
-      if (e.ticketId) ticketed++
-      else nonTicketed++
-    }
-    return [
-      { name: 'Ticketed', value: ticketed },
-      { name: 'Non-ticketed', value: nonTicketed },
-    ].filter((s) => s.value > 0)
-  }, [entries, monthCount])
-}
-
-// ---- Aggregation: entries by ticket ID ----
-
-export function useEntriesByTicket(entries: TimelineEntry[], monthCount = 12) {
-  return useMemo(() => {
-    const cutoff = getCutoff(monthCount)
-    const counts = new Map<string, number>()
-    for (const e of entries) {
-      if (e.isPending) continue
-      if (new Date(e.date) < cutoff) continue
-      if (!e.ticketId) continue
-      counts.set(e.ticketId, (counts.get(e.ticketId) || 0) + 1)
-    }
-    return [...counts.entries()]
-      .map(([name, value]) => ({ name, value }))
-      .sort((a, b) => b.value - a.value)
-  }, [entries, monthCount])
-}
-
 // ---- Aggregation: candidates by status ----
 
 const STATUS_ORDER = ['active', 'recommended', 'hired', 'rejected', 'withdrawn']

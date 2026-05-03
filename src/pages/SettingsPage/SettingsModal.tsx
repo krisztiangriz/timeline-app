@@ -25,15 +25,39 @@ export function SettingsModal({ open, onClose, onToast }: SettingsModalProps) {
   const [addingDim, setAddingDim] = useState(false)
   const [newDimName, setNewDimName] = useState('')
 
-  // Hub pages (for trigger editing)
+  // Trigger add state
+  const [addingTrigger, setAddingTrigger] = useState(false)
+  const [newTriggerPageId, setNewTriggerPageId] = useState<number | undefined>()
+  const [newTriggerChar, setNewTriggerChar] = useState('')
+
   // Pages with triggers (hubs + any page with a mentionTrigger)
   const triggerPages = allPages.filter((p) => p.type === 'hub' || p.mentionTrigger)
+  // Pages available to add a trigger to (no trigger yet, not main-timeline)
+  const availableForTrigger = allPages.filter((p) => !p.mentionTrigger && p.role !== 'main-timeline')
 
   async function handleTriggerChange(pageId: number, value: string) {
     const ch = value.slice(0, 1)
     if (ch === '~' || /\s/.test(ch)) return
     const mentionTrigger = ch === '' ? undefined : ch
     await updatePage(pageId, { mentionTrigger })
+  }
+
+  async function handleRemoveTrigger(pageId: number) {
+    await updatePage(pageId, { mentionTrigger: undefined })
+  }
+
+  async function handleAddTrigger() {
+    if (!newTriggerPageId || !newTriggerChar.trim()) return
+    const ch = newTriggerChar.trim().slice(0, 1)
+    if (ch === '~' || /\s/.test(ch)) return
+    await updatePage(newTriggerPageId, { mentionTrigger: ch })
+    cancelAddTrigger()
+  }
+
+  function cancelAddTrigger() {
+    setNewTriggerPageId(undefined)
+    setNewTriggerChar('')
+    setAddingTrigger(false)
   }
 
   async function handleAddDimension() {
@@ -96,7 +120,12 @@ export function SettingsModal({ open, onClose, onToast }: SettingsModalProps) {
 
       {/* Triggers */}
       <div className={styles.section}>
-        <span className={styles.sectionTitle}>Triggers</span>
+        <div className={styles.listHeader}>
+          <span className={styles.sectionTitle}>Triggers</span>
+          {!addingTrigger && availableForTrigger.length > 0 && (
+            <button className={styles.addButton} onClick={() => setAddingTrigger(true)} aria-label="Add trigger">{<PlusIcon />}</button>
+          )}
+        </div>
         {triggerPages.map((page) => (
           <div key={page.id} className={styles.listItem}>
             <span className={styles.itemName}>{page.name}</span>
@@ -108,8 +137,39 @@ export function SettingsModal({ open, onClose, onToast }: SettingsModalProps) {
               placeholder="trigger"
               style={{ width: 52 }}
             />
+            <button className={styles.deleteButton} onClick={() => handleRemoveTrigger(page.id!)} aria-label={`Remove trigger from ${page.name}`}>{<TrashIcon />}</button>
           </div>
         ))}
+        {addingTrigger && (
+          <div className={styles.listItem}>
+            <select
+              className={styles.inlineInput}
+              value={newTriggerPageId ?? ''}
+              onChange={(e) => setNewTriggerPageId(e.target.value ? Number(e.target.value) : undefined)}
+              style={{ flex: 1 }}
+            >
+              <option value="">Select a page</option>
+              {availableForTrigger.map((p) => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+            <input
+              className={styles.colorInput}
+              type="text"
+              value={newTriggerChar}
+              onChange={(e) => {
+                const ch = e.target.value.slice(0, 1)
+                if (ch === '~' || /\s/.test(ch)) return
+                setNewTriggerChar(ch)
+              }}
+              placeholder="trigger"
+              style={{ width: 52 }}
+            />
+            <button className={styles.confirmButton} onClick={handleAddTrigger} aria-label="Confirm"
+              style={{ opacity: newTriggerPageId && newTriggerChar.trim() ? 1 : 0.4, pointerEvents: newTriggerPageId && newTriggerChar.trim() ? 'auto' : 'none' }}>{<CheckIcon />}</button>
+            <button className={styles.deleteButton} onClick={cancelAddTrigger} aria-label="Cancel">{<TrashIcon />}</button>
+          </div>
+        )}
       </div>
 
       {/* Dimensions */}

@@ -82,8 +82,6 @@ export interface Dimension {
 
 export type ChartDataSource =
   | 'entry-count'
-  | 'ticket-breakdown'
-  | 'ticketed-ratio'
   | 'feedback-sentiment'
   | 'feedback-by-dimension'
   | 'candidate-status'

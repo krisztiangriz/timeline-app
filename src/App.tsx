@@ -169,25 +169,14 @@ function useEnsureDefaults() {
       })
       await db.blocks.add({ pageId: timelineId as number, type: 'timeline', order: 0 })
 
-      // Structural hubs
-      await createHub('People', 'colleague-hub', '@')
-      await createHub('Projects', 'project-hub', '#')
-      await createHub('Candidates', 'candidate-hub', '%')
-
-      // Generic hubs
-      await createHub('Meetings', undefined, '!')
-
-      // Standalone pages
-      const adminId = await db.pages.add({
-        ...base, name: 'Admin', type: 'general' as const, mentionTrigger: '^',
-      })
-      await db.blocks.add({ pageId: adminId as number, type: 'visualization', order: 0 })
-      await db.blocks.add({ pageId: adminId as number, type: 'timeline', order: 1 })
-
+      // Visualization page
       const vizId = await db.pages.add({
         ...base, name: 'Visualization', type: 'general' as const,
       })
       await db.blocks.add({ pageId: vizId as number, type: 'visualization', order: 0 })
+
+      // Projects hub
+      await createHub('Projects', 'project-hub', '#')
     })()
   }, [])
 }
