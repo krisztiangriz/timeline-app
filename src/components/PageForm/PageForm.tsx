@@ -4,7 +4,7 @@ import { DragHandleIcon, TrashIcon, CheckIcon, PlusIcon, CloseIcon } from '../Ic
 import styles from './PageForm.module.css'
 import radio from '../../styles/radio.module.css'
 
-export type PageTemplate = 'tabbed' | 'simple' | 'text' | 'custom'
+export type PageTemplate = 'tabbed' | 'simple' | 'text' | 'custom' | 'hub-standard' | 'hub-table'
 
 export interface PageFormData {
   name: string
@@ -80,9 +80,10 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
     prevOpen.current = open
   }, [open, initial, hubs])
 
-  // Smart default: update template when hub selection changes
+  // Smart default: update template when hub selection or type changes
   useEffect(() => {
-    if (isHubType || isEdit) return
+    if (isEdit) return
+    if (isHubType) { setTemplate('hub-standard'); return }
     const hub = hubs.find(h => h.id === parentHubId)
     setTemplate(getDefaultTemplate(hub))
   }, [parentHubId, isHubType, isEdit, hubs])
@@ -133,6 +134,17 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
           <div className={styles.radioCol}>
             <RadioOption selected={!isHubType} onChange={() => setIsHubType(false)} label="Page" />
             <RadioOption selected={isHubType} onChange={() => setIsHubType(true)} label="Hub" />
+          </div>
+        </div>
+      )}
+
+      {/* Hub template (creation only, hub type only) */}
+      {!isEdit && !isHubProp && isHubType && (
+        <div className={styles.section}>
+          <span className={styles.label}>Hub template</span>
+          <div className={styles.radioCol}>
+            <RadioOption selected={template === 'hub-standard'} onChange={() => setTemplate('hub-standard')} label="Standard" description="Visualization + Table" />
+            <RadioOption selected={template === 'hub-table'} onChange={() => setTemplate('hub-table')} label="Table" description="Table only" />
           </div>
         </div>
       )}

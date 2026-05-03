@@ -215,7 +215,17 @@
   border-color: var(--color-input-border);
 }
 
-.formSelect {
+/* ---- Scope multi-select dropdown ---- */
+
+.scopeDropdown {
+  position: relative;
+}
+
+.scopeTrigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
   font-family: var(--font-family);
   font-size: var(--font-size-base);
   line-height: var(--line-height-base);
@@ -228,27 +238,35 @@
   height: 32px;
   cursor: pointer;
   outline: none;
-  width: 100%;
 }
 
-.formSelect:focus {
+.scopeTrigger:focus {
   border-color: var(--color-input-border);
 }
 
-/* ---- Scope multi-select ---- */
-
-.scopeHint {
-  font-size: var(--font-size-xs);
-  line-height: var(--line-height-base);
+.scopeChevron {
   color: var(--color-text-tertiary);
+  flex-shrink: 0;
+  transition: transform 0.15s;
 }
 
-.scopeList {
+.scopeChevronOpen {
+  composes: scopeChevron;
+  transform: rotate(180deg);
+}
+
+.scopePanel {
+  z-index: 200;
   display: flex;
   flex-direction: column;
-  gap: var(--space-sm);
-  max-height: 160px;
+  gap: var(--space-xs);
+  padding: var(--space-sm);
+  max-height: 200px;
   overflow-y: auto;
+  background: #FFFFFF;
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-sm);
+  box-shadow: 0px 2px 8px #5E6E8C33;
 }
 
 .scopeOption {
@@ -262,7 +280,7 @@
   color: var(--color-text-primary);
   background: none;
   border: none;
-  padding: 0;
+  padding: var(--space-xs) 0;
   text-align: left;
 }
 
@@ -276,5 +294,22 @@
 }
 
 .scopeCheckbox[data-checked="true"] {
+  border: 4px solid var(--color-text-body);
+}
+
+.scopeOptionChild {
+  padding-left: 24px;
+}
+
+.scopeRadio {
+  width: 16px;
+  height: 16px;
+  border-radius: 8px;
+  border: 1px solid var(--color-input-border);
+  background: var(--color-input-bg);
+  flex-shrink: 0;
+}
+
+.scopeRadio[data-checked="true"] {
   border: 4px solid var(--color-text-body);
 }

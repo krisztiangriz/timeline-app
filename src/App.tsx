@@ -56,8 +56,10 @@ function GlobalOverlays() {
     // Hub creation
     if (data.isHub) {
       const pageId = await addPage({ name: data.name, type: 'hub', description: '' })
-      await db.blocks.add({ pageId, type: 'visualization', order: 0 })
-      await db.blocks.add({ pageId, type: 'table', order: 1 })
+      if (data.template !== 'hub-table') {
+        await db.blocks.add({ pageId, type: 'visualization', order: 0 })
+      }
+      await db.blocks.add({ pageId, type: 'table', order: data.template === 'hub-table' ? 0 : 1 })
       setAddPageOpen(false)
       showToast('Hub created')
       navigate(`/page/${pageId}`)

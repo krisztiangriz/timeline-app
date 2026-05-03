@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef, useMemo } from 'react'
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { Modal } from '../Modal/Modal'
 import { DATA_SOURCE_LABELS, VALID_CHART_TYPES } from './ChartRenderer'
 import { resolveScopes } from '../../hooks/useChartConfigs'
@@ -21,6 +22,7 @@ interface ScopeOption {
   label: string
   scope: ChartScope
   key: string
+  isChild?: boolean
 }
 
 function scopeKey(s: ChartScope): string {
@@ -43,6 +45,34 @@ function isScopeSelected(scopes: ChartScope[], scope: ChartScope): boolean {
   return scopes.some((s) => scopesEqual(s, scope))
 }
 
+// ---- Dropdown panel rendered in a portal to escape modal overflow ----
+
+function DropdownPanel({ anchorRef, children }: { anchorRef: React.RefObject<HTMLElement | null>; children: React.ReactNode }) {
+  const [pos, setPos] = useState<{ top: number; left: number; width: number } | null>(null)
+
+  useEffect(() => {
+    function update() {
+      const el = anchorRef.current
+      if (!el) return
+      const rect = el.getBoundingClientRect()
+      setPos({ top: rect.bottom + 4, left: rect.left, width: rect.width })
+    }
+    update()
+    window.addEventListener('scroll', update, true)
+    window.addEventListener('resize', update)
+    return () => { window.removeEventListener('scroll', update, true); window.removeEventListener('resize', update) }
+  }, [anchorRef])
+
+  if (!pos) return null
+
+  return createPortal(
+    <div className={styles.scopePanel} data-dropdown-panel style={{ position: 'fixed', top: pos.top, left: pos.left, width: pos.width }}>
+      {children}
+    </div>,
+    document.body,
+  )
+}
+
 // ---- Component ----
 
 interface AddChartModalProps {
@@ -60,21 +90,36 @@ export function AddChartModal({ open, onClose, onAdd, editing, onUpdate, pageId,
   const [scopes, setScopes] = useState<ChartScope[]>([])
   const [source, setSource] = useState<ChartDataSource>(editing?.dataSource ?? 'entry-count')
   const [type, setType] = useState<ChartType>(editing?.chartType ?? 'bar')
+  const [scopeOpen, setScopeOpen] = useState(false)
+  const [sourceOpen, setSourceOpen] = useState(false)
   const prevOpen = useRef(false)
   const userEditedName = useRef(false)
+  const scopeRef = useRef<HTMLDivElement>(null)
+  const sourceRef = useRef<HTMLDivElement>(null)
+  const scopeTriggerRef = useRef<HTMLButtonElement>(null)
+  const sourceTriggerRef = useRef<HTMLButtonElement>(null)
 
-  // Build scope options: "This page" + hubs + standalone root pages (no parentId, not hub, not this page)
+  // Build scope options: grouped tree — "This page", main-timeline, hubs with children, standalone pages
   const scopeOptions = useMemo<ScopeOption[]>(() => {
     const opts: ScopeOption[] = [
       { label: 'This page', scope: { type: 'page', pageId }, key: `page-${pageId}` },
     ]
-    // Hubs
-    for (const p of allPages) {
-      if (p.type === 'hub') {
-        opts.push({ label: p.name, scope: { type: 'hub', hubId: p.id! }, key: `hub-${p.id}` })
+    // Main timeline (if not the current page)
+    const mainTimeline = allPages.find((p) => p.role === 'main-timeline' && p.id !== pageId)
+    if (mainTimeline) {
+      opts.push({ label: mainTimeline.name, scope: { type: 'page', pageId: mainTimeline.id! }, key: `page-${mainTimeline.id}` })
+    }
+    // Hubs with their children indented underneath
+    for (const hub of allPages) {
+      if (hub.type !== 'hub') continue
+      opts.push({ label: hub.name, scope: { type: 'hub', hubId: hub.id! }, key: `hub-${hub.id}` })
+      const children = allPages.filter((p) => p.parentId === hub.id && p.type !== 'candidate')
+      for (const child of children) {
+        if (child.id === pageId) continue
+        opts.push({ label: child.name, scope: { type: 'page', pageId: child.id! }, key: `page-${child.id}`, isChild: true })
       }
     }
-    // Standalone root pages (not hubs, no parent, not the current page)
+    // Standalone root pages (not hubs, no parent, not main-timeline, not current page)
     for (const p of allPages) {
       if (p.type !== 'hub' && !p.parentId && p.id !== pageId && p.role !== 'main-timeline') {
         opts.push({ label: p.name, scope: { type: 'page', pageId: p.id! }, key: `page-${p.id}` })
@@ -83,9 +128,41 @@ export function AddChartModal({ open, onClose, onAdd, editing, onUpdate, pageId,
     return opts
   }, [allPages, pageId])
 
+  // Close dropdowns on click outside
+  const handleClickOutside = useCallback((e: MouseEvent) => {
+    const target = e.target as HTMLElement
+    // Don't close if clicking inside a portaled dropdown panel
+    if (target.closest?.('[data-dropdown-panel]')) return
+    if (scopeRef.current && !scopeRef.current.contains(target)) {
+      setScopeOpen(false)
+    }
+    if (sourceRef.current && !sourceRef.current.contains(target)) {
+      setSourceOpen(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (scopeOpen || sourceOpen) {
+      document.addEventListener('mousedown', handleClickOutside)
+      return () => document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [scopeOpen, sourceOpen, handleClickOutside])
+
+  // Summary text for the scope trigger
+  const scopeSummary = useMemo(() => {
+    if (scopes.length === 0) return 'All'
+    if (scopes.length === 1) {
+      const match = scopeOptions.find((o) => scopesEqual(o.scope, scopes[0]))
+      return match?.label ?? '1 selected'
+    }
+    return `${scopes.length} selected`
+  }, [scopes, scopeOptions])
+
   // Reset form when modal opens
   useEffect(() => {
     if (open && !prevOpen.current) {
+      setScopeOpen(false)
+      setSourceOpen(false)
       if (editing) {
         setName(editing.name ?? '')
         setScopes(resolveScopes(editing))
@@ -144,40 +221,76 @@ export function AddChartModal({ open, onClose, onAdd, editing, onUpdate, pageId,
           />
         </div>
 
-        {/* Scope — multi-select checkboxes */}
+        {/* Scope — multi-select dropdown */}
         <div className={styles.formSection}>
           <span className={styles.formLabel}>Scope</span>
-          <span className={styles.scopeHint}>None selected = all data</span>
-          <div className={styles.scopeList}>
-            {scopeOptions.map((opt) => (
-              <button
-                key={opt.key}
-                className={styles.scopeOption}
-                onClick={() => setScopes(toggleScope(scopes, opt.scope))}
-                type="button"
-              >
-                <div
-                  className={styles.scopeCheckbox}
-                  data-checked={isScopeSelected(scopes, opt.scope)}
-                />
-                {opt.label}
-              </button>
-            ))}
+          <div className={styles.scopeDropdown} ref={scopeRef}>
+            <button
+              className={styles.scopeTrigger}
+              onClick={() => setScopeOpen((v) => !v)}
+              type="button"
+              ref={scopeTriggerRef}
+            >
+              <span>{scopeSummary}</span>
+              <svg className={scopeOpen ? styles.scopeChevronOpen : styles.scopeChevron} width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <path d="M12 13.0729L7.42708 8.5L5.92708 10L12 16.0729L18.0729 10L16.5729 8.5L12 13.0729Z" fill="currentColor" />
+              </svg>
+            </button>
+            {scopeOpen && (
+              <DropdownPanel anchorRef={scopeTriggerRef}>
+                {scopeOptions.map((opt) => (
+                  <button
+                    key={opt.key}
+                    className={opt.isChild ? `${styles.scopeOption} ${styles.scopeOptionChild}` : styles.scopeOption}
+                    onClick={() => setScopes(toggleScope(scopes, opt.scope))}
+                    type="button"
+                  >
+                    <div
+                      className={styles.scopeCheckbox}
+                      data-checked={isScopeSelected(scopes, opt.scope)}
+                    />
+                    {opt.label}
+                  </button>
+                ))}
+              </DropdownPanel>
+            )}
           </div>
         </div>
 
-        {/* Data source */}
+        {/* Data source — single-select dropdown */}
         <div className={styles.formSection}>
           <span className={styles.formLabel}>Data source</span>
-          <select
-            className={styles.formSelect}
-            value={source}
-            onChange={(e) => setSource(e.target.value as ChartDataSource)}
-          >
-            {ALL_SOURCES.map((s) => (
-              <option key={s} value={s}>{DATA_SOURCE_LABELS[s]}</option>
-            ))}
-          </select>
+          <div className={styles.scopeDropdown} ref={sourceRef}>
+            <button
+              className={styles.scopeTrigger}
+              onClick={() => setSourceOpen((v) => !v)}
+              type="button"
+              ref={sourceTriggerRef}
+            >
+              <span>{DATA_SOURCE_LABELS[source]}</span>
+              <svg className={sourceOpen ? styles.scopeChevronOpen : styles.scopeChevron} width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <path d="M12 13.0729L7.42708 8.5L5.92708 10L12 16.0729L18.0729 10L16.5729 8.5L12 13.0729Z" fill="currentColor" />
+              </svg>
+            </button>
+            {sourceOpen && (
+              <DropdownPanel anchorRef={sourceTriggerRef}>
+                {ALL_SOURCES.map((s) => (
+                  <button
+                    key={s}
+                    className={styles.scopeOption}
+                    onClick={() => { setSource(s); setSourceOpen(false) }}
+                    type="button"
+                  >
+                    <div
+                      className={styles.scopeRadio}
+                      data-checked={source === s}
+                    />
+                    {DATA_SOURCE_LABELS[s]}
+                  </button>
+                ))}
+              </DropdownPanel>
+            )}
+          </div>
         </div>
 
         {/* Chart type */}
