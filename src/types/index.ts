@@ -99,7 +99,8 @@ export interface ChartConfig {
   name?: string
   dataSource: ChartDataSource
   chartType: ChartType
-  scope?: ChartScope
+  scope?: ChartScope          // deprecated — kept for backward compat with existing DB records
+  scopes?: ChartScope[]       // new: multi-select scopes (empty = all data)
   order: number
 }
 

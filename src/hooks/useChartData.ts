@@ -78,6 +78,36 @@ export function filterFeedbacksByScope(feedbacks: Feedback[], scope: ChartScope,
   return feedbacks
 }
 
+// ---- Multi-scope filtering (union + dedup) ----
+
+export function filterEntriesByScopes(entries: TimelineEntry[], scopes: ChartScope[], allPages: Page[]): TimelineEntry[] {
+  if (scopes.length === 0) return entries
+  if (scopes.length === 1) return filterEntriesByScope(entries, scopes[0], allPages)
+  const seen = new Set<number>()
+  const result: TimelineEntry[] = []
+  for (const scope of scopes) {
+    for (const e of filterEntriesByScope(entries, scope, allPages)) {
+      const id = e.id!
+      if (!seen.has(id)) { seen.add(id); result.push(e) }
+    }
+  }
+  return result
+}
+
+export function filterFeedbacksByScopes(feedbacks: Feedback[], scopes: ChartScope[], allPages: Page[]): Feedback[] {
+  if (scopes.length === 0) return feedbacks
+  if (scopes.length === 1) return filterFeedbacksByScope(feedbacks, scopes[0], allPages)
+  const seen = new Set<number>()
+  const result: Feedback[] = []
+  for (const scope of scopes) {
+    for (const f of filterFeedbacksByScope(feedbacks, scope, allPages)) {
+      const id = f.id!
+      if (!seen.has(id)) { seen.add(id); result.push(f) }
+    }
+  }
+  return result
+}
+
 // ---- All entries / feedbacks ----
 
 export function useAllEntries() {
@@ -89,23 +119,32 @@ export function useAllFeedbacks() {
 }
 
 // ---- Aggregation: entry count (scope-aware) ----
-// Hub scope → break down by children
-// Page scope → single page over time
-// Global → total over time
+// Hub scopes → break down by children of all selected hubs
+// Other scopes / empty → total over time
 
 export function useEntryCount(
   entries: TimelineEntry[],
   pages: Page[],
-  scope: ChartScope,
+  scopes: ChartScope[],
   monthCount = 12,
 ) {
   return useMemo(() => {
     const months = buildMonthKeys(monthCount)
     const cutoff = getCutoff(monthCount)
 
-    // Hub scope: break down by children
-    if (scope.type === 'hub') {
-      const children = pages.filter((p) => p.parentId === scope.hubId)
+    // Collect hub scopes — if any scope is hub-type, do per-child breakdown
+    const hubIds: number[] = []
+    for (const s of scopes) {
+      if (s.type === 'hub') hubIds.push(s.hubId)
+      else if (s.type === 'page') {
+        const page = pages.find((p) => p.id === s.pageId)
+        if (page?.type === 'hub') hubIds.push(page.id!)
+      }
+    }
+
+    if (hubIds.length > 0) {
+      const hubIdSet = new Set(hubIds)
+      const children = pages.filter((p) => p.parentId && hubIdSet.has(p.parentId))
       const childIdSet = new Set(children.map((p) => p.id!))
 
       const data = months.map((m) => {
@@ -152,7 +191,7 @@ export function useEntryCount(
       return { data, keys, summary }
     }
 
-    // Page or Global scope: single series "Entries"
+    // No hub scopes (or empty scopes): single series "Entries"
     const data = months.map((m) => {
       const row: Record<string, string | number> = { month: formatMonthLabel(m), Entries: 0 }
       return row
@@ -176,7 +215,7 @@ export function useEntryCount(
     const summary = total > 0 ? [{ name: 'Entries', value: total }] : []
 
     return { data, keys, summary }
-  }, [entries, pages, scope, monthCount])
+  }, [entries, pages, scopes, monthCount])
 }
 
 // ---- Aggregation: candidates by status ----
@@ -249,22 +288,32 @@ export function useFeedbackSummary(feedbacks: Feedback[], monthCount = 12) {
 }
 
 // ---- Aggregation: dimension distribution (scope-aware) ----
-// Hub scope → per-child dimension breakdown
-// Page/Global → aggregate distribution
+// Hub scopes → per-child dimension breakdown
+// Other scopes / empty → aggregate distribution
 
 export function useDimensionDistribution(
   feedbacks: Feedback[],
   pages: Page[],
   dimensionNames: Map<number, string>,
-  scope: ChartScope,
+  scopes: ChartScope[],
   monthCount = 12,
 ) {
   return useMemo(() => {
     const cutoff = getCutoff(monthCount)
 
-    // Hub scope: per-child dimension breakdown
-    if (scope.type === 'hub') {
-      const children = pages.filter((p) => p.parentId === scope.hubId)
+    // Collect hub scopes — if any scope is hub-type, do per-child breakdown
+    const hubIds: number[] = []
+    for (const s of scopes) {
+      if (s.type === 'hub') hubIds.push(s.hubId)
+      else if (s.type === 'page') {
+        const page = pages.find((p) => p.id === s.pageId)
+        if (page?.type === 'hub') hubIds.push(page.id!)
+      }
+    }
+
+    if (hubIds.length > 0) {
+      const hubIdSet = new Set(hubIds)
+      const children = pages.filter((p) => p.parentId && hubIdSet.has(p.parentId))
       const dims = [...dimensionNames.values()]
 
       const data = children.map((c) => {
@@ -288,7 +337,7 @@ export function useDimensionDistribution(
       return { perChild: true as const, data: filteredData, keys }
     }
 
-    // Page or Global: aggregate counts by dimension
+    // No hub scopes: aggregate counts by dimension
     const counts = new Map<string, number>()
     for (const f of feedbacks) {
       if (!f.dimensionId) continue
@@ -299,5 +348,5 @@ export function useDimensionDistribution(
     const summary = [...counts.entries()].map(([name, value]) => ({ name, value }))
 
     return { perChild: false as const, summary }
-  }, [feedbacks, pages, dimensionNames, scope, monthCount])
+  }, [feedbacks, pages, dimensionNames, scopes, monthCount])
 }

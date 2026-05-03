@@ -4,19 +4,18 @@ import {
   PieChart, Pie, Cell, Legend, LineChart, Line, AreaChart, Area,
 } from 'recharts'
 import {
-  filterEntriesByScope, filterFeedbacksByScope,
+  filterEntriesByScopes, filterFeedbacksByScopes,
   useEntryCount,
   useCandidatesByStatus, STATUS_COLORS,
   useFeedbackByMonth, useFeedbackSummary,
   useDimensionDistribution,
   getColor,
 } from '../../hooks/useChartData'
+import { resolveScopes } from '../../hooks/useChartConfigs'
 import type { ChartConfig, ChartScope, ChartDataSource, ChartType, TimelineEntry, Feedback, Page, Dimension } from '../../types'
 import styles from './Charts.module.css'
 
 // ---- Shared constants ----
-
-const GLOBAL_SCOPE: ChartScope = { type: 'global' }
 
 function pieLabel({ name, percent }: { name?: string; percent?: number }) {
   return `${name ?? ''} ${((percent ?? 0) * 100).toFixed(0)}%`
@@ -100,9 +99,9 @@ export function ChartRenderer(props: ChartRendererProps) {
 
 // ---- Helper: scope-filtered data ----
 
-function useScopedData(entries: TimelineEntry[], feedbacks: Feedback[], pages: Page[], scope: ChartScope) {
-  const scopedEntries = useMemo(() => filterEntriesByScope(entries, scope, pages), [entries, scope, pages])
-  const scopedFeedbacks = useMemo(() => filterFeedbacksByScope(feedbacks, scope, pages), [feedbacks, scope, pages])
+function useScopedData(entries: TimelineEntry[], feedbacks: Feedback[], pages: Page[], scopes: ChartScope[]) {
+  const scopedEntries = useMemo(() => filterEntriesByScopes(entries, scopes, pages), [entries, scopes, pages])
+  const scopedFeedbacks = useMemo(() => filterFeedbacksByScopes(feedbacks, scopes, pages), [feedbacks, scopes, pages])
   return { scopedEntries, scopedFeedbacks }
 }
 
@@ -113,9 +112,9 @@ function useContainerClass(config: ChartConfig, containerClass?: string) {
 // ---- Per-source chart components ----
 
 function EntryCountChart({ config, monthCount = 12, entries, pages, containerClass }: ChartRendererProps) {
-  const scope = config.scope ?? GLOBAL_SCOPE
-  const { scopedEntries } = useScopedData(entries, [], pages, scope)
-  const data = useEntryCount(scopedEntries, pages, scope, monthCount)
+  const scopes = resolveScopes(config)
+  const { scopedEntries } = useScopedData(entries, [], pages, scopes)
+  const data = useEntryCount(scopedEntries, pages, scopes, monthCount)
   const cls = useContainerClass(config, containerClass)
   const { chartType } = config
 
@@ -168,8 +167,8 @@ function CandidateStatusChart({ config, pages, containerClass }: ChartRendererPr
 }
 
 function FeedbackSentimentChart({ config, monthCount = 12, feedbacks, pages, containerClass }: ChartRendererProps) {
-  const scope = config.scope ?? GLOBAL_SCOPE
-  const { scopedFeedbacks } = useScopedData([], feedbacks, pages, scope)
+  const scopes = resolveScopes(config)
+  const { scopedFeedbacks } = useScopedData([], feedbacks, pages, scopes)
   const byMonth = useFeedbackByMonth(scopedFeedbacks, monthCount)
   const summary = useFeedbackSummary(scopedFeedbacks, monthCount)
   const cls = useContainerClass(config, containerClass)
@@ -219,10 +218,10 @@ function FeedbackSentimentChart({ config, monthCount = 12, feedbacks, pages, con
 }
 
 function FeedbackDimensionChart({ config, monthCount = 12, feedbacks, pages, dimensions, containerClass }: ChartRendererProps) {
-  const scope = config.scope ?? GLOBAL_SCOPE
-  const { scopedFeedbacks } = useScopedData([], feedbacks, pages, scope)
+  const scopes = resolveScopes(config)
+  const { scopedFeedbacks } = useScopedData([], feedbacks, pages, scopes)
   const dimMap = useMemo(() => new Map(dimensions.map((d) => [d.id!, d.name])), [dimensions])
-  const data = useDimensionDistribution(scopedFeedbacks, pages, dimMap, scope, monthCount)
+  const data = useDimensionDistribution(scopedFeedbacks, pages, dimMap, scopes, monthCount)
   const cls = useContainerClass(config, containerClass)
   const { chartType } = config
 

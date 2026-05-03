@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState } from 'react'
 import { EmptyState } from '../EmptyState/EmptyState'
 import { ChartRenderer, DATA_SOURCE_LABELS } from './ChartRenderer'
 import { AddChartModal } from './AddChartModal'
@@ -36,17 +36,12 @@ export function ConfigurableViz({ blockId, pageId }: ConfigurableVizProps) {
     localStorage.setItem(`viz-range-${blockId}`, String(r))
   }
 
-  const hubPages = useMemo(() =>
-    allPages.filter((p) => p.type === 'hub'),
-    [allPages]
-  )
-
-  async function handleAdd(name: string, dataSource: ChartDataSource, chartType: ChartType, scope?: ChartScope) {
-    await addChartConfig(blockId, name, dataSource, chartType, scope)
+  async function handleAdd(name: string, dataSource: ChartDataSource, chartType: ChartType, scopes?: ChartScope[]) {
+    await addChartConfig(blockId, name, dataSource, chartType, scopes)
   }
 
-  async function handleUpdate(id: number, name: string, dataSource: ChartDataSource, chartType: ChartType, scope?: ChartScope) {
-    await updateChartConfig(id, { name, dataSource, chartType, scope })
+  async function handleUpdate(id: number, name: string, dataSource: ChartDataSource, chartType: ChartType, scopes?: ChartScope[]) {
+    await updateChartConfig(id, { name, dataSource, chartType, scopes })
   }
 
   async function handleDelete(id: number) {
@@ -111,7 +106,7 @@ export function ConfigurableViz({ blockId, pageId }: ConfigurableVizProps) {
         editing={editing}
         onUpdate={handleUpdate}
         pageId={pageId}
-        hubPages={hubPages}
+        allPages={allPages}
       />
     </div>
   )

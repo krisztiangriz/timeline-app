@@ -1,6 +1,7 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { Modal } from '../Modal/Modal'
 import { DATA_SOURCE_LABELS, VALID_CHART_TYPES } from './ChartRenderer'
+import { resolveScopes } from '../../hooks/useChartConfigs'
 import type { ChartDataSource, ChartType, ChartConfig, ChartScope, Page } from '../../types'
 import styles from './Charts.module.css'
 import radio from '../../styles/radio.module.css'
@@ -14,48 +15,86 @@ const CHART_TYPE_LABELS: Record<ChartType, string> = {
   bar: 'Bar', line: 'Line', area: 'Area', pie: 'Pie',
 }
 
-function scopeToValue(scope: ChartScope): string {
-  if (scope.type === 'global') return 'global'
-  if (scope.type === 'page') return 'page'
-  return `hub-${scope.hubId}`
+// ---- Scope helpers ----
+
+interface ScopeOption {
+  label: string
+  scope: ChartScope
+  key: string
 }
 
-function valueToScope(value: string, pageId: number): ChartScope {
-  if (value === 'global') return { type: 'global' }
-  if (value === 'page') return { type: 'page', pageId }
-  return { type: 'hub', hubId: Number(value.replace('hub-', '')) }
+function scopeKey(s: ChartScope): string {
+  if (s.type === 'page') return `page-${s.pageId}`
+  if (s.type === 'hub') return `hub-${s.hubId}`
+  return 'global'
 }
+
+function scopesEqual(a: ChartScope, b: ChartScope): boolean {
+  return scopeKey(a) === scopeKey(b)
+}
+
+function toggleScope(scopes: ChartScope[], scope: ChartScope): ChartScope[] {
+  const idx = scopes.findIndex((s) => scopesEqual(s, scope))
+  if (idx >= 0) return scopes.filter((_, i) => i !== idx)
+  return [...scopes, scope]
+}
+
+function isScopeSelected(scopes: ChartScope[], scope: ChartScope): boolean {
+  return scopes.some((s) => scopesEqual(s, scope))
+}
+
+// ---- Component ----
 
 interface AddChartModalProps {
   open: boolean
   onClose: () => void
-  onAdd: (name: string, dataSource: ChartDataSource, chartType: ChartType, scope?: ChartScope) => void
+  onAdd: (name: string, dataSource: ChartDataSource, chartType: ChartType, scopes?: ChartScope[]) => void
   editing?: ChartConfig
-  onUpdate?: (id: number, name: string, dataSource: ChartDataSource, chartType: ChartType, scope?: ChartScope) => void
+  onUpdate?: (id: number, name: string, dataSource: ChartDataSource, chartType: ChartType, scopes?: ChartScope[]) => void
   pageId: number
-  hubPages: Page[]
+  allPages: Page[]
 }
 
-export function AddChartModal({ open, onClose, onAdd, editing, onUpdate, pageId, hubPages }: AddChartModalProps) {
+export function AddChartModal({ open, onClose, onAdd, editing, onUpdate, pageId, allPages }: AddChartModalProps) {
   const [name, setName] = useState('')
-  const [scope, setScope] = useState<ChartScope>(editing?.scope ?? { type: 'global' })
+  const [scopes, setScopes] = useState<ChartScope[]>([])
   const [source, setSource] = useState<ChartDataSource>(editing?.dataSource ?? 'entry-count')
   const [type, setType] = useState<ChartType>(editing?.chartType ?? 'bar')
   const prevOpen = useRef(false)
   const userEditedName = useRef(false)
+
+  // Build scope options: "This page" + hubs + standalone root pages (no parentId, not hub, not this page)
+  const scopeOptions = useMemo<ScopeOption[]>(() => {
+    const opts: ScopeOption[] = [
+      { label: 'This page', scope: { type: 'page', pageId }, key: `page-${pageId}` },
+    ]
+    // Hubs
+    for (const p of allPages) {
+      if (p.type === 'hub') {
+        opts.push({ label: p.name, scope: { type: 'hub', hubId: p.id! }, key: `hub-${p.id}` })
+      }
+    }
+    // Standalone root pages (not hubs, no parent, not the current page)
+    for (const p of allPages) {
+      if (p.type !== 'hub' && !p.parentId && p.id !== pageId && p.role !== 'main-timeline') {
+        opts.push({ label: p.name, scope: { type: 'page', pageId: p.id! }, key: `page-${p.id}` })
+      }
+    }
+    return opts
+  }, [allPages, pageId])
 
   // Reset form when modal opens
   useEffect(() => {
     if (open && !prevOpen.current) {
       if (editing) {
         setName(editing.name ?? '')
-        setScope(editing.scope ?? { type: 'global' })
+        setScopes(resolveScopes(editing))
         setSource(editing.dataSource)
         setType(editing.chartType)
         userEditedName.current = true
       } else {
         setName(DATA_SOURCE_LABELS['entry-count'] ?? '')
-        setScope({ type: 'global' })
+        setScopes([])
         setSource('entry-count')
         setType('bar')
         userEditedName.current = false
@@ -76,10 +115,11 @@ export function AddChartModal({ open, onClose, onAdd, editing, onUpdate, pageId,
 
   function handleConfirm() {
     const chartName = name.trim() || (DATA_SOURCE_LABELS[source] ?? 'Chart')
+    const scopesValue = scopes.length > 0 ? scopes : undefined
     if (editing && onUpdate) {
-      onUpdate(editing.id!, chartName, source, effectiveType, scope)
+      onUpdate(editing.id!, chartName, source, effectiveType, scopesValue)
     } else {
-      onAdd(chartName, source, effectiveType, scope)
+      onAdd(chartName, source, effectiveType, scopesValue)
     }
     onClose()
   }
@@ -104,20 +144,26 @@ export function AddChartModal({ open, onClose, onAdd, editing, onUpdate, pageId,
           />
         </div>
 
-        {/* Scope */}
+        {/* Scope — multi-select checkboxes */}
         <div className={styles.formSection}>
           <span className={styles.formLabel}>Scope</span>
-          <select
-            className={styles.formSelect}
-            value={scopeToValue(scope)}
-            onChange={(e) => setScope(valueToScope(e.target.value, pageId))}
-          >
-            <option value="global">All</option>
-            <option value="page">This page</option>
-            {hubPages.map((h) => (
-              <option key={h.id} value={`hub-${h.id}`}>{h.name}</option>
+          <span className={styles.scopeHint}>None selected = all data</span>
+          <div className={styles.scopeList}>
+            {scopeOptions.map((opt) => (
+              <button
+                key={opt.key}
+                className={styles.scopeOption}
+                onClick={() => setScopes(toggleScope(scopes, opt.scope))}
+                type="button"
+              >
+                <div
+                  className={styles.scopeCheckbox}
+                  data-checked={isScopeSelected(scopes, opt.scope)}
+                />
+                {opt.label}
+              </button>
             ))}
-          </select>
+          </div>
         </div>
 
         {/* Data source */}
