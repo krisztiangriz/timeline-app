@@ -11,7 +11,6 @@ import {
   useDimensionDistribution,
   getColor,
 } from '../../hooks/useChartData'
-import { resolveScopes } from '../../hooks/useChartConfigs'
 import type { ChartConfig, ChartScope, ChartDataSource, ChartType, TimelineEntry, Feedback, Page, Dimension } from '../../types'
 import styles from './Charts.module.css'
 
@@ -131,7 +130,7 @@ function useContainerClass(config: ChartConfig, containerClass?: string) {
 // ---- Per-source chart components ----
 
 function EntryCountChart({ config, monthCount = 12, entries, pages, containerClass }: ChartRendererProps) {
-  const scopes = resolveScopes(config)
+  const scopes = config.scopes ?? []
   const { scopedEntries } = useScopedData(entries, [], pages, scopes)
   const data = useEntryCount(scopedEntries, pages, scopes, monthCount)
   const cls = useContainerClass(config, containerClass)
@@ -190,7 +189,7 @@ function CandidateStatusChart({ config, pages, containerClass }: ChartRendererPr
 }
 
 function FeedbackSentimentChart({ config, monthCount = 12, feedbacks, pages, containerClass }: ChartRendererProps) {
-  const scopes = resolveScopes(config)
+  const scopes = config.scopes ?? []
   const { scopedFeedbacks } = useScopedData([], feedbacks, pages, scopes)
   const byMonth = useFeedbackByMonth(scopedFeedbacks, monthCount)
   const summary = useFeedbackSummary(scopedFeedbacks, monthCount)
@@ -241,7 +240,7 @@ function FeedbackSentimentChart({ config, monthCount = 12, feedbacks, pages, con
 }
 
 function FeedbackDimensionChart({ config, monthCount = 12, feedbacks, pages, dimensions, containerClass }: ChartRendererProps) {
-  const scopes = resolveScopes(config)
+  const scopes = config.scopes ?? []
   const { scopedFeedbacks } = useScopedData([], feedbacks, pages, scopes)
   const dimMap = useMemo(() => new Map(dimensions.map((d) => [d.id!, d.name])), [dimensions])
   const data = useDimensionDistribution(scopedFeedbacks, pages, dimMap, scopes, monthCount)

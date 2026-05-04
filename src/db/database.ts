@@ -234,6 +234,16 @@ class TimelineDB extends Dexie {
       pageSettings: '++id, &pageKey',
       chartConfigs: '++id, blockId, order',
     })
+    // v12: migrate deprecated scope → scopes on chartConfigs
+    this.version(12).stores({}).upgrade(async (tx) => {
+      const configs = tx.table('chartConfigs')
+      await configs.toCollection().modify((config: Record<string, unknown>) => {
+        if (config.scope && !config.scopes) {
+          config.scopes = [config.scope]
+        }
+        delete config.scope
+      })
+    })
   }
 }
 

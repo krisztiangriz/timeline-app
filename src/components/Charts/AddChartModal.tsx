@@ -2,7 +2,6 @@ import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { Modal } from '../Modal/Modal'
 import { DATA_SOURCE_LABELS, VALID_CHART_TYPES } from './ChartRenderer'
-import { resolveScopes } from '../../hooks/useChartConfigs'
 import type { ChartDataSource, ChartType, ChartConfig, ChartScope, Page } from '../../types'
 import styles from './Charts.module.css'
 import radio from '../../styles/radio.module.css'
@@ -165,7 +164,7 @@ export function AddChartModal({ open, onClose, onAdd, editing, onUpdate, pageId,
       setSourceOpen(false)
       if (editing) {
         setName(editing.name ?? '')
-        setScopes(resolveScopes(editing))
+        setScopes(editing.scopes ?? [])
         setSource(editing.dataSource)
         setType(editing.chartType)
         userEditedName.current = true

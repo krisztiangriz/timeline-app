@@ -55,7 +55,7 @@
   align-items: center;
   gap: var(--space-xl);
   justify-content: flex-end;
-  height: 20px;
+  height: 24px;
   cursor: pointer;
   position: relative;
   padding: var(--space-sm) 0;

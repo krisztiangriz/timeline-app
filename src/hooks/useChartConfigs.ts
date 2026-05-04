@@ -2,11 +2,6 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db/database'
 import type { ChartConfig, ChartDataSource, ChartType, ChartScope } from '../types'
 
-/** Resolve scopes from a ChartConfig, handling backward compat with old single `scope` field */
-export function resolveScopes(config: ChartConfig): ChartScope[] {
-  return config.scopes ?? (config.scope ? [config.scope] : [])
-}
-
 export function useChartConfigs(blockId: number) {
   return useLiveQuery(
     () => db.chartConfigs.where('blockId').equals(blockId).sortBy('order'),
