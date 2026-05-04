@@ -34,10 +34,15 @@ export async function deleteChartConfig(id: number) {
   const config = await db.chartConfigs.get(id)
   if (!config) return
   await db.chartConfigs.delete(id)
+  // Reorder remaining configs in one batch
   const remaining = await db.chartConfigs.where('blockId').equals(config.blockId).sortBy('order')
-  await db.transaction('rw', db.chartConfigs, async () => {
-    for (let i = 0; i < remaining.length; i++) {
-      await db.chartConfigs.update(remaining[i].id!, { order: i })
-    }
-  })
+  if (remaining.length > 0) {
+    await db.transaction('rw', db.chartConfigs, async () => {
+      for (let i = 0; i < remaining.length; i++) {
+        if (remaining[i].order !== i) {
+          await db.chartConfigs.update(remaining[i].id!, { order: i })
+        }
+      }
+    })
+  }
 }

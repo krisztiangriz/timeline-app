@@ -181,12 +181,9 @@ export function usePageActions() {
     const page = await db.pages.get(id)
     if (!page || page.role === 'main-timeline') return
     await db.pages.update(id, { archived: true })
-    // If hub, archive all children
+    // If hub, archive all children in one batch
     if (page.type === 'hub') {
-      const children = await db.pages.where('parentId').equals(id).toArray()
-      for (const child of children) {
-        await db.pages.update(child.id!, { archived: true })
-      }
+      await db.pages.where('parentId').equals(id).modify({ archived: true })
     }
   }
 
@@ -194,12 +191,9 @@ export function usePageActions() {
     const page = await db.pages.get(id)
     if (!page) return
     await db.pages.update(id, { archived: false })
-    // If hub, unarchive all children
+    // If hub, unarchive all children in one batch
     if (page.type === 'hub') {
-      const children = await db.pages.where('parentId').equals(id).toArray()
-      for (const child of children) {
-        await db.pages.update(child.id!, { archived: false })
-      }
+      await db.pages.where('parentId').equals(id).modify({ archived: false })
     }
   }
 

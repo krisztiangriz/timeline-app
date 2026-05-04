@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { BreadcrumbNav } from '../../components/Breadcrumb/Breadcrumb'
 import { PageHeader } from '../../components/PageHeader/PageHeader'
 import { EmptyState } from '../../components/EmptyState/EmptyState'
-import { useAppContext } from '../../hooks/useAppContext'
+import { usePreferences } from '../../hooks/useAppContext'
 import {
   usePageActions,
   buildPageTree,
@@ -30,7 +30,7 @@ function isHubPage(type: string): boolean {
 export function RootPage() {
   const { allPages } = useAutocomplete()
   const { updatePage } = usePageActions()
-  const { showArchived } = useAppContext()
+  const { showArchived } = usePreferences()
   const navigate = useNavigate()
   const { show: showToast } = useToast()
   const { toggleSort, sortPages, arrow } = useTableSort('root')

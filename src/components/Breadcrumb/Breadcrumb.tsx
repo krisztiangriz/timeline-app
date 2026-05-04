@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import type { BreadcrumbItem } from '../../types'
-import { useAppContext } from '../../hooks/useAppContext'
+import { useModalContext } from '../../hooks/useAppContext'
 import { SearchBar } from '../SearchBar/SearchBar'
 import { ContextMenu, type MenuEntry } from '../ContextMenu/ContextMenu'
 import { PlusIcon, SearchIcon } from '../Icons/Icons'
@@ -17,7 +17,7 @@ export function BreadcrumbNav({
   addMenuItems,
   moreMenuItems,
 }: BreadcrumbNavProps) {
-  const { searchOpen, setSearchOpen, setAddPageOpen } = useAppContext()
+  const { searchOpen, setSearchOpen, setAddPageOpen } = useModalContext()
 
   const addTrigger = (
     <button className={styles.actionButton} aria-label="Add">

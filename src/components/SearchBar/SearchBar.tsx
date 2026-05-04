@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useSearch } from '../../hooks/useSearch'
 import { getPagePath } from '../../hooks/usePages'
 import { useAutocomplete } from '../../hooks/useAutocomplete'
+import { SearchIcon, PlusIcon } from '../Icons/Icons'
 import { formatTableDate } from '../../utils/dateUtils'
 import styles from './SearchBar.module.css'
 
@@ -90,10 +91,7 @@ export function SearchBar({ open, onClose, onAddPage }: SearchBarProps) {
       <div className={styles.backdrop} onClick={onClose} />
       <div className={styles.container}>
         <div className={styles.inputWrapper}>
-          <svg className={styles.icon} width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <circle cx="7" cy="7" r="4.5" stroke="currentColor" strokeWidth="1.5" />
-            <path d="M10.5 10.5L13.5 13.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-          </svg>
+          <SearchIcon />
           <input
             ref={inputRef}
             className={styles.input}
@@ -144,9 +142,7 @@ export function SearchBar({ open, onClose, onAddPage }: SearchBarProps) {
               }}
               onMouseEnter={() => setActiveIndex(results.length)}
             >
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                <path d="M6 2V10M2 6H10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-              </svg>
+              <PlusIcon size={12} />
               Add new page
             </button>
           </div>

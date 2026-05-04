@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, memo } from 'react'
 import type { TimelineEntry } from '../../types'
 import { stripHtml } from '../../utils/stripHtml'
 import { filterHtmlToMention, stripSelfMention } from '../../utils/mentionParser'
@@ -18,7 +18,7 @@ interface TimelineEntryRowProps {
   crossRefPageId?: number
 }
 
-export function TimelineEntryRow({
+export const TimelineEntryRow = memo(function TimelineEntryRow({
   entry,
   onUpdate,
   onDelete,
@@ -82,4 +82,4 @@ export function TimelineEntryRow({
       </div>
     </div>
   )
-}
+})

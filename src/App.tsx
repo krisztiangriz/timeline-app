@@ -1,12 +1,7 @@
-import { useMemo, useEffect } from 'react'
+import { useMemo, useEffect, lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom'
-import { AppProvider, useAppContext } from './hooks/useAppContext'
+import { AppProvider, useModalContext } from './hooks/useAppContext'
 import { AutocompleteProvider, useAutocomplete } from './hooks/useAutocomplete'
-import { FeedbackForm } from './components/FeedbackForm/FeedbackForm'
-import { PageForm, type PageFormData, type HubInfo } from './components/PageForm/PageForm'
-import { SettingsModal } from './pages/SettingsPage/SettingsModal'
-import { HelpModal } from './components/HelpModal/HelpModal'
-import { OnboardingModal } from './components/OnboardingModal/OnboardingModal'
 import { DemoBanner } from './components/DemoBanner/DemoBanner'
 import { ToastContainer } from './components/Toast/Toast'
 import { useToast } from './hooks/useToast'
@@ -15,10 +10,20 @@ import { usePageActions, usePageByRole, getPagePath } from './hooks/usePages'
 import { db } from './db/database'
 import { seedDemoData } from './utils/demoData'
 import type { PageType, PageRole } from './types'
+import type { PageFormData, HubInfo } from './components/PageForm/PageForm'
 import { ROLE_TO_PAGE_TYPE } from './types'
-import { RootPage } from './pages/RootPage/RootPage'
-import { HubPage } from './pages/HubPage/HubPage'
-import { DetailPage } from './pages/DetailPage/DetailPage'
+
+// Lazy-loaded route components
+const RootPage = lazy(() => import('./pages/RootPage/RootPage').then((m) => ({ default: m.RootPage })))
+const HubPage = lazy(() => import('./pages/HubPage/HubPage').then((m) => ({ default: m.HubPage })))
+const DetailPage = lazy(() => import('./pages/DetailPage/DetailPage').then((m) => ({ default: m.DetailPage })))
+
+// Lazy-loaded modal components
+const FeedbackForm = lazy(() => import('./components/FeedbackForm/FeedbackForm').then((m) => ({ default: m.FeedbackForm })))
+const PageForm = lazy(() => import('./components/PageForm/PageForm').then((m) => ({ default: m.PageForm })))
+const SettingsModal = lazy(() => import('./pages/SettingsPage/SettingsModal').then((m) => ({ default: m.SettingsModal })))
+const HelpModal = lazy(() => import('./components/HelpModal/HelpModal').then((m) => ({ default: m.HelpModal })))
+const OnboardingModal = lazy(() => import('./components/OnboardingModal/OnboardingModal').then((m) => ({ default: m.OnboardingModal })))
 
 function GlobalOverlays() {
   const {
@@ -27,7 +32,7 @@ function GlobalOverlays() {
     settingsOpen, setSettingsOpen,
     helpOpen, setHelpOpen,
     onboardingOpen, setOnboardingOpen,
-  } = useAppContext()
+  } = useModalContext()
   const { toasts, show: showToast } = useToast()
   const { allPages } = useAutocomplete()
   const { addPage } = usePageActions()
@@ -85,7 +90,7 @@ function GlobalOverlays() {
         const tabDefs = [
           { name: 'Timeline', blockType: 'timeline' as const },
           { name: 'Feedback', blockType: 'feedback' as const },
-          { name: 'Insights', blockType: 'visualization' as const },
+          { name: 'Visualization', blockType: 'visualization' as const },
         ]
         for (let i = 0; i < tabDefs.length; i++) {
           const tabId = await db.layouts.add({ pageId, type: 'tab' as const, name: tabDefs[i].name, order: i })
@@ -123,17 +128,21 @@ function GlobalOverlays() {
 
   return (
     <>
-      <FeedbackForm open={feedbackOpen} onClose={() => setFeedbackOpen(false)} onSuccess={showToast} />
-      <PageForm
-        open={addPageOpen}
-        onClose={() => setAddPageOpen(false)}
-        onSubmit={handleAddPage}
-        hubs={hubs}
-        initial={{ parentHubId: defaultParentHubId }}
-      />
-      <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} onToast={showToast} />
-      <HelpModal open={helpOpen} onClose={() => setHelpOpen(false)} />
-      <OnboardingModal open={onboardingOpen} onClose={() => setOnboardingOpen(false)} />
+      {feedbackOpen && <Suspense fallback={null}><FeedbackForm open={feedbackOpen} onClose={() => setFeedbackOpen(false)} onSuccess={showToast} /></Suspense>}
+      {addPageOpen && (
+        <Suspense fallback={null}>
+          <PageForm
+            open={addPageOpen}
+            onClose={() => setAddPageOpen(false)}
+            onSubmit={handleAddPage}
+            hubs={hubs}
+            initial={{ parentHubId: defaultParentHubId }}
+          />
+        </Suspense>
+      )}
+      {settingsOpen && <Suspense fallback={null}><SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} onToast={showToast} /></Suspense>}
+      {helpOpen && <Suspense fallback={null}><HelpModal open={helpOpen} onClose={() => setHelpOpen(false)} /></Suspense>}
+      {onboardingOpen && <Suspense fallback={null}><OnboardingModal open={onboardingOpen} onClose={() => setOnboardingOpen(false)} /></Suspense>}
       <ToastContainer toasts={toasts} />
     </>
   )
@@ -177,9 +186,9 @@ function useEnsureDefaults() {
       })
       await db.blocks.add({ pageId: timelineId as number, type: 'timeline', order: 0 })
 
-      // Insights page
+      // Visualization page
       const vizId = await db.pages.add({
-        ...base, name: 'Insights', type: 'general' as const,
+        ...base, name: 'Visualization', type: 'general' as const,
       })
       await db.blocks.add({ pageId: vizId as number, type: 'visualization', order: 0 })
 
@@ -204,6 +213,7 @@ export default function App() {
       <AppProvider>
         <AutocompleteProvider>
         {isDemoMode && <DemoBanner onExitDemo={clearDemoFlag} />}
+        <Suspense fallback={null}>
         <Routes>
           <Route path="/" element={<RootPage />} />
           <Route path="/timeline" element={<TimelineRedirect />} />
@@ -215,6 +225,7 @@ export default function App() {
           <Route path="/projects/:id" element={<DetailPage routePrefix="projects" />} />
           <Route path="/page/:id" element={<DetailPage />} />
         </Routes>
+        </Suspense>
         <GlobalOverlays />
         </AutocompleteProvider>
       </AppProvider>

@@ -3,7 +3,7 @@ import { Modal } from '../../components/Modal/Modal'
 import { useDimensions, useDimensionActions } from '../../hooks/useDimensions'
 import { useAutocomplete } from '../../hooks/useAutocomplete'
 import { usePageActions } from '../../hooks/usePages'
-import { useAppContext } from '../../hooks/useAppContext'
+import { useModalContext, usePreferences } from '../../hooks/useAppContext'
 import { TrashIcon, CheckIcon, PlusIcon } from '../../components/Icons/Icons'
 import { downloadExport, triggerImport } from '../../utils/exportImport'
 import styles from './SettingsModal.module.css'
@@ -18,7 +18,8 @@ export function SettingsModal({ open, onClose, onToast }: SettingsModalProps) {
   const dimensions = useDimensions()
   const { allPages } = useAutocomplete()
   const { updatePage } = usePageActions()
-  const { showArchived, setShowArchived, setOnboardingOpen } = useAppContext()
+  const { showArchived, setShowArchived } = usePreferences()
+  const { setOnboardingOpen } = useModalContext()
   const { addDimension, deleteDimension } = useDimensionActions()
 
   // Dimension add state

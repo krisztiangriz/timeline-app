@@ -17,7 +17,6 @@ class TimelineDB extends Dexie {
   blocks!: Table<Block>
   timelineEntries!: Table<TimelineEntry>
   feedbacks!: Table<Feedback>
-  categories!: Table        // Legacy: kept for migration/import compatibility
   dimensions!: Table<Dimension>
   pageSettings!: Table<PageSetting>
   chartConfigs!: Table<ChartConfig>
@@ -218,6 +217,19 @@ class TimelineDB extends Dexie {
       categories: '++id',
       shortcuts: null,
       abbreviationGroups: null,
+      dimensions: '++id, order',
+      pageSettings: '++id, &pageKey',
+      chartConfigs: '++id, blockId, order',
+    })
+    // v11: optimize indexes — add compound [pageId+tabId] on blocks, remove unused indexes, drop legacy categories
+    this.version(11).stores({
+      tags: '++id, shorthand',
+      pages: '++id, parentId, role',
+      layouts: '++id, pageId',
+      blocks: '++id, pageId, [pageId+tabId], order',
+      timelineEntries: '++id, pageId, date, *tagRefs',
+      feedbacks: '++id, subjectId, createdAt',
+      categories: null,
       dimensions: '++id, order',
       pageSettings: '++id, &pageKey',
       chartConfigs: '++id, blockId, order',

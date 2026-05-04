@@ -1,4 +1,6 @@
+import { memo } from 'react'
 import { useNavigate } from 'react-router-dom'
+import DOMPurify from 'dompurify'
 import { getPagePath } from '../../hooks/usePages'
 import { useAutocomplete } from '../../hooks/useAutocomplete'
 import styles from './RichTextEditor.module.css'
@@ -13,7 +15,7 @@ interface RichTextDisplayProps {
  * Read-only display of rich text HTML content.
  * Clicking a mention navigates to the referenced page.
  */
-export function RichTextDisplay({ html, className, onClick }: RichTextDisplayProps) {
+export const RichTextDisplay = memo(function RichTextDisplay({ html, className, onClick }: RichTextDisplayProps) {
   const navigate = useNavigate()
   const { allPages } = useAutocomplete()
   const displayClassName = [styles.editor, className].filter(Boolean).join(' ')
@@ -46,9 +48,9 @@ export function RichTextDisplay({ html, className, onClick }: RichTextDisplayPro
   return (
     <div
       className={displayClassName}
-      dangerouslySetInnerHTML={{ __html: html }}
+      dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(html) }}
       onClick={handleClick}
       style={{ cursor: onClick ? 'text' : undefined }}
     />
   )
-}
+})

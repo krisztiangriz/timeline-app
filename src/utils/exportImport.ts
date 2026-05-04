@@ -1,4 +1,5 @@
 import { db } from '../db/database'
+import DOMPurify from 'dompurify'
 import type { Page } from '../types'
 
 interface ExportData {
@@ -92,7 +93,7 @@ async function ensurePageRoles(): Promise<void> {
  * Export all data from IndexedDB as a JSON string.
  */
 async function exportAllData(): Promise<string> {
-  const [tags, pages, layouts, blocks, timelineEntries, feedbacks, categories, dimensions, pageSettings, chartConfigs] =
+  const [tags, pages, layouts, blocks, timelineEntries, feedbacks, dimensions, pageSettings, chartConfigs] =
     await Promise.all([
       db.tags.toArray(),
       db.pages.toArray(),
@@ -100,7 +101,6 @@ async function exportAllData(): Promise<string> {
       db.blocks.toArray(),
       db.timelineEntries.toArray(),
       db.feedbacks.toArray(),
-      db.categories.toArray(),
       db.dimensions.toArray(),
       db.pageSettings.toArray(),
       db.chartConfigs.toArray(),
@@ -114,7 +114,7 @@ async function exportAllData(): Promise<string> {
     layouts,
     timelineEntries,
     feedbacks,
-    categories,
+    categories: [],
     dimensions,
     pageSettings,
     blocks,
@@ -163,32 +163,40 @@ async function importData(jsonString: string): Promise<void> {
   }))
   const entries = (data.timelineEntries as Record<string, unknown>[]).map((e) => ({
     ...e,
+    text: typeof e.text === 'string' ? DOMPurify.sanitize(e.text) : e.text,
     date: new Date(e.date as string),
     createdAt: new Date(e.createdAt as string),
     updatedAt: new Date(e.updatedAt as string),
   }))
   const feedbacks = (data.feedbacks as Record<string, unknown>[]).map((f) => ({
     ...f,
+    description: typeof f.description === 'string' ? DOMPurify.sanitize(f.description) : f.description,
     createdAt: new Date(f.createdAt as string),
   }))
+  // Sanitize text content in blocks
+  const blocks = data.blocks?.length
+    ? (data.blocks as Record<string, unknown>[]).map((b) => ({
+        ...b,
+        content: typeof b.content === 'string' ? DOMPurify.sanitize(b.content) : b.content,
+      }))
+    : undefined
 
   // Run everything in a transaction so failure rolls back
   await db.transaction('rw',
-    [db.tags, db.pages, db.layouts, db.blocks, db.timelineEntries, db.feedbacks, db.categories, db.dimensions, db.pageSettings, db.chartConfigs],
+    [db.tags, db.pages, db.layouts, db.blocks, db.timelineEntries, db.feedbacks, db.dimensions, db.pageSettings, db.chartConfigs],
     async () => {
       await Promise.all([
         db.tags.clear(), db.pages.clear(), db.layouts.clear(), db.blocks.clear(),
-        db.timelineEntries.clear(), db.feedbacks.clear(), db.categories.clear(),
+        db.timelineEntries.clear(), db.feedbacks.clear(),
         db.dimensions.clear(), db.pageSettings.clear(), db.chartConfigs.clear(),
       ])
       await Promise.all([
         db.tags.bulkAdd(data.tags as never[]),
         db.pages.bulkAdd(pages as never[]),
         db.layouts.bulkAdd(data.layouts as never[]),
-        data.blocks?.length ? db.blocks.bulkAdd(data.blocks as never[]) : Promise.resolve(),
+        blocks?.length ? db.blocks.bulkAdd(blocks as never[]) : Promise.resolve(),
         db.timelineEntries.bulkAdd(entries as never[]),
         db.feedbacks.bulkAdd(feedbacks as never[]),
-        data.categories?.length ? db.categories.bulkAdd(data.categories as never[]) : Promise.resolve(),
         db.dimensions.bulkAdd(data.dimensions as never[]),
         data.pageSettings?.length ? db.pageSettings.bulkAdd(data.pageSettings as never[]) : Promise.resolve(),
         data.chartConfigs?.length ? db.chartConfigs.bulkAdd(data.chartConfigs as never[]) : Promise.resolve(),

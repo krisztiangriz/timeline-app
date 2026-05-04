@@ -1,6 +1,8 @@
-import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useState, useCallback, useMemo, type ReactNode } from 'react'
 
-interface AppContextValue {
+// ---- Modal context (open/close states for all modals) ----
+
+interface ModalContextValue {
   feedbackOpen: boolean
   setFeedbackOpen: (v: boolean) => void
   searchOpen: boolean
@@ -13,11 +15,9 @@ interface AppContextValue {
   setHelpOpen: (v: boolean) => void
   onboardingOpen: boolean
   setOnboardingOpen: (v: boolean) => void
-  showArchived: boolean
-  setShowArchived: (v: boolean) => void
 }
 
-const AppContext = createContext<AppContextValue>({
+const ModalContext = createContext<ModalContextValue>({
   feedbackOpen: false,
   setFeedbackOpen: () => {},
   searchOpen: false,
@@ -30,13 +30,43 @@ const AppContext = createContext<AppContextValue>({
   setHelpOpen: () => {},
   onboardingOpen: false,
   setOnboardingOpen: () => {},
+})
+
+// ---- Preferences context (user settings persisted to localStorage) ----
+
+interface PreferencesContextValue {
+  showArchived: boolean
+  setShowArchived: (v: boolean) => void
+}
+
+const PreferencesContext = createContext<PreferencesContextValue>({
   showArchived: false,
   setShowArchived: () => {},
 })
 
-export function useAppContext() {
-  return useContext(AppContext)
+// ---- Hooks ----
+
+/** Use modal open/close states only (won't re-render on preference changes) */
+export function useModalContext() {
+  return useContext(ModalContext)
 }
+
+/** Use user preferences only (won't re-render on modal open/close) */
+export function usePreferences() {
+  return useContext(PreferencesContext)
+}
+
+/**
+ * Legacy hook: returns both modal + preferences context merged.
+ * Prefer useModalContext() or usePreferences() for narrower subscriptions.
+ */
+export function useAppContext() {
+  const modals = useContext(ModalContext)
+  const prefs = useContext(PreferencesContext)
+  return { ...modals, ...prefs }
+}
+
+// ---- Provider ----
 
 function isInsideRichEditor(): boolean {
   const active = document.activeElement
@@ -53,10 +83,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [onboardingOpen, setOnboardingOpen] = useState(() => localStorage.getItem('onboarding-completed') !== 'true')
   const [showArchived, setShowArchivedState] = useState(() => localStorage.getItem('show-archived') === 'true')
 
-  function setShowArchived(v: boolean) {
+  const setShowArchived = useCallback((v: boolean) => {
     setShowArchivedState(v)
     localStorage.setItem('show-archived', String(v))
-  }
+  }, [])
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     // Ctrl+Shift+F → open feedback form
@@ -87,19 +117,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [handleKeyDown])
 
+  const modalValue = useMemo<ModalContextValue>(() => ({
+    feedbackOpen, setFeedbackOpen,
+    searchOpen, setSearchOpen,
+    addPageOpen, setAddPageOpen,
+    settingsOpen, setSettingsOpen,
+    helpOpen, setHelpOpen,
+    onboardingOpen, setOnboardingOpen,
+  }), [feedbackOpen, searchOpen, addPageOpen, settingsOpen, helpOpen, onboardingOpen])
+
+  const prefsValue = useMemo<PreferencesContextValue>(() => ({
+    showArchived, setShowArchived,
+  }), [showArchived, setShowArchived])
+
   return (
-    <AppContext.Provider
-      value={{
-        feedbackOpen, setFeedbackOpen,
-        searchOpen, setSearchOpen,
-        addPageOpen, setAddPageOpen,
-        settingsOpen, setSettingsOpen,
-        helpOpen, setHelpOpen,
-        onboardingOpen, setOnboardingOpen,
-        showArchived, setShowArchived,
-      }}
-    >
-      {children}
-    </AppContext.Provider>
+    <ModalContext.Provider value={modalValue}>
+      <PreferencesContext.Provider value={prefsValue}>
+        {children}
+      </PreferencesContext.Provider>
+    </ModalContext.Provider>
   )
 }

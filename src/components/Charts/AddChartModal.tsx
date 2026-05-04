@@ -182,7 +182,7 @@ export function AddChartModal({ open, onClose, onAdd, editing, onUpdate, pageId,
       }
     }
     prevOpen.current = open
-  }, [open, editing])
+  }, [open, editing, allPages, pageId])
 
   // Auto-fill name from data source label when source changes (only if user hasn't customized it)
   useEffect(() => {

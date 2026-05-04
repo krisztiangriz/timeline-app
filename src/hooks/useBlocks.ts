@@ -81,14 +81,11 @@ export function useBlockActions() {
     const afterBlock = await db.blocks.get(afterBlockId)
     if (!afterBlock) return addBlock(pageId, type, tabId, content)
 
-    // Shift subsequent blocks
-    const subsequent = await db.blocks
+    // Shift subsequent blocks in one batch
+    await db.blocks
       .where('pageId').equals(pageId)
       .filter((b) => b.order > afterBlock.order && (tabId ? b.tabId === tabId : !b.tabId))
-      .toArray()
-    for (const b of subsequent) {
-      await db.blocks.update(b.id!, { order: b.order + 2 })
-    }
+      .modify((b) => { b.order += 2 })
 
     const id = await db.blocks.add({
       pageId, tabId, type, content, order: afterBlock.order + 1,

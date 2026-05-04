@@ -168,6 +168,8 @@ export function useEntryCount(
       const hubIdSet = new Set(hubIds)
       const children = pages.filter((p) => p.parentId && hubIdSet.has(p.parentId))
       const childIdSet = new Set(children.map((p) => p.id!))
+      const childById = new Map(children.map((c) => [c.id!, c]))
+      const monthToIdx = new Map(months.map((m, i) => [m, i]))
 
       const data = months.map((m) => {
         const row: Record<string, string | number> = { month: formatMonthLabel(m) }
@@ -178,11 +180,11 @@ export function useEntryCount(
       for (const e of entries) {
         if (e.isPending) continue
         const m = formatMonthKey(new Date(e.date))
-        const idx = months.indexOf(m)
-        if (idx === -1) continue
+        const idx = monthToIdx.get(m)
+        if (idx === undefined) continue
         const counted = new Set<number>()
         if (childIdSet.has(e.pageId)) {
-          const child = children.find((c) => c.id === e.pageId)
+          const child = childById.get(e.pageId)
           if (child) { data[idx][child.name] = (Number(data[idx][child.name]) || 0) + countHtmlBlocks(e.text); counted.add(child.id!) }
         }
         if (e.tagRefs) {
@@ -190,7 +192,7 @@ export function useEntryCount(
             const refId = Number(ref)
             if (counted.has(refId)) continue
             if (childIdSet.has(refId)) {
-              const child = children.find((c) => c.id === refId)
+              const child = childById.get(refId)
               if (child) { data[idx][child.name] = (Number(data[idx][child.name]) || 0) + countMentionBlocks(e.text, refId); counted.add(refId) }
             }
           }
@@ -227,11 +229,13 @@ export function useEntryCount(
       return row
     })
 
+    const monthToIdx2 = new Map(months.map((m, i) => [m, i]))
+
     for (const e of entries) {
       if (e.isPending) continue
       const m = formatMonthKey(new Date(e.date))
-      const idx = months.indexOf(m)
-      if (idx === -1) continue
+      const idx = monthToIdx2.get(m)
+      if (idx === undefined) continue
       const blocks = scopePageId && e.pageId !== scopePageId
         ? countMentionBlocks(e.text, scopePageId)
         : countHtmlBlocks(e.text)
@@ -288,6 +292,7 @@ export function useCandidatesByStatus(pages: Page[]) {
 export function useFeedbackByMonth(feedbacks: Feedback[], monthCount = 12) {
   return useMemo(() => {
     const months = buildMonthKeys(monthCount)
+    const monthToIdx = new Map(months.map((m, i) => [m, i]))
 
     const data = months.map((m) => ({
       month: formatMonthLabel(m),
@@ -296,8 +301,8 @@ export function useFeedbackByMonth(feedbacks: Feedback[], monthCount = 12) {
 
     for (const f of feedbacks) {
       const m = formatMonthKey(new Date(f.createdAt))
-      const idx = months.indexOf(m)
-      if (idx === -1) continue
+      const idx = monthToIdx.get(m)
+      if (idx === undefined) continue
       if (f.type === 'positive') data[idx].Positive++
       else if (f.type === 'neutral') data[idx].Neutral++
       else data[idx].Negative++

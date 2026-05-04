@@ -7,10 +7,10 @@ import { EmptyState } from '../EmptyState/EmptyState'
 import { useBlocks, useBlockActions, getRequiredBlockTypesSync } from '../../hooks/useBlocks'
 import { useChildPages, getPagePath, usePageTabs } from '../../hooks/usePages'
 import { useAutocomplete } from '../../hooks/useAutocomplete'
-import { useAppContext } from '../../hooks/useAppContext'
+import { usePreferences } from '../../hooks/useAppContext'
 import { useTableSort } from '../../hooks/useTableSort'
 import { formatTableDate } from '../../utils/dateUtils'
-import { DragHandleIcon } from '../Icons/Icons'
+import { DragHandleIcon, CloseIcon } from '../Icons/Icons'
 import { db } from '../../db/database'
 import type { Page, Block } from '../../types'
 import styles from './BlockRenderer.module.css'
@@ -137,9 +137,7 @@ function BlockList({ pageId, page, blocks, rearrangeMode, tabId }: {
             {rearrangeMode && dragHandle}
             {rearrangeMode && !isProtected && (
               <button className={styles.deleteBtnVisible} onClick={() => deleteBlock(block.id!)} aria-label="Delete block">
-                <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-                  <path d="M2 2L8 8M8 2L2 8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-                </svg>
+                <CloseIcon size={10} />
               </button>
             )}
             <ComponentBlockContent block={block} page={page} allPages={allPages} />
@@ -202,7 +200,7 @@ function ComponentBlockContent({ block, page, allPages }: { block: Block; page: 
 function TableBlock({ page }: { page: Page }) {
   const children = useChildPages(page.id)
   const { allPages } = useAutocomplete()
-  const { showArchived } = useAppContext()
+  const { showArchived } = usePreferences()
   const navigate = useNavigate()
   const { toggleSort, sortPages, arrow } = useTableSort(`page-${page.id}-table`)
   const filtered = showArchived ? children : children.filter((c) => !c.archived)

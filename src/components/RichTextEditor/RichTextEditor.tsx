@@ -19,7 +19,7 @@ const COMPONENT_OPTIONS: AutocompleteOption[] = [
   { kind: 'component', id: 'timeline', label: 'Timeline', componentType: 'timeline' },
   { kind: 'component', id: 'feedback', label: 'Feedback', componentType: 'feedback' },
   { kind: 'component', id: 'table', label: 'Table', componentType: 'table' },
-  { kind: 'component', id: 'visualization', label: 'Insights', componentType: 'visualization' },
+  { kind: 'component', id: 'visualization', label: 'Visualization', componentType: 'visualization' },
 ]
 
 interface RichTextEditorProps {

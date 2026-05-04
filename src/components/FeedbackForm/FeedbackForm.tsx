@@ -3,6 +3,7 @@ import { Modal } from '../Modal/Modal'
 import { useAutocomplete } from '../../hooks/useAutocomplete'
 import { useDimensions } from '../../hooks/useDimensions'
 import { useFeedbackActions } from '../../hooks/useFeedback'
+import { CloseIcon, SearchIcon, PlusIcon } from '../Icons/Icons'
 import type { FeedbackType, Page } from '../../types'
 import styles from './FeedbackForm.module.css'
 import radio from '../../styles/radio.module.css'
@@ -118,17 +119,12 @@ export function FeedbackForm({ open, onClose, onSuccess }: FeedbackFormProps) {
               className={styles.clearSubject}
               onClick={() => setSelectedSubject(null)}
             >
-              <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-                <path d="M2 2L8 8M8 2L2 8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-              </svg>
+              <CloseIcon size={10} />
             </button>
           </div>
         ) : (
           <div className={styles.searchWrapper}>
-            <svg className={styles.searchIcon} width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <circle cx="7" cy="7" r="4.5" stroke="currentColor" strokeWidth="1.5" />
-              <path d="M10.5 10.5L13.5 13.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-            </svg>
+            <SearchIcon />
             <input
               className={styles.searchInput}
               type="text"
@@ -141,9 +137,7 @@ export function FeedbackForm({ open, onClose, onSuccess }: FeedbackFormProps) {
             />
             {subjectQuery && (
               <button className={styles.clearSearch} onClick={() => setSubjectQuery('')} aria-label="Clear">
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                  <path d="M3 3L9 9M9 3L3 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                </svg>
+                <PlusIcon size={12} />
               </button>
             )}
             {subjectResults.length > 0 && (

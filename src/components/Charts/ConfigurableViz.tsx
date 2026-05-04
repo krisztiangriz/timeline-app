@@ -1,5 +1,6 @@
-import React, { useState } from 'react'
+import React, { useState, memo } from 'react'
 import { EmptyState } from '../EmptyState/EmptyState'
+import { CloseIcon } from '../Icons/Icons'
 import { ChartRenderer, DATA_SOURCE_LABELS } from './ChartRenderer'
 import { AddChartModal } from './AddChartModal'
 import { useChartConfigs, addChartConfig, updateChartConfig, deleteChartConfig } from '../../hooks/useChartConfigs'
@@ -114,7 +115,7 @@ export function ConfigurableViz({ blockId, pageId }: ConfigurableVizProps) {
 
 // ---- Chart card ----
 
-function ChartCard({
+const ChartCard = memo(function ChartCard({
   config,
   monthCount,
   entries,
@@ -146,9 +147,7 @@ function ChartCard({
             </svg>
           </button>
           <button className={styles.chartDeleteBtn} onClick={() => onDelete(config.id!)} aria-label="Delete chart">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <path d="M4 4L12 12M12 4L4 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-            </svg>
+            <CloseIcon />
           </button>
         </div>
       </div>
@@ -163,9 +162,7 @@ function ChartCard({
       />
     </div>
   )
-}
-
-// ---- Auto-pairing logic ----
+})
 
 type ChartRow =
   | { type: 'pair'; time: ChartConfig; pie: ChartConfig }

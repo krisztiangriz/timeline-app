@@ -143,7 +143,7 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
         <div className={styles.section}>
           <span className={styles.label}>Hub template</span>
           <div className={styles.radioCol}>
-            <RadioOption selected={template === 'hub-standard'} onChange={() => setTemplate('hub-standard')} label="Standard" description="Insights + Table" />
+            <RadioOption selected={template === 'hub-standard'} onChange={() => setTemplate('hub-standard')} label="Standard" description="Visualization + Table" />
             <RadioOption selected={template === 'hub-table'} onChange={() => setTemplate('hub-table')} label="Table" description="Table only" />
           </div>
         </div>
@@ -174,8 +174,8 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
         <div className={styles.section}>
           <span className={styles.label}>Page template</span>
           <div className={styles.radioCol}>
-            <RadioOption selected={template === 'tabbed'} onChange={() => setTemplate('tabbed')} label="Tabbed" description="Timeline, Feedback, Insights" />
-            <RadioOption selected={template === 'simple'} onChange={() => setTemplate('simple')} label="Simple" description="Insights + Timeline" />
+            <RadioOption selected={template === 'tabbed'} onChange={() => setTemplate('tabbed')} label="Tabbed" description="Timeline, Feedback, Visualization" />
+            <RadioOption selected={template === 'simple'} onChange={() => setTemplate('simple')} label="Simple" description="Visualization + Timeline" />
             <RadioOption selected={template === 'text'} onChange={() => setTemplate('text')} label="Text only" description="Notes / Discussion" />
             <RadioOption selected={template === 'custom'} onChange={() => setTemplate('custom')} label="Custom" description="Empty, configure later" />
           </div>
@@ -193,7 +193,7 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
           )}
         </div>
         {/* Required tabs (shown as read-only during creation) */}
-        {!isEdit && template === 'tabbed' && ['Timeline', 'Feedback', 'Insights'].map((name) => (
+        {!isEdit && template === 'tabbed' && ['Timeline', 'Feedback', 'Visualization'].map((name) => (
           <div key={name} className={styles.tabRow}>
             <span className={styles.tabRowName}>{name}</span>
             <span className={styles.tabRequired}>Required</span>

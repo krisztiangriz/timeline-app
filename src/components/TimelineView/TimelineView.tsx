@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from 'react'
+import { useState, useMemo, useEffect, useRef, memo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { stripHtml } from '../../utils/stripHtml'
 import { filterHtmlToMentionLines } from '../../utils/mentionParser'
@@ -42,7 +42,7 @@ function toSentenceCase(html: string): string {
 
 // ---- Pending item row (component renders the checkbox, DB has plain text) ----
 
-function PendingItemRow({ entry, onComplete, onUpdate, onDelete }: {
+const PendingItemRow = memo(function PendingItemRow({ entry, onComplete, onUpdate, onDelete }: {
   entry: TimelineEntry
   onComplete: (id: number) => void
   onUpdate: (id: number, data: { text?: string }) => void
@@ -92,7 +92,7 @@ function PendingItemRow({ entry, onComplete, onUpdate, onDelete }: {
       </div>
     </div>
   )
-}
+})
 
 // ---- Timeline view ----
 

@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { useFeedbackForSubject } from '../../hooks/useFeedback'
 import { useDimensions } from '../../hooks/useDimensions'
 import { formatTableDate } from '../../utils/dateUtils'
@@ -11,6 +12,7 @@ interface FeedbackListProps {
 export function FeedbackList({ subjectId }: FeedbackListProps) {
   const feedbacks = useFeedbackForSubject(subjectId)
   const dimensions = useDimensions()
+  const dimMap = useMemo(() => new Map(dimensions.map((d) => [d.id!, d])), [dimensions])
 
   if (feedbacks.length === 0) {
     return <EmptyState message="No feedback yet" />
@@ -20,7 +22,7 @@ export function FeedbackList({ subjectId }: FeedbackListProps) {
     <div className={styles.feedbackList}>
       {feedbacks.map((fb) => {
         const dim = fb.dimensionId
-          ? dimensions.find((d) => d.id === fb.dimensionId)
+          ? dimMap.get(fb.dimensionId)
           : undefined
 
         return (

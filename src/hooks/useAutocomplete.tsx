@@ -1,4 +1,4 @@
-import { createContext, useContext, type ReactNode } from 'react'
+import { createContext, useContext, useMemo, type ReactNode } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db/database'
 import type { Page } from '../types'
@@ -18,8 +18,10 @@ export function useAutocomplete(): AutocompleteContextValue {
 export function AutocompleteProvider({ children }: { children: ReactNode }) {
   const allPages = useLiveQuery(() => db.pages.toArray()) ?? []
 
+  const value = useMemo<AutocompleteContextValue>(() => ({ allPages }), [allPages])
+
   return (
-    <AutocompleteContext.Provider value={{ allPages }}>
+    <AutocompleteContext.Provider value={value}>
       {children}
     </AutocompleteContext.Provider>
   )

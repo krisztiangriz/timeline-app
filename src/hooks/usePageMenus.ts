@@ -1,6 +1,6 @@
 import { useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAppContext } from './useAppContext'
+import { useModalContext } from './useAppContext'
 import type { MenuEntry } from '../components/ContextMenu/ContextMenu'
 
 interface UsePageMenusOptions {
@@ -30,7 +30,7 @@ export function usePageMenus({
   pageName,
   showToast,
 }: UsePageMenusOptions) {
-  const { setFeedbackOpen, setAddPageOpen, setSettingsOpen, setHelpOpen } = useAppContext()
+  const { setFeedbackOpen, setAddPageOpen, setSettingsOpen, setHelpOpen } = useModalContext()
   const navigate = useNavigate()
 
   const handleDelete = useCallback(async () => {

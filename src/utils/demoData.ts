@@ -353,9 +353,9 @@ export async function purgeDemoData() {
   })
   await db.blocks.add({ pageId: timelineId as number, type: 'timeline', order: 0 })
 
-  // Insights page
+  // Visualization page
   const vizId = await db.pages.add({
-    ...base, name: 'Insights', type: 'general' as const,
+    ...base, name: 'Visualization', type: 'general' as const,
   })
   await db.blocks.add({ pageId: vizId as number, type: 'visualization', order: 0 })
 
