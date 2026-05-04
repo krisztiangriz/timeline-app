@@ -171,7 +171,11 @@ export function AddChartModal({ open, onClose, onAdd, editing, onUpdate, pageId,
         userEditedName.current = true
       } else {
         setName(DATA_SOURCE_LABELS['entry-count'] ?? '')
-        setScopes([])
+        const currentPage = allPages.find((p) => p.id === pageId)
+        const defaultScope: ChartScope[] = currentPage?.type === 'hub'
+          ? [{ type: 'hub', hubId: pageId }]
+          : [{ type: 'page', pageId }]
+        setScopes(defaultScope)
         setSource('entry-count')
         setType('bar')
         userEditedName.current = false
