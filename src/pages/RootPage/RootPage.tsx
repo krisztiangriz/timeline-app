@@ -13,6 +13,7 @@ import {
 import { useAutocomplete } from '../../hooks/useAutocomplete'
 import { usePageMenus } from '../../hooks/usePageMenus'
 import { useTableSort } from '../../hooks/useTableSort'
+import { useEntryCounts } from '../../hooks/useEntryCounts'
 import { useToast } from '../../hooks/useToast'
 import { formatTableDate } from '../../utils/dateUtils'
 import { ROLE_TO_PAGE_TYPE } from '../../types'
@@ -44,6 +45,9 @@ export function RootPage() {
     const sorted = sortPages(filtered)
     return buildFlatPageList(sorted)
   }, [allPages, sortPages, showArchived])
+
+  const pageIds = useMemo(() => allPages.map((p) => p.id!), [allPages])
+  const entryCounts = useEntryCounts(pageIds)
 
   const { addMenuItems, moreMenuItems } = usePageMenus({ showToast })
 
@@ -109,6 +113,7 @@ export function RootPage() {
           <div className={table.tableHeader}>
             <span className={table.thName} onClick={() => toggleSort('name')}>Name <span className={table.sortArrow}>{arrow('name')}</span></span>
             <span className={table.thType}>Type</span>
+            <span className={table.thEntries}>Entries</span>
             <span className={table.thDate} onClick={() => toggleSort('createdAt')}>Created on <span className={table.sortArrow}>{arrow('createdAt')}</span></span>
             <span className={table.thDate} onClick={() => toggleSort('updatedAt')}>Last updated <span className={table.sortArrow}>{arrow('updatedAt')}</span></span>
           </div>
@@ -138,6 +143,7 @@ export function RootPage() {
                   <span className={table.rowName}>{page.name}</span>
                 </div>
                 <span className={table.typeCell}>{page.type === 'hub' ? 'Hub' : 'Page'}</span>
+                <span className={table.entriesCell}>{entryCounts.get(page.id!) ?? 0}</span>
                 <span className={table.dateCell}>{formatTableDate(page.createdAt)}</span>
                 <span className={table.dateCell}>{formatTableDate(page.updatedAt)}</span>
               </div>

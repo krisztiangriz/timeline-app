@@ -154,6 +154,25 @@
   outline-offset: -1.5px;
 }
 
+.thEntries {
+  composes: th;
+  width: 56px;
+  justify-content: flex-end;
+  flex-shrink: 0;
+}
+
+.entriesCell {
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-base);
+  font-weight: var(--font-weight-medium);
+  width: 56px;
+  text-align: right;
+  flex-shrink: 0;
+  white-space: nowrap;
+  position: relative;
+  z-index: 1;
+}
+
 .rowArchived {
   opacity: 0.4;
 }
