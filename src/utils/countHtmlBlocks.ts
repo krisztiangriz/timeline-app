@@ -26,3 +26,29 @@ export function countHtmlBlocks(html: string): number {
   // At least 1 if the original html was non-empty (safety fallback)
   return Math.max(count, 1)
 }
+
+/**
+ * Count only the HTML lines that mention a specific page (by data-page-id).
+ *
+ * Used for cross-referenced entries: an entry from Page A that mentions Page B
+ * may contain many lines, but only some mention Page B. This counts just those.
+ *
+ * Uses the same line-splitting logic as filterHtmlToMentionLines in mentionParser.ts.
+ */
+export function countMentionBlocks(html: string, pageId: number): number {
+  if (!html || !html.trim()) return 0
+
+  const marker = `data-page-id="${pageId}"`
+  const lines = html
+    .replace(/<\/div>\s*<div[^>]*>/gi, '\n')
+    .replace(/<div[^>]*>/gi, '\n')
+    .replace(/<\/div>/gi, '')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .split('\n')
+    .map((l) => l.trim())
+    .filter(Boolean)
+
+  const count = lines.filter((l) => l.includes(marker)).length
+  // At least 1 if tagRefs matched this page (the mention exists somewhere)
+  return Math.max(count, 1)
+}

@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db/database'
 import type { TimelineEntry, Feedback, Page, ChartScope } from '../types'
-import { countHtmlBlocks } from '../utils/countHtmlBlocks'
+import { countHtmlBlocks, countMentionBlocks } from '../utils/countHtmlBlocks'
 
 // Native date helpers
 function formatMonthKey(d: Date): string {
@@ -160,10 +160,9 @@ export function useEntryCount(
         const idx = months.indexOf(m)
         if (idx === -1) continue
         const counted = new Set<number>()
-        const blocks = countHtmlBlocks(e.text)
         if (childIdSet.has(e.pageId)) {
           const child = children.find((c) => c.id === e.pageId)
-          if (child) { data[idx][child.name] = (Number(data[idx][child.name]) || 0) + blocks; counted.add(child.id!) }
+          if (child) { data[idx][child.name] = (Number(data[idx][child.name]) || 0) + countHtmlBlocks(e.text); counted.add(child.id!) }
         }
         if (e.tagRefs) {
           for (const ref of e.tagRefs) {
@@ -171,7 +170,7 @@ export function useEntryCount(
             if (counted.has(refId)) continue
             if (childIdSet.has(refId)) {
               const child = children.find((c) => c.id === refId)
-              if (child) { data[idx][child.name] = (Number(data[idx][child.name]) || 0) + blocks; counted.add(refId) }
+              if (child) { data[idx][child.name] = (Number(data[idx][child.name]) || 0) + countMentionBlocks(e.text, refId); counted.add(refId) }
             }
           }
         }
@@ -184,7 +183,11 @@ export function useEntryCount(
           for (const e of entries) {
             if (e.isPending) continue
             if (new Date(e.date) < cutoff) continue
-            if (e.pageId === c.id || e.tagRefs?.includes(String(c.id))) total += countHtmlBlocks(e.text)
+            if (e.pageId === c.id) {
+              total += countHtmlBlocks(e.text)
+            } else if (e.tagRefs?.includes(String(c.id))) {
+              total += countMentionBlocks(e.text, c.id!)
+            }
           }
           return { name: c.name, value: total }
         })
@@ -194,6 +197,10 @@ export function useEntryCount(
     }
 
     // No hub scopes (or empty scopes): single series "Entries"
+    // Determine single-page scope for mention-aware counting
+    const scopePageId = scopes.length === 1 && scopes[0].type === 'page'
+      ? scopes[0].pageId : undefined
+
     const data = months.map((m) => {
       const row: Record<string, string | number> = { month: formatMonthLabel(m), Entries: 0 }
       return row
@@ -204,7 +211,10 @@ export function useEntryCount(
       const m = formatMonthKey(new Date(e.date))
       const idx = months.indexOf(m)
       if (idx === -1) continue
-      data[idx].Entries = (Number(data[idx].Entries) || 0) + countHtmlBlocks(e.text)
+      const blocks = scopePageId && e.pageId !== scopePageId
+        ? countMentionBlocks(e.text, scopePageId)
+        : countHtmlBlocks(e.text)
+      data[idx].Entries = (Number(data[idx].Entries) || 0) + blocks
     }
 
     const keys = ['Entries']
@@ -212,7 +222,10 @@ export function useEntryCount(
     for (const e of entries) {
       if (e.isPending) continue
       if (new Date(e.date) < cutoff) continue
-      total += countHtmlBlocks(e.text)
+      const blocks = scopePageId && e.pageId !== scopePageId
+        ? countMentionBlocks(e.text, scopePageId)
+        : countHtmlBlocks(e.text)
+      total += blocks
     }
     const summary = total > 0 ? [{ name: 'Entries', value: total }] : []
 
