@@ -13,43 +13,41 @@
 
 .searchWrapper {
   position: relative;
-}
-
-.searchIcon {
-  position: absolute;
-  left: var(--space-md);
-  top: 50%;
-  transform: translateY(-50%);
-  color: var(--color-text-primary);
-  pointer-events: none;
-}
-
-.searchInput {
-  width: 100%;
-  padding: var(--space-sm) var(--space-md) var(--space-sm) 32px;
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: 0 var(--space-md);
   border: 1px solid transparent;
   border-radius: var(--radius-md);
-  font-size: var(--font-size-base);
-  line-height: var(--line-height-base);
-  height: 32px;
   background: var(--color-input-bg);
+  height: 32px;
 }
 
-.searchInput:focus {
+.searchWrapper:focus-within {
   border-color: var(--color-input-border);
 }
 
+.searchIcon {
+  flex-shrink: 0;
+  color: var(--color-text-primary);
+}
+
+.searchInput {
+  flex: 1;
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-base);
+  min-width: 0;
+  height: 100%;
+}
+
 .clearSearch {
-  position: absolute;
-  right: var(--space-sm);
-  top: 50%;
-  transform: translateY(-50%);
   width: 20px;
   height: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
   color: var(--color-text-tertiary);
+  flex-shrink: 0;
   border-radius: var(--radius-sm);
   cursor: pointer;
 }

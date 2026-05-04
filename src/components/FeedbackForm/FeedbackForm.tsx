@@ -133,7 +133,6 @@ export function FeedbackForm({ open, onClose, onSuccess }: FeedbackFormProps) {
               onKeyDown={handleSubjectKeyDown}
               placeholder="Look up colleagues or projects"
               autoFocus
-              style={subjectQuery ? { paddingRight: 32 } : undefined}
             />
             {subjectQuery && (
               <button className={styles.clearSearch} onClick={() => setSubjectQuery('')} aria-label="Clear">
