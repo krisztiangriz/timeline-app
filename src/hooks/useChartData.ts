@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db/database'
 import type { TimelineEntry, Feedback, Page, ChartScope } from '../types'
+import { countHtmlBlocks } from '../utils/countHtmlBlocks'
 
 // Native date helpers
 function formatMonthKey(d: Date): string {
@@ -159,9 +160,10 @@ export function useEntryCount(
         const idx = months.indexOf(m)
         if (idx === -1) continue
         const counted = new Set<number>()
+        const blocks = countHtmlBlocks(e.text)
         if (childIdSet.has(e.pageId)) {
           const child = children.find((c) => c.id === e.pageId)
-          if (child) { data[idx][child.name] = (Number(data[idx][child.name]) || 0) + 1; counted.add(child.id!) }
+          if (child) { data[idx][child.name] = (Number(data[idx][child.name]) || 0) + blocks; counted.add(child.id!) }
         }
         if (e.tagRefs) {
           for (const ref of e.tagRefs) {
@@ -169,7 +171,7 @@ export function useEntryCount(
             if (counted.has(refId)) continue
             if (childIdSet.has(refId)) {
               const child = children.find((c) => c.id === refId)
-              if (child) { data[idx][child.name] = (Number(data[idx][child.name]) || 0) + 1; counted.add(refId) }
+              if (child) { data[idx][child.name] = (Number(data[idx][child.name]) || 0) + blocks; counted.add(refId) }
             }
           }
         }
@@ -182,7 +184,7 @@ export function useEntryCount(
           for (const e of entries) {
             if (e.isPending) continue
             if (new Date(e.date) < cutoff) continue
-            if (e.pageId === c.id || e.tagRefs?.includes(String(c.id))) total++
+            if (e.pageId === c.id || e.tagRefs?.includes(String(c.id))) total += countHtmlBlocks(e.text)
           }
           return { name: c.name, value: total }
         })
@@ -202,7 +204,7 @@ export function useEntryCount(
       const m = formatMonthKey(new Date(e.date))
       const idx = months.indexOf(m)
       if (idx === -1) continue
-      data[idx].Entries = (Number(data[idx].Entries) || 0) + 1
+      data[idx].Entries = (Number(data[idx].Entries) || 0) + countHtmlBlocks(e.text)
     }
 
     const keys = ['Entries']
@@ -210,7 +212,7 @@ export function useEntryCount(
     for (const e of entries) {
       if (e.isPending) continue
       if (new Date(e.date) < cutoff) continue
-      total++
+      total += countHtmlBlocks(e.text)
     }
     const summary = total > 0 ? [{ name: 'Entries', value: total }] : []
 
