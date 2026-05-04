@@ -291,7 +291,7 @@
 
 /* Inline mention span */
 .editor [data-mention] {
-  color: var(--color-text-tertiary);
+  color: var(--color-text-placeholder);
   font-weight: var(--font-weight-medium);
   cursor: pointer;
 }
