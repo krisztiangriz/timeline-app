@@ -31,7 +31,7 @@ function getCutoff(monthCount: number): Date {
 }
 
 // ---- Color palette for charts ----
-export const CHART_COLORS = [
+const CHART_COLORS = [
   '#6699FF', // blue (primary)
   '#45C9A1', // green
   '#8E63E6', // purple
@@ -48,7 +48,7 @@ export const CHART_COLORS = [
   '#A97FFF',
 ]
 
-export const CHART_COLORS_EXTENDED = [
+const CHART_COLORS_EXTENDED = [
   ...CHART_COLORS,
   '#2A54A3', // dark blue
   '#2E9B7A', // dark green
@@ -63,7 +63,7 @@ export function getColor(index: number, total?: number) {
 
 // ---- Scope filtering ----
 
-export function filterEntriesByScope(entries: TimelineEntry[], scope: ChartScope, allPages: Page[]): TimelineEntry[] {
+function filterEntriesByScope(entries: TimelineEntry[], scope: ChartScope, allPages: Page[]): TimelineEntry[] {
   if (scope.type === 'global') return entries
   if (scope.type === 'page') {
     const page = allPages.find((p) => p.id === scope.pageId)
@@ -82,7 +82,7 @@ export function filterEntriesByScope(entries: TimelineEntry[], scope: ChartScope
   return entries
 }
 
-export function filterFeedbacksByScope(feedbacks: Feedback[], scope: ChartScope, allPages: Page[]): Feedback[] {
+function filterFeedbacksByScope(feedbacks: Feedback[], scope: ChartScope, allPages: Page[]): Feedback[] {
   if (scope.type === 'global') return feedbacks
   if (scope.type === 'page') {
     const page = allPages.find((p) => p.id === scope.pageId)

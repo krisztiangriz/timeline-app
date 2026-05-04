@@ -124,18 +124,22 @@ async function exportAllData(): Promise<string> {
   return JSON.stringify(data, null, 2)
 }
 
-/**
- * Download the exported data as a JSON file.
- */
-export async function downloadExport() {
+async function downloadJson(prefix: string) {
   const json = await exportAllData()
   const blob = new Blob([json], { type: 'application/json' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
-  a.download = `timeline-export-${new Date().toISOString().slice(0, 10)}.json`
+  a.download = `${prefix}-${new Date().toISOString().slice(0, 10)}.json`
   a.click()
   URL.revokeObjectURL(url)
+}
+
+/**
+ * Download the exported data as a JSON file.
+ */
+export async function downloadExport() {
+  await downloadJson('timeline-export')
 }
 
 /**
@@ -143,14 +147,7 @@ export async function downloadExport() {
  * Uses a distinct filename prefix so users can tell backups from manual exports.
  */
 export async function downloadBackup() {
-  const json = await exportAllData()
-  const blob = new Blob([json], { type: 'application/json' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `timeline-backup-${new Date().toISOString().slice(0, 10)}.json`
-  a.click()
-  URL.revokeObjectURL(url)
+  await downloadJson('timeline-backup')
 }
 
 /**
@@ -159,7 +156,7 @@ export async function downloadBackup() {
 async function importData(jsonString: string): Promise<void> {
   const data: ExportData = JSON.parse(jsonString)
 
-  if (![1, 2, 3, 4, 5, 6, 7, 8, 9, 10].includes(data.version)) {
+  if (data.version < 1 || data.version > 10) {
     throw new Error(`Unsupported export version: ${data.version}`)
   }
 

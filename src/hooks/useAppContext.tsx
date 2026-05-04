@@ -56,16 +56,6 @@ export function usePreferences() {
   return useContext(PreferencesContext)
 }
 
-/**
- * Legacy hook: returns both modal + preferences context merged.
- * Prefer useModalContext() or usePreferences() for narrower subscriptions.
- */
-export function useAppContext() {
-  const modals = useContext(ModalContext)
-  const prefs = useContext(PreferencesContext)
-  return { ...modals, ...prefs }
-}
-
 // ---- Provider ----
 
 function isInsideRichEditor(): boolean {

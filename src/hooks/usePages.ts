@@ -207,10 +207,9 @@ export function usePageActions() {
 interface PageRow {
   page: Page
   depth: number
-  children: PageRow[]
 }
 
-export function buildPageTree(pages: Page[]): PageRow[] {
+export function buildFlatPageList(pages: Page[]): PageRow[] {
   const roots = pages.filter((p) => !p.parentId)
   const childMap = new Map<number, Page[]>()
 
@@ -222,26 +221,15 @@ export function buildPageTree(pages: Page[]): PageRow[] {
     }
   }
 
-  function buildRows(list: Page[], depth: number): PageRow[] {
-    return list.map((page) => {
-      const children = childMap.get(page.id!) ?? []
-      return {
-        page,
-        depth,
-        children: buildRows(children, depth + 1),
-      }
-    })
-  }
-
-  return buildRows(roots, 0)
-}
-
-export function flattenTree(rows: PageRow[]): PageRow[] {
   const result: PageRow[] = []
-  for (const row of rows) {
-    result.push(row)
-    result.push(...flattenTree(row.children))
+  function walk(list: Page[], depth: number) {
+    for (const page of list) {
+      result.push({ page, depth })
+      const children = childMap.get(page.id!) ?? []
+      walk(children, depth + 1)
+    }
   }
+  walk(roots, 0)
   return result
 }
 

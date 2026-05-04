@@ -1,4 +1,4 @@
-import { memo } from 'react'
+import { memo, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import DOMPurify from 'dompurify'
 import { getPagePath } from '../../hooks/usePages'
@@ -19,6 +19,7 @@ export const RichTextDisplay = memo(function RichTextDisplay({ html, className, 
   const navigate = useNavigate()
   const { allPages } = useAutocomplete()
   const displayClassName = [styles.editor, className].filter(Boolean).join(' ')
+  const cleanHtml = useMemo(() => DOMPurify.sanitize(html), [html])
 
   if (!html || html === '<br>') {
     return null
@@ -48,7 +49,7 @@ export const RichTextDisplay = memo(function RichTextDisplay({ html, className, 
   return (
     <div
       className={displayClassName}
-      dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(html) }}
+      dangerouslySetInnerHTML={{ __html: cleanHtml }}
       onClick={handleClick}
       style={{ cursor: onClick ? 'text' : undefined }}
     />

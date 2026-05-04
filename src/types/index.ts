@@ -57,8 +57,6 @@ export interface TimelineEntry {
   text: string
   tagRefs: string[] // page IDs of mentioned pages (for cross-referencing)
   isPending: boolean
-  isCompleted: boolean
-  ticketId: string | null
   createdAt: Date
   updatedAt: Date
 }

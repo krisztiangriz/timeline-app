@@ -12,6 +12,18 @@ export function extractMentionPageIds(html: string): string[] {
   return [...ids]
 }
 
+/** Normalize HTML into individual non-empty text lines */
+export function splitHtmlLines(html: string): string[] {
+  return html
+    .replace(/<\/div>\s*<div[^>]*>/gi, '\n')
+    .replace(/<div[^>]*>/gi, '\n')
+    .replace(/<\/div>/gi, '')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+}
+
 /**
  * Strip the mention span for a specific page from HTML.
  * Removes `<span data-mention="true" data-page-id="{pageId}" ...>...</span>` and cleans up.
@@ -33,40 +45,19 @@ export function stripSelfMention(html: string, pageId: number): string {
   if (!result || result === '&nbsp;') return ''
   return result
 }
+
 export function filterHtmlToMention(html: string, pageId: number): string {
-  const pageIdStr = String(pageId)
-  const marker = `data-page-id="${pageIdStr}"`
-
-  // Normalize all line break patterns to \n, then split
-  const lines = html
-    .replace(/<\/div>\s*<div[^>]*>/gi, '\n')  // </div><div> boundary
-    .replace(/<div[^>]*>/gi, '\n')             // opening <div> (new line)
-    .replace(/<\/div>/gi, '')                   // closing </div>
-    .replace(/<br\s*\/?>/gi, '\n')             // <br> variants
-    .split('\n')
-    .map((line) => line.trim())
-    .filter(Boolean)
-
+  const marker = `data-page-id="${String(pageId)}"`
+  const lines = splitHtmlLines(html)
   const matching = lines.find((line) => line.includes(marker))
-
   if (!matching) return html // fallback: show full text
   return matching
 }
 
 /** Split HTML into individual lines and return ALL lines mentioning a specific page. */
 export function filterHtmlToMentionLines(html: string, pageId: number): string[] {
-  const pageIdStr = String(pageId)
-  const marker = `data-page-id="${pageIdStr}"`
-
-  const lines = html
-    .replace(/<\/div>\s*<div[^>]*>/gi, '\n')
-    .replace(/<div[^>]*>/gi, '\n')
-    .replace(/<\/div>/gi, '')
-    .replace(/<br\s*\/?>/gi, '\n')
-    .split('\n')
-    .map((line) => line.trim())
-    .filter(Boolean)
-
+  const marker = `data-page-id="${String(pageId)}"`
+  const lines = splitHtmlLines(html)
   const matching = lines.filter((line) => line.includes(marker))
   return matching.length > 0 ? matching : [html]
 }

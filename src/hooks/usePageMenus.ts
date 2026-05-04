@@ -1,4 +1,4 @@
-import { useCallback } from 'react'
+import { useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useModalContext } from './useAppContext'
 import type { MenuEntry } from '../components/ContextMenu/ContextMenu'
@@ -41,34 +41,38 @@ export function usePageMenus({
     navigate(deleteRedirect)
   }, [pageId, deletePage, pageName, showToast, navigate, deleteRedirect])
 
-  const addMenuItems: MenuEntry[] = [
+  const addMenuItems = useMemo<MenuEntry[]>(() => [
     { type: 'item', label: 'Add feedback', onClick: () => setFeedbackOpen(true) },
     { type: 'separator' },
     { type: 'item', label: 'Add page', onClick: () => setAddPageOpen(true) },
-  ]
+  ], [setFeedbackOpen, setAddPageOpen])
 
-  const moreMenuItems: MenuEntry[] = []
+  const moreMenuItems = useMemo<MenuEntry[]>(() => {
+    const items: MenuEntry[] = []
 
-  if (onEditPage) {
-    moreMenuItems.push({ type: 'item', label: 'Edit page', onClick: onEditPage })
-  }
+    if (onEditPage) {
+      items.push({ type: 'item', label: 'Edit page', onClick: onEditPage })
+    }
 
-  if (onRearrange) {
-    moreMenuItems.push({ type: 'item', label: 'Rearrange', onClick: onRearrange })
-  }
+    if (onRearrange) {
+      items.push({ type: 'item', label: 'Rearrange', onClick: onRearrange })
+    }
 
-  moreMenuItems.push({ type: 'item', label: 'Settings', onClick: () => setSettingsOpen(true) })
-  moreMenuItems.push({ type: 'item', label: 'Help', onClick: () => setHelpOpen(true) })
+    items.push({ type: 'item', label: 'Settings', onClick: () => setSettingsOpen(true) })
+    items.push({ type: 'item', label: 'Help', onClick: () => setHelpOpen(true) })
 
-  if (canArchive && onArchive) {
-    moreMenuItems.push({ type: 'separator' })
-    moreMenuItems.push({ type: 'item', label: isArchived ? 'Unarchive' : 'Archive', onClick: onArchive })
-  }
+    if (canArchive && onArchive) {
+      items.push({ type: 'separator' })
+      items.push({ type: 'item', label: isArchived ? 'Unarchive' : 'Archive', onClick: onArchive })
+    }
 
-  if (canDelete && pageId && deletePage) {
-    if (!canArchive) moreMenuItems.push({ type: 'separator' })
-    moreMenuItems.push({ type: 'item', label: 'Delete', onClick: handleDelete })
-  }
+    if (canDelete && pageId && deletePage) {
+      if (!canArchive) items.push({ type: 'separator' })
+      items.push({ type: 'item', label: 'Delete', onClick: handleDelete })
+    }
+
+    return items
+  }, [onEditPage, onRearrange, canArchive, onArchive, isArchived, canDelete, pageId, deletePage, handleDelete, setSettingsOpen, setHelpOpen])
 
   return { addMenuItems, moreMenuItems }
 }

@@ -9,7 +9,6 @@ import { useDemoMode } from './hooks/useDemoMode'
 import { useAutoBackup } from './hooks/useAutoBackup'
 import { usePageActions, usePageByRole, getPagePath } from './hooks/usePages'
 import { db } from './db/database'
-import { seedDemoData } from './utils/demoData'
 import type { PageType, PageRole } from './types'
 import type { PageFormData, HubInfo } from './components/PageForm/PageForm'
 import { ROLE_TO_PAGE_TYPE } from './types'
@@ -198,6 +197,7 @@ function useEnsureDefaults() {
 
       // Seed demo data on truly fresh install (not after a purge)
       if (localStorage.getItem('onboarding-completed') !== 'true') {
+        const { seedDemoData } = await import('./utils/demoData')
         await seedDemoData()
         localStorage.setItem('demo-mode', 'true')
       }

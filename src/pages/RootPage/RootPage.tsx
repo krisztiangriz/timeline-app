@@ -7,8 +7,7 @@ import { EmptyState } from '../../components/EmptyState/EmptyState'
 import { usePreferences } from '../../hooks/useAppContext'
 import {
   usePageActions,
-  buildPageTree,
-  flattenTree,
+  buildFlatPageList,
   getPagePath,
 } from '../../hooks/usePages'
 import { useAutocomplete } from '../../hooks/useAutocomplete'
@@ -43,8 +42,7 @@ export function RootPage() {
   const flatRows = useMemo(() => {
     const filtered = showArchived ? allPages : allPages.filter((p) => !p.archived)
     const sorted = sortPages(filtered)
-    const tree = buildPageTree(sorted)
-    return flattenTree(tree)
+    return buildFlatPageList(sorted)
   }, [allPages, sortPages, showArchived])
 
   const { addMenuItems, moreMenuItems } = usePageMenus({ showToast })

@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { Modal } from '../Modal/Modal'
-import { purgeDemoData } from '../../utils/demoData'
 import styles from './DemoBanner.module.css'
 
 interface DemoBannerProps {
@@ -14,6 +13,7 @@ export function DemoBanner({ onExitDemo }: DemoBannerProps) {
   async function handleConfirmExit() {
     setPurging(true)
     try {
+      const { purgeDemoData } = await import('../../utils/demoData')
       await purgeDemoData()
       onExitDemo()
       window.location.reload()

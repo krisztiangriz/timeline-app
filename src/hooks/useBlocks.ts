@@ -9,10 +9,18 @@ export function useBlocks(pageId?: number, tabId?: number | null) {
   return useLiveQuery(
     () => {
       if (!pageId) return []
+      // Use compound index when filtering by a specific tab
+      if (typeof tabId === 'number') {
+        return db.blocks
+          .where('[pageId+tabId]')
+          .equals([pageId, tabId])
+          .sortBy('order')
+      }
+      // Page-level blocks (no tab) or all blocks
       return db.blocks
         .where('pageId')
         .equals(pageId)
-        .filter((b) => tabId === undefined ? true : (tabId === null ? !b.tabId : b.tabId === tabId))
+        .filter((b) => tabId === undefined ? true : !b.tabId)
         .sortBy('order')
     },
     [pageId, tabId]
@@ -20,33 +28,7 @@ export function useBlocks(pageId?: number, tabId?: number | null) {
 }
 
 /**
- * Required block types for each page context.
- * Returns the set of block types that cannot be deleted (if they're the only one of that type).
- */
-async function getRequiredBlockTypes(pageId: number): Promise<Set<BlockType>> {
-  const page = await db.pages.get(pageId)
-  if (!page) return new Set()
-
-  // Main timeline page
-  if (page.role === 'main-timeline') return new Set(['timeline'])
-
-  // Hub pages themselves
-  if (page.type === 'hub') return new Set(['visualization', 'table'])
-
-  // Child pages — check parent hub role
-  if (page.parentId) {
-    const parent = await db.pages.get(page.parentId)
-    if (parent?.role === 'colleague-hub') return new Set(['timeline', 'feedback', 'visualization'])
-    if (parent?.role === 'project-hub') return new Set(['visualization', 'feedback', 'timeline'])
-    if (parent?.role === 'candidate-hub') return new Set(['text'])
-    if (parent?.type === 'hub') return new Set(['visualization', 'timeline']) // generic hub child
-  }
-
-  return new Set()
-}
-
-/**
- * Synchronous version for UI — derives required types from page + allPages context.
+ * Required block types for each page context (sync version for UI).
  */
 export function getRequiredBlockTypesSync(page: Page, allPages: Page[]): Set<BlockType> {
   if (page.role === 'main-timeline') return new Set(['timeline'])
@@ -61,6 +43,14 @@ export function getRequiredBlockTypesSync(page: Page, allPages: Page[]): Set<Blo
   }
 
   return new Set()
+}
+
+/** Async version — fetches page + parent from DB, then delegates to sync logic */
+async function getRequiredBlockTypes(pageId: number): Promise<Set<BlockType>> {
+  const page = await db.pages.get(pageId)
+  if (!page) return new Set()
+  const allPages = page.parentId ? [page, ...(await db.pages.where('parentId').equals(page.parentId).toArray()), ...(page.parentId ? [await db.pages.get(page.parentId)].filter(Boolean) as Page[] : [])] : [page]
+  return getRequiredBlockTypesSync(page, allPages)
 }
 
 /**

@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef, memo } from 'react'
+import { useState, useMemo, useEffect, useRef, memo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { stripHtml } from '../../utils/stripHtml'
 import { filterHtmlToMentionLines } from '../../utils/mentionParser'
@@ -132,7 +132,7 @@ export function TimelineView({ pageId, title, readOnly = false }: TimelineViewPr
     const dated = new Map<string, TimelineEntry[]>()
 
     for (const entry of allEntries) {
-      if (entry.isPending && !entry.isCompleted) {
+      if (entry.isPending) {
         pending.push(entry)
       } else {
         const key = startOfDay(new Date(entry.date)).toISOString()
@@ -236,22 +236,25 @@ export function TimelineView({ pageId, title, readOnly = false }: TimelineViewPr
     await deleteEntry(id)
   }
 
-  async function handleUpdateEntry(id: number, data: { text?: string }) {
+  const handleUpdateEntry = useCallback(async (id: number, data: { text?: string }) => {
     await updateEntry(id, data)
-  }
+  }, [updateEntry])
 
-  async function handleDeleteEntry(id: number) {
+  const handleDeleteEntry = useCallback(async (id: number) => {
     await deleteEntry(id)
-  }
+  }, [deleteEntry])
 
-  function handleMentionClick(mentionPageId: number) {
-    const page = allPages.find((p) => p.id === mentionPageId)
+  const allPagesRef = useRef(allPages)
+  allPagesRef.current = allPages
+
+  const handleMentionClick = useCallback((mentionPageId: number) => {
+    const page = allPagesRef.current.find((p) => p.id === mentionPageId)
     if (page) {
-      navigate(getPagePath(page, allPages))
+      navigate(getPagePath(page, allPagesRef.current))
     } else {
       navigate(`/page/${mentionPageId}`)
     }
-  }
+  }, [navigate])
 
   return (
     <div className={styles.timeline}>
