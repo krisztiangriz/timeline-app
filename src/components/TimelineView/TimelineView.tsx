@@ -20,6 +20,26 @@ function stripCheckboxHtml(html: string): string {
   return html.replace(/<span data-checkbox="[^"]*">([\s\S]*?)<\/span>/g, '$1').trim()
 }
 
+/** Convert HTML text to sentence case, preserving mention span content */
+function toSentenceCase(html: string): string {
+  let first = true
+  let mentionDepth = 0
+  return html.replace(/(<[^>]+>)|([^<]+)/g, (_, tag, text) => {
+    if (tag) {
+      if (/data-page-id/.test(tag)) mentionDepth++
+      else if (tag === '</span>' && mentionDepth > 0) mentionDepth--
+      return tag
+    }
+    if (mentionDepth > 0) return text
+    let result = text.toLowerCase()
+    if (first) {
+      result = result.replace(/[a-z]/, (c: string) => c.toUpperCase())
+      first = false
+    }
+    return result
+  })
+}
+
 // ---- Pending item row (component renders the checkbox, DB has plain text) ----
 
 function PendingItemRow({ entry, onComplete, onUpdate, onDelete }: {
@@ -134,6 +154,9 @@ export function TimelineView({ pageId, title, readOnly = false }: TimelineViewPr
     const todayCrossRefEntries = todayAll.filter((e) => !directIds.has(e.id!))
     const history = sortedGroups.filter(([key]) => key !== todayKey)
 
+    // Sort pending items oldest-first so new items appear at the bottom
+    pending.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+
     return { pendingEntries: pending, todayEntry: todayDirect, todayCrossRefs: todayCrossRefEntries, historyGroups: history }
   }, [allEntries, directIds])
 
@@ -194,7 +217,7 @@ export function TimelineView({ pageId, title, readOnly = false }: TimelineViewPr
   async function handleCompletePending(id: number) {
     const entry = allEntries.find((e) => e.id === id)
     if (!entry) return
-    const cleanText = stripCheckboxHtml(entry.text.trim())
+    const cleanText = toSentenceCase(stripCheckboxHtml(entry.text.trim()))
     if (cleanText) {
       // Append to today's content (use local state which may have unsaved edits)
       if (todayEntryId.current) {
