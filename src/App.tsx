@@ -6,10 +6,14 @@ import { FeedbackForm } from './components/FeedbackForm/FeedbackForm'
 import { PageForm, type PageFormData, type HubInfo } from './components/PageForm/PageForm'
 import { SettingsModal } from './pages/SettingsPage/SettingsModal'
 import { HelpModal } from './components/HelpModal/HelpModal'
+import { OnboardingModal } from './components/OnboardingModal/OnboardingModal'
+import { DemoBanner } from './components/DemoBanner/DemoBanner'
 import { ToastContainer } from './components/Toast/Toast'
 import { useToast } from './hooks/useToast'
+import { useDemoMode } from './hooks/useDemoMode'
 import { usePageActions, usePageByRole, getPagePath } from './hooks/usePages'
 import { db } from './db/database'
+import { seedDemoData } from './utils/demoData'
 import type { PageType, PageRole } from './types'
 import { ROLE_TO_PAGE_TYPE } from './types'
 import { RootPage } from './pages/RootPage/RootPage'
@@ -22,6 +26,7 @@ function GlobalOverlays() {
     addPageOpen, setAddPageOpen,
     settingsOpen, setSettingsOpen,
     helpOpen, setHelpOpen,
+    onboardingOpen, setOnboardingOpen,
   } = useAppContext()
   const { toasts, show: showToast } = useToast()
   const { allPages } = useAutocomplete()
@@ -80,7 +85,7 @@ function GlobalOverlays() {
         const tabDefs = [
           { name: 'Timeline', blockType: 'timeline' as const },
           { name: 'Feedback', blockType: 'feedback' as const },
-          { name: 'Visualization', blockType: 'visualization' as const },
+          { name: 'Insights', blockType: 'visualization' as const },
         ]
         for (let i = 0; i < tabDefs.length; i++) {
           const tabId = await db.layouts.add({ pageId, type: 'tab' as const, name: tabDefs[i].name, order: i })
@@ -128,6 +133,7 @@ function GlobalOverlays() {
       />
       <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} onToast={showToast} />
       <HelpModal open={helpOpen} onClose={() => setHelpOpen(false)} />
+      <OnboardingModal open={onboardingOpen} onClose={() => setOnboardingOpen(false)} />
       <ToastContainer toasts={toasts} />
     </>
   )
@@ -142,7 +148,7 @@ function TimelineRedirect() {
 
 let defaultsInitialized = false
 
-/** Auto-create default structural pages on fresh install */
+/** Auto-create default structural pages on fresh install, then seed demo data */
 function useEnsureDefaults() {
   useEffect(() => {
     if (defaultsInitialized) return
@@ -171,25 +177,33 @@ function useEnsureDefaults() {
       })
       await db.blocks.add({ pageId: timelineId as number, type: 'timeline', order: 0 })
 
-      // Visualization page
+      // Insights page
       const vizId = await db.pages.add({
-        ...base, name: 'Visualization', type: 'general' as const,
+        ...base, name: 'Insights', type: 'general' as const,
       })
       await db.blocks.add({ pageId: vizId as number, type: 'visualization', order: 0 })
 
       // Projects hub
       await createHub('Projects', 'project-hub', '#')
+
+      // Seed demo data on truly fresh install (not after a purge)
+      if (localStorage.getItem('onboarding-completed') !== 'true') {
+        await seedDemoData()
+        localStorage.setItem('demo-mode', 'true')
+      }
     })()
   }, [])
 }
 
 export default function App() {
   useEnsureDefaults()
+  const { isDemoMode, clearDemoFlag } = useDemoMode()
 
   return (
     <BrowserRouter basename="/timeline-app">
       <AppProvider>
         <AutocompleteProvider>
+        {isDemoMode && <DemoBanner onExitDemo={clearDemoFlag} />}
         <Routes>
           <Route path="/" element={<RootPage />} />
           <Route path="/timeline" element={<TimelineRedirect />} />
