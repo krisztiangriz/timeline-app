@@ -4,6 +4,7 @@ import { useDimensions, useDimensionActions } from '../../hooks/useDimensions'
 import { useAutocomplete } from '../../hooks/useAutocomplete'
 import { usePageActions } from '../../hooks/usePages'
 import { useModalContext, usePreferences } from '../../hooks/useAppContext'
+import { useBackupSettings, type BackupFrequency } from '../../hooks/useAutoBackup'
 import { TrashIcon, CheckIcon, PlusIcon } from '../../components/Icons/Icons'
 import { downloadExport, triggerImport } from '../../utils/exportImport'
 import styles from './SettingsModal.module.css'
@@ -20,6 +21,7 @@ export function SettingsModal({ open, onClose, onToast }: SettingsModalProps) {
   const { updatePage } = usePageActions()
   const { showArchived, setShowArchived } = usePreferences()
   const { setOnboardingOpen } = useModalContext()
+  const { frequency, setFrequency, lastBackup } = useBackupSettings()
   const { addDimension, deleteDimension } = useDimensionActions()
 
   // Dimension add state
@@ -109,6 +111,24 @@ export function SettingsModal({ open, onClose, onToast }: SettingsModalProps) {
             Import JSON
           </button>
         </div>
+      </div>
+
+      {/* Auto-backup */}
+      <div className={styles.section}>
+        <span className={styles.sectionTitle}>Auto-backup</span>
+        <div className={styles.backupRow}>
+          {(['daily', 'weekly', 'monthly', 'off'] as BackupFrequency[]).map((opt) => (
+            <button key={opt} className={styles.checkboxRow} onClick={() => setFrequency(opt)}>
+              <div className={styles.radio} data-checked={frequency === opt} />
+              <span className={styles.checkboxLabel}>{opt.charAt(0).toUpperCase() + opt.slice(1)}</span>
+            </button>
+          ))}
+        </div>
+        <span className={styles.backupStatus}>
+          {lastBackup
+            ? `Last backup: ${new Date(lastBackup).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}`
+            : 'No backups yet'}
+        </span>
       </div>
 
       {/* Show / Hide */}

@@ -6,6 +6,7 @@ import { DemoBanner } from './components/DemoBanner/DemoBanner'
 import { ToastContainer } from './components/Toast/Toast'
 import { useToast } from './hooks/useToast'
 import { useDemoMode } from './hooks/useDemoMode'
+import { useAutoBackup } from './hooks/useAutoBackup'
 import { usePageActions, usePageByRole, getPagePath } from './hooks/usePages'
 import { db } from './db/database'
 import { seedDemoData } from './utils/demoData'
@@ -206,6 +207,7 @@ function useEnsureDefaults() {
 
 export default function App() {
   useEnsureDefaults()
+  useAutoBackup()
   const { isDemoMode, clearDemoFlag } = useDemoMode()
 
   return (

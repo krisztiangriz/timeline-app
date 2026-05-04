@@ -1,0 +1,75 @@
+import { useEffect, useState, useCallback } from 'react'
+import { downloadBackup } from '../utils/exportImport'
+
+export type BackupFrequency = 'daily' | 'weekly' | 'monthly' | 'off'
+
+const LS_FREQUENCY = 'backup-frequency'
+const LS_LAST = 'backup-last'
+
+const INTERVALS: Record<Exclude<BackupFrequency, 'off'>, number> = {
+  daily: 24 * 60 * 60 * 1000,
+  weekly: 7 * 24 * 60 * 60 * 1000,
+  monthly: 30 * 24 * 60 * 60 * 1000,
+}
+
+function getFrequency(): BackupFrequency {
+  const v = localStorage.getItem(LS_FREQUENCY)
+  if (v === 'daily' || v === 'weekly' || v === 'monthly' || v === 'off') return v
+  return 'off'
+}
+
+function getLastBackup(): string | null {
+  return localStorage.getItem(LS_LAST)
+}
+
+function isDue(frequency: BackupFrequency): boolean {
+  if (frequency === 'off') return false
+  const last = getLastBackup()
+  if (!last) return true
+  const elapsed = Date.now() - new Date(last).getTime()
+  return elapsed >= INTERVALS[frequency]
+}
+
+/**
+ * Runs once on app load. If a backup is due, triggers a JSON file download.
+ * Skips when in demo mode.
+ */
+export function useAutoBackup() {
+  useEffect(() => {
+    // Don't backup demo data
+    if (localStorage.getItem('demo-mode') === 'true') return
+
+    const frequency = getFrequency()
+    if (!isDue(frequency)) return
+
+    // Re-check right before downloading (guards against multiple tabs)
+    const run = async () => {
+      if (!isDue(getFrequency())) return
+      try {
+        await downloadBackup()
+        localStorage.setItem(LS_LAST, new Date().toISOString())
+      } catch {
+        // Silently fail — don't block the app
+      }
+    }
+
+    // Small delay so the app finishes rendering before triggering the download
+    const timer = setTimeout(run, 2000)
+    return () => clearTimeout(timer)
+  }, [])
+}
+
+/**
+ * Hook for the Settings UI to read/write backup preferences.
+ */
+export function useBackupSettings() {
+  const [frequency, setFrequencyState] = useState<BackupFrequency>(getFrequency)
+  const [lastBackup] = useState<string | null>(getLastBackup)
+
+  const setFrequency = useCallback((v: BackupFrequency) => {
+    setFrequencyState(v)
+    localStorage.setItem(LS_FREQUENCY, v)
+  }, [])
+
+  return { frequency, setFrequency, lastBackup }
+}

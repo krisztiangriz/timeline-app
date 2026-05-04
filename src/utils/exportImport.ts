@@ -139,6 +139,21 @@ export async function downloadExport() {
 }
 
 /**
+ * Download an automatic backup as a JSON file.
+ * Uses a distinct filename prefix so users can tell backups from manual exports.
+ */
+export async function downloadBackup() {
+  const json = await exportAllData()
+  const blob = new Blob([json], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `timeline-backup-${new Date().toISOString().slice(0, 10)}.json`
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
+/**
  * Import data from a JSON file, replacing all existing data.
  */
 async function importData(jsonString: string): Promise<void> {
