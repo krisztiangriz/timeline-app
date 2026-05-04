@@ -63,6 +63,12 @@ const FEEDBACK_NEUTRAL_STROKE = '#B8C5DB'
 const FEEDBACK_TOOLTIP_ORDER: Record<string, number> = { Positive: 0, Neutral: 1, Negative: 2 }
 const feedbackTooltipSorter = (a: { dataKey?: unknown }) => FEEDBACK_TOOLTIP_ORDER[String(a.dataKey)] ?? 9
 const FALLBACK_COLOR = '#B8C5DB'
+
+/** Use grey for single-series charts, color palette for 2+ series */
+function getSeriesColor(index: number, total: number) {
+  return total < 2 ? FALLBACK_COLOR : getColor(index, total)
+}
+
 const cursorStyle = { fill: '#ECF1F9', stroke: '#ECF1F9' }
 const TP = { contentStyle: tooltipStyle, labelStyle: tooltipLabelStyle, cursor: cursorStyle }
 const TPfb = { ...TP, itemSorter: feedbackTooltipSorter }
@@ -149,11 +155,11 @@ function EntryCountChart({ config, monthCount = 12, entries, pages, containerCla
             <ChartComp data={data.data}>
               <XAxis dataKey="month" tick={tickStyle} stroke={axisStroke} interval="preserveStartEnd" />
               <Tooltip {...TP} />
-              <Legend iconType="circle" iconSize={8} wrapperStyle={legendStyle} />
+              {total > 1 && <Legend iconType="circle" iconSize={8} wrapperStyle={legendStyle} />}
               {data.keys.map((key, i) =>
-                chartType === 'line' ? <Line key={key} type="monotone" dataKey={key} stroke={getColor(i, total)} strokeWidth={2} dot={false} />
-                : chartType === 'area' ? <Area key={key} type="monotone" dataKey={key} stackId="s" fill={getColor(i, total)} stroke={getColor(i, total)} fillOpacity={0.6} />
-                : <Bar key={key} dataKey={key} stackId="s" fill={getColor(i, total)} />
+                chartType === 'line' ? <Line key={key} type="monotone" dataKey={key} stroke={getSeriesColor(i, total)} strokeWidth={2} dot={false} />
+                : chartType === 'area' ? <Area key={key} type="monotone" dataKey={key} stackId="s" fill={getSeriesColor(i, total)} stroke={getSeriesColor(i, total)} fillOpacity={0.6} />
+                : <Bar key={key} dataKey={key} stackId="s" fill={getSeriesColor(i, total)} />
               )}
             </ChartComp>
           )
@@ -173,9 +179,9 @@ function CandidateStatusChart({ config, pages, containerClass }: ChartRendererPr
         <BarChart data={data}>
           <XAxis dataKey="name" tick={tickStyle} stroke={axisStroke} interval={0} />
           <Tooltip {...TP} />
-          <Legend content={cellLegend(data.map((s, i) => ({ name: s.name, color: STATUS_COLORS[s.name] ?? getColor(i, data.length) })))} />
+          {data.length > 1 && <Legend content={cellLegend(data.map((s, i) => ({ name: s.name, color: STATUS_COLORS[s.name] ?? getSeriesColor(i, data.length) })))} />}
           <Bar dataKey="value">
-            {data.map((s, i) => <Cell key={s.name || i} fill={STATUS_COLORS[s.name] ?? getColor(i, data.length)} />)}
+            {data.map((s, i) => <Cell key={s.name || i} fill={STATUS_COLORS[s.name] ?? getSeriesColor(i, data.length)} />)}
           </Bar>
         </BarChart>
       </ResponsiveContainer>
@@ -263,8 +269,8 @@ function FeedbackDimensionChart({ config, monthCount = 12, feedbacks, pages, dim
             <BarChart data={data.data}>
               <XAxis dataKey="name" tick={tickStyle} stroke={axisStroke} interval={0} />
               <Tooltip {...TP} />
-              <Legend iconType="circle" iconSize={8} wrapperStyle={legendStyle} />
-              {data.keys.map((key, i) => <Bar key={key} dataKey={key} fill={getColor(i, data.keys.length)} />)}
+              {data.keys.length > 1 && <Legend iconType="circle" iconSize={8} wrapperStyle={legendStyle} />}
+              {data.keys.map((key, i) => <Bar key={key} dataKey={key} fill={getSeriesColor(i, data.keys.length)} />)}
             </BarChart>
           )
         ) : (
@@ -281,9 +287,9 @@ function FeedbackDimensionChart({ config, monthCount = 12, feedbacks, pages, dim
               <XAxis type="number" allowDecimals={false} tick={tickStyle} stroke={axisStroke} interval="preserveStartEnd" />
               <YAxis type="category" dataKey="name" tick={tickStyle} stroke={axisStroke} width={120} />
               <Tooltip {...TP} />
-              <Legend content={cellLegend(data.summary.map((s, i) => ({ name: s.name, color: getColor(i, data.summary.length) })))} />
+              {data.summary.length > 1 && <Legend content={cellLegend(data.summary.map((s, i) => ({ name: s.name, color: getSeriesColor(i, data.summary.length) })))} />}
               <Bar dataKey="value">
-                {data.summary.map((_: unknown, i: number) => <Cell key={i} fill={getColor(i, data.summary.length)} />)}
+                {data.summary.map((_: unknown, i: number) => <Cell key={i} fill={getSeriesColor(i, data.summary.length)} />)}
               </Bar>
             </BarChart>
           )
