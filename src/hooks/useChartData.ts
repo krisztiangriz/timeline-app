@@ -31,13 +31,34 @@ function getCutoff(monthCount: number): Date {
 }
 
 // ---- Color palette for charts ----
-const CHART_COLORS = [
-  '#334055', '#5E6E8C', '#485670', '#B8C5DB', '#8494B2',
-  '#6E7F99', '#A0AECC', '#3D4D66', '#CDD6E4', '#7889A3',
+export const CHART_COLORS = [
+  '#6699FF', // blue (primary)
+  '#45C9A1', // green
+  '#8E63E6', // purple
+  '#FB8C00', // orange
+  '#5E6E8C', // neutral
+
+  '#4F83E6',
+  '#38B38E',
+  '#744FCC',
+  '#E67A00',
+
+  '#99BDFF',
+  '#7FE1C5',
+  '#A97FFF',
 ]
 
-export function getColor(index: number) {
-  return CHART_COLORS[index % CHART_COLORS.length]
+export const CHART_COLORS_EXTENDED = [
+  ...CHART_COLORS,
+  '#2A54A3', // dark blue
+  '#2E9B7A', // dark green
+  '#5B3CA3', // dark purple
+  '#CC6A00', // dark orange
+]
+
+export function getColor(index: number, total?: number) {
+  const palette = total && total > CHART_COLORS.length ? CHART_COLORS_EXTENDED : CHART_COLORS
+  return palette[index % palette.length]
 }
 
 // ---- Scope filtering ----

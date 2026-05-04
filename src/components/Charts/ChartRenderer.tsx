@@ -21,6 +21,19 @@ function pieLabel({ name, percent }: { name?: string; percent?: number }) {
   return `${name ?? ''} ${((percent ?? 0) * 100).toFixed(0)}%`
 }
 
+function cellLegend(items: { name: string; color: string }[]) {
+  return () => (
+    <div style={{ display: 'flex', justifyContent: 'center', gap: 12, flexWrap: 'wrap', paddingTop: 4 }}>
+      {items.map((item) => (
+        <span key={item.name} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, color: '#485670' }}>
+          <span style={{ width: 8, height: 8, borderRadius: '50%', background: item.color, flexShrink: 0 }} />
+          {item.name}
+        </span>
+      ))}
+    </div>
+  )
+}
+
 function ChartContainer({ className, children }: { className: string; children: React.ReactNode }) {
   const ref = useRef<HTMLDivElement>(null)
   const [mounted, setMounted] = useState(false)
@@ -49,13 +62,13 @@ const FEEDBACK_COLORS: Record<string, string> = { Positive: '#45C9A1', Neutral: 
 const FEEDBACK_NEUTRAL_STROKE = '#B8C5DB'
 const FEEDBACK_TOOLTIP_ORDER: Record<string, number> = { Positive: 0, Neutral: 1, Negative: 2 }
 const feedbackTooltipSorter = (a: { dataKey?: unknown }) => FEEDBACK_TOOLTIP_ORDER[String(a.dataKey)] ?? 9
-const ACCENT_BAR = '#5E6E8C'
 const FALLBACK_COLOR = '#B8C5DB'
 const cursorStyle = { fill: '#ECF1F9', stroke: '#ECF1F9' }
 const TP = { contentStyle: tooltipStyle, labelStyle: tooltipLabelStyle, cursor: cursorStyle }
 const TPfb = { ...TP, itemSorter: feedbackTooltipSorter }
 const axisStroke = '#B8C5DB'
 const tickStyle = { fontSize: 10, fill: '#485670' }
+const legendStyle: React.CSSProperties = { fontSize: 10, color: '#485670', paddingTop: 4 }
 
 // ---- Exports for AddChartModal ----
 
@@ -124,20 +137,23 @@ function EntryCountChart({ config, monthCount = 12, entries, pages, containerCla
         {chartType === 'pie' ? (
           <PieChart>
             <Pie data={data.summary} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={55} label={pieLabel}>
-              {data.summary.map((_: unknown, i: number) => <Cell key={i} fill={getColor(i)} />)}
+              {data.summary.map((_: unknown, i: number) => <Cell key={i} fill={getColor(i, data.summary.length)} />)}
             </Pie>
             <Tooltip {...TP} />
+            <Legend content={cellLegend(data.summary.map((s: { name: string }, i: number) => ({ name: s.name, color: getColor(i, data.summary.length) })))} />
           </PieChart>
         ) : (() => {
           const ChartComp = chartType === 'line' ? LineChart : chartType === 'area' ? AreaChart : BarChart
+          const total = data.keys.length
           return (
             <ChartComp data={data.data}>
               <XAxis dataKey="month" tick={tickStyle} stroke={axisStroke} interval="preserveStartEnd" />
               <Tooltip {...TP} />
+              <Legend iconType="circle" iconSize={8} wrapperStyle={legendStyle} />
               {data.keys.map((key, i) =>
-                chartType === 'line' ? <Line key={key} type="monotone" dataKey={key} stroke={getColor(i)} strokeWidth={2} dot={false} />
-                : chartType === 'area' ? <Area key={key} type="monotone" dataKey={key} stackId="s" fill={getColor(i)} stroke={getColor(i)} fillOpacity={0.6} />
-                : <Bar key={key} dataKey={key} stackId="s" fill={getColor(i)} />
+                chartType === 'line' ? <Line key={key} type="monotone" dataKey={key} stroke={getColor(i, total)} strokeWidth={2} dot={false} />
+                : chartType === 'area' ? <Area key={key} type="monotone" dataKey={key} stackId="s" fill={getColor(i, total)} stroke={getColor(i, total)} fillOpacity={0.6} />
+                : <Bar key={key} dataKey={key} stackId="s" fill={getColor(i, total)} />
               )}
             </ChartComp>
           )
@@ -157,8 +173,9 @@ function CandidateStatusChart({ config, pages, containerClass }: ChartRendererPr
         <BarChart data={data}>
           <XAxis dataKey="name" tick={tickStyle} stroke={axisStroke} interval={0} />
           <Tooltip {...TP} />
+          <Legend content={cellLegend(data.map((s, i) => ({ name: s.name, color: STATUS_COLORS[s.name] ?? getColor(i, data.length) })))} />
           <Bar dataKey="value">
-            {data.map((s, i) => <Cell key={s.name || i} fill={STATUS_COLORS[s.name] ?? getColor(i)} />)}
+            {data.map((s, i) => <Cell key={s.name || i} fill={STATUS_COLORS[s.name] ?? getColor(i, data.length)} />)}
           </Bar>
         </BarChart>
       </ResponsiveContainer>
@@ -236,33 +253,38 @@ function FeedbackDimensionChart({ config, monthCount = 12, feedbacks, pages, dim
             return (
               <PieChart>
                 <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={55} label={pieLabel}>
-                  {pieData.map((_: unknown, i: number) => <Cell key={i} fill={getColor(i)} />)}
+                  {pieData.map((_: unknown, i: number) => <Cell key={i} fill={getColor(i, pieData.length)} />)}
                 </Pie>
                 <Tooltip {...TP} />
+                <Legend content={cellLegend(pieData.map((s, i) => ({ name: s.name, color: getColor(i, pieData.length) })))} />
               </PieChart>
             )
           })() : (
             <BarChart data={data.data}>
               <XAxis dataKey="name" tick={tickStyle} stroke={axisStroke} interval={0} />
               <Tooltip {...TP} />
-              <Legend wrapperStyle={{ fontSize: 10, color: '#485670' }} />
-              {data.keys.map((key, i) => <Bar key={key} dataKey={key} fill={getColor(i)} />)}
+              <Legend iconType="circle" iconSize={8} wrapperStyle={legendStyle} />
+              {data.keys.map((key, i) => <Bar key={key} dataKey={key} fill={getColor(i, data.keys.length)} />)}
             </BarChart>
           )
         ) : (
           chartType === 'pie' ? (
             <PieChart>
               <Pie data={data.summary} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={55} label={pieLabel}>
-                {data.summary.map((_: unknown, i: number) => <Cell key={i} fill={getColor(i)} />)}
+                {data.summary.map((_: unknown, i: number) => <Cell key={i} fill={getColor(i, data.summary.length)} />)}
               </Pie>
               <Tooltip {...TP} />
+              <Legend content={cellLegend(data.summary.map((s, i) => ({ name: s.name, color: getColor(i, data.summary.length) })))} />
             </PieChart>
           ) : (
             <BarChart data={data.summary} layout="vertical">
               <XAxis type="number" allowDecimals={false} tick={tickStyle} stroke={axisStroke} interval="preserveStartEnd" />
               <YAxis type="category" dataKey="name" tick={tickStyle} stroke={axisStroke} width={120} />
               <Tooltip {...TP} />
-              <Bar dataKey="value" fill={ACCENT_BAR} />
+              <Legend content={cellLegend(data.summary.map((s, i) => ({ name: s.name, color: getColor(i, data.summary.length) })))} />
+              <Bar dataKey="value">
+                {data.summary.map((_: unknown, i: number) => <Cell key={i} fill={getColor(i, data.summary.length)} />)}
+              </Bar>
             </BarChart>
           )
         )}
