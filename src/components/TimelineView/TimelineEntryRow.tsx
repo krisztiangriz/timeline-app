@@ -48,34 +48,26 @@ export const TimelineEntryRow = memo(function TimelineEntryRow({
     setEditing(false)
   }
 
-  if (editing) {
-    return (
-      <div className={styles.entryRow}>
-        <div className={styles.entryRowText}>
-          <RichTextEditor
-            value={editHtml}
-            onChange={setEditHtml}
-            onBlur={handleSave}
-            autoFocus
-          />
-        </div>
-      </div>
-    )
-  }
-
   const hasHtml = !isPlainText(displayText)
 
   return (
     <div className={styles.entryRow}>
       <div
         className={crossRefPageId ? styles.entryRowTextDisabled : styles.entryRowText}
-        onClick={crossRefPageId ? undefined : () => {
+        onClick={!editing && !crossRefPageId ? () => {
           setEditHtml(entry.text)
           setEditing(true)
-        }}
-        style={{ cursor: crossRefPageId ? 'default' : 'text' }}
+        } : undefined}
+        style={{ cursor: editing || crossRefPageId ? 'default' : 'text' }}
       >
-        {hasHtml ? (
+        {editing ? (
+          <RichTextEditor
+            value={editHtml}
+            onChange={setEditHtml}
+            onBlur={handleSave}
+            autoFocus
+          />
+        ) : hasHtml ? (
           <RichTextDisplay html={displayText} />
         ) : (
           <span className={styles.entryText}>{displayText}</span>
