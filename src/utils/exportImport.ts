@@ -245,3 +245,119 @@ export function triggerImport(): Promise<void> {
     input.click()
   })
 }
+
+// ---- Merge Import ----
+
+interface MergeImportEntry {
+  date: string | Date
+  text: string
+  tagRefs?: string[]
+  isPending?: boolean
+  createdAt?: string | Date
+  updatedAt?: string | Date
+}
+
+interface MergeImportFeedback {
+  type: 'positive' | 'neutral' | 'negative'
+  description: string
+  dimensionId?: number
+  createdAt?: string | Date
+}
+
+interface MergeImportData {
+  timelineEntries?: MergeImportEntry[]
+  feedbacks?: MergeImportFeedback[]
+}
+
+/**
+ * Merge (append) timeline entries and feedbacks from a JSON file into the
+ * existing database without removing any existing data.
+ * All entries are assigned to the given targetPageId.
+ *
+ * Returns a summary string describing what was added.
+ */
+async function mergeImportData(jsonString: string, targetPageId: number): Promise<string> {
+  const data: MergeImportData = JSON.parse(jsonString)
+
+  const entries = data.timelineEntries ?? []
+  const feedbacks = data.feedbacks ?? []
+
+  if (entries.length === 0 && feedbacks.length === 0) {
+    throw new Error('File contains no timeline entries or feedbacks to merge')
+  }
+
+  // Validate target page exists
+  const targetPage = await db.pages.get(targetPageId)
+  if (!targetPage) {
+    throw new Error(`Target page with id ${targetPageId} does not exist`)
+  }
+
+  const now = new Date()
+
+  // Prepare timeline entries — all assigned to targetPageId
+  const preparedEntries = entries.map((e) => ({
+    pageId: targetPageId,
+    date: new Date(e.date),
+    text: DOMPurify.sanitize(e.text),
+    tagRefs: e.tagRefs ?? [],
+    isPending: e.isPending ?? false,
+    createdAt: e.createdAt ? new Date(e.createdAt) : now,
+    updatedAt: e.updatedAt ? new Date(e.updatedAt) : now,
+  }))
+
+  // Prepare feedbacks — all assigned to targetPageId as subjectId
+  const preparedFeedbacks = feedbacks.map((f) => ({
+    subjectId: targetPageId,
+    type: f.type,
+    description: DOMPurify.sanitize(f.description),
+    dimensionId: f.dimensionId,
+    createdAt: f.createdAt ? new Date(f.createdAt) : now,
+  }))
+
+  // Insert in a transaction (all-or-nothing)
+  await db.transaction('rw', [db.timelineEntries, db.feedbacks], async () => {
+    if (preparedEntries.length > 0) {
+      await db.timelineEntries.bulkAdd(preparedEntries as never[])
+    }
+    if (preparedFeedbacks.length > 0) {
+      await db.feedbacks.bulkAdd(preparedFeedbacks as never[])
+    }
+  })
+
+  const parts: string[] = []
+  if (preparedEntries.length > 0) {
+    parts.push(`${preparedEntries.length} timeline ${preparedEntries.length === 1 ? 'entry' : 'entries'}`)
+  }
+  if (preparedFeedbacks.length > 0) {
+    parts.push(`${preparedFeedbacks.length} ${preparedFeedbacks.length === 1 ? 'feedback' : 'feedbacks'}`)
+  }
+  return `Merged ${parts.join(' and ')}`
+}
+
+/**
+ * Trigger a file picker and merge data from selected JSON file into existing data.
+ * All entries/feedbacks in the file are assigned to the given targetPageId.
+ * Returns a summary string on success.
+ */
+export function triggerMergeImport(targetPageId: number): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.accept = '.json'
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0]
+      if (!file) {
+        resolve('')
+        return
+      }
+      try {
+        const text = await file.text()
+        const summary = await mergeImportData(text, targetPageId)
+        resolve(summary)
+      } catch (err) {
+        reject(err)
+      }
+    }
+    input.click()
+  })
+}

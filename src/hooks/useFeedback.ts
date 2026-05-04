@@ -27,5 +27,16 @@ export function useFeedbackActions() {
     return id as number
   }
 
-  return { addFeedback }
+  async function updateFeedback(
+    id: number,
+    data: Partial<Pick<Feedback, 'type' | 'description' | 'dimensionId'>>
+  ) {
+    await db.feedbacks.update(id, data)
+  }
+
+  async function deleteFeedback(id: number) {
+    await db.feedbacks.delete(id)
+  }
+
+  return { addFeedback, updateFeedback, deleteFeedback }
 }

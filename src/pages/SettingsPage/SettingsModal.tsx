@@ -6,7 +6,7 @@ import { usePageActions } from '../../hooks/usePages'
 import { useModalContext, usePreferences } from '../../hooks/useAppContext'
 import { useBackupSettings, type BackupFrequency } from '../../hooks/useAutoBackup'
 import { TrashIcon, CheckIcon, PlusIcon } from '../../components/Icons/Icons'
-import { downloadExport, triggerImport } from '../../utils/exportImport'
+import { downloadExport, triggerImport, triggerMergeImport } from '../../utils/exportImport'
 import styles from './SettingsModal.module.css'
 
 interface SettingsModalProps {
@@ -32,6 +32,10 @@ export function SettingsModal({ open, onClose, onToast }: SettingsModalProps) {
   const [addingTrigger, setAddingTrigger] = useState(false)
   const [newTriggerPageId, setNewTriggerPageId] = useState<number | undefined>()
   const [newTriggerChar, setNewTriggerChar] = useState('')
+
+  // Merge import state
+  const [merging, setMerging] = useState(false)
+  const [mergePageId, setMergePageId] = useState<number | undefined>()
 
   // Pages with triggers (hubs + any page with a mentionTrigger)
   const triggerPages = allPages.filter((p) => p.type === 'hub' || p.mentionTrigger)
@@ -89,28 +93,71 @@ export function SettingsModal({ open, onClose, onToast }: SettingsModalProps) {
     }
   }
 
+  async function handleMergeImport() {
+    if (!mergePageId) return
+    try {
+      const summary = await triggerMergeImport(mergePageId)
+      if (summary) {
+        onToast(summary)
+        cancelMerge()
+        onClose()
+      }
+    } catch (err) {
+      onToast(err instanceof Error ? err.message : 'Merge failed')
+    }
+  }
+
+  function cancelMerge() {
+    setMergePageId(undefined)
+    setMerging(false)
+  }
+
   return (
     <Modal title="Settings" open={open} onClose={onClose} onConfirm={onClose}>
       {/* Data */}
       <div className={styles.section}>
         <span className={styles.sectionTitle}>Data</span>
         <span className={styles.sectionDescription}>
-          Export or Import all your data as JSON. Importing will replace all existing data.
+          Export or Import all your data as JSON. Import replaces all existing data. Merge adds entries and feedback from a file without removing existing data.
         </span>
         <div className={styles.buttonRow}>
           <button className={styles.iconButton} onClick={handleExport}>
             <svg width="16" height="16" viewBox="0 0 18 18" fill="none">
               <path d="M8.25 1.5V8.691L5.781 6.219L4.719 7.281L9 11.559L13.281 7.281L12.219 6.219L9.75 8.691V1.5H8.25ZM1.5 12.75V15C1.5 15.82 2.18 16.5 3 16.5H15C15.82 16.5 16.5 15.82 16.5 15V12.75H15V15H3V12.75H1.5Z" fill="currentColor" />
             </svg>
-            Export JSON
+            Export
           </button>
           <button className={styles.iconButton} onClick={handleImport}>
             <svg width="16" height="16" viewBox="0 0 18 18" fill="none">
               <path d="M8.25 12V5.559L5.781 8.031L4.719 6.969L9 2.691L13.281 6.969L12.219 8.031L9.75 5.559V12H8.25ZM1.5 12.75V15C1.5 15.82 2.18 16.5 3 16.5H15C15.82 16.5 16.5 15.82 16.5 15V12.75H15V15H3V12.75H1.5Z" fill="currentColor" />
             </svg>
-            Import JSON
+            Import
+          </button>
+          <button className={styles.iconButton} onClick={() => setMerging(true)}>
+            <svg width="16" height="16" viewBox="0 0 18 18" fill="none">
+              <path d="M9 1.5C9.414 1.5 9.75 1.836 9.75 2.25V8.25H15.75C16.164 8.25 16.5 8.586 16.5 9C16.5 9.414 16.164 9.75 15.75 9.75H9.75V15.75C9.75 16.164 9.414 16.5 9 16.5C8.586 16.5 8.25 16.164 8.25 15.75V9.75H2.25C1.836 9.75 1.5 9.414 1.5 9C1.5 8.586 1.836 8.25 2.25 8.25H8.25V2.25C8.25 1.836 8.586 1.5 9 1.5Z" fill="currentColor" />
+            </svg>
+            Merge
           </button>
         </div>
+        {merging && (
+          <div className={styles.listItem}>
+            <select
+              className={styles.inlineInput}
+              value={mergePageId ?? ''}
+              onChange={(e) => setMergePageId(e.target.value ? Number(e.target.value) : undefined)}
+              style={{ flex: 1 }}
+            >
+              <option value="">Select a page</option>
+              {allPages.map((p) => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+            <button className={styles.confirmButton} onClick={handleMergeImport} aria-label="Choose file"
+              style={{ opacity: mergePageId ? 1 : 0.4, pointerEvents: mergePageId ? 'auto' : 'none' }}>{<CheckIcon />}</button>
+            <button className={styles.deleteButton} onClick={cancelMerge} aria-label="Cancel merge">{<TrashIcon />}</button>
+          </div>
+        )}
       </div>
 
       {/* Auto-backup */}

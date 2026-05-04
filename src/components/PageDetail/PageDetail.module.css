@@ -73,6 +73,48 @@
   white-space: pre-wrap;
 }
 
+.feedbackDeleteButton {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-tertiary);
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.1s;
+}
+
+.feedbackItem:hover .feedbackDeleteButton {
+  opacity: 1;
+}
+
+.feedbackDeleteButton:hover {
+  color: var(--color-negative);
+}
+
+.feedbackEditTextarea {
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-base);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+  font-family: inherit;
+  width: 100%;
+  min-height: 48px;
+  padding: var(--space-xs) var(--space-sm);
+  border: 1px solid var(--color-input-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-input-bg);
+  resize: vertical;
+  white-space: pre-wrap;
+}
+
+.feedbackEditTextarea:focus {
+  outline: none;
+  border-color: var(--color-text-body);
+}
+
 /* ---- Candidate status ---- */
 
 .titleRow {

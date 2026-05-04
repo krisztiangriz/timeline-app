@@ -93,6 +93,27 @@
   color: inherit !important;
 }
 
+.entryDeleteButton {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-tertiary);
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.1s;
+}
+
+.entryRow:hover .entryDeleteButton {
+  opacity: 1;
+}
+
+.entryDeleteButton:hover {
+  color: var(--color-negative);
+}
+
 /* ---- Entry text ---- */
 
 .entryText {

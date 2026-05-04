@@ -4,6 +4,7 @@ import { stripHtml } from '../../utils/stripHtml'
 import { filterHtmlToMention, stripSelfMention } from '../../utils/mentionParser'
 import { RichTextEditor } from '../RichTextEditor/RichTextEditor'
 import { RichTextDisplay } from '../RichTextEditor/RichTextDisplay'
+import { TrashIcon } from '../Icons/Icons'
 import styles from './TimelineView.module.css'
 
 function isPlainText(text: string): boolean {
@@ -80,6 +81,15 @@ export const TimelineEntryRow = memo(function TimelineEntryRow({
           <span className={styles.entryText}>{displayText}</span>
         )}
       </div>
+      {!crossRefPageId && (
+        <button
+          className={styles.entryDeleteButton}
+          onClick={() => onDelete(entry.id!)}
+          aria-label="Delete entry"
+        >
+          <TrashIcon />
+        </button>
+      )}
     </div>
   )
 })
