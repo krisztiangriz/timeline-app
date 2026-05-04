@@ -1,12 +1,13 @@
-import { useState } from 'react'
+import { useState, useMemo, useRef, useEffect } from 'react'
 import { Modal } from '../../components/Modal/Modal'
 import { useDimensions, useDimensionActions } from '../../hooks/useDimensions'
 import { useAutocomplete } from '../../hooks/useAutocomplete'
 import { usePageActions } from '../../hooks/usePages'
 import { useModalContext, usePreferences } from '../../hooks/useAppContext'
 import { useBackupSettings, type BackupFrequency } from '../../hooks/useAutoBackup'
-import { TrashIcon, CheckIcon, PlusIcon } from '../../components/Icons/Icons'
+import { TrashIcon, CheckIcon, PlusIcon, CloseIcon, SearchIcon } from '../../components/Icons/Icons'
 import { downloadExport, triggerImport, triggerMergeImport } from '../../utils/exportImport'
+import type { Page } from '../../types'
 import styles from './SettingsModal.module.css'
 
 interface SettingsModalProps {
@@ -36,6 +37,29 @@ export function SettingsModal({ open, onClose, onToast }: SettingsModalProps) {
   // Merge import state
   const [merging, setMerging] = useState(false)
   const [mergePageId, setMergePageId] = useState<number | undefined>()
+  const [mergeQuery, setMergeQuery] = useState('')
+  const [mergeSelected, setMergeSelected] = useState<Page | null>(null)
+  const [mergeActiveIndex, setMergeActiveIndex] = useState(-1)
+  const mergeResultsRef = useRef<HTMLDivElement>(null)
+
+  // Merge lookup: filter pages by search query
+  const mergeResults = useMemo(() => {
+    if (!mergeQuery.trim()) return []
+    const q = mergeQuery.toLowerCase()
+    return allPages.filter(
+      (p) => p.type !== 'hub' && p.name.toLowerCase().includes(q)
+    )
+  }, [mergeQuery, allPages])
+
+  // Reset active index when merge results change
+  useEffect(() => { setMergeActiveIndex(-1) }, [mergeResults.length])
+
+  // Scroll active merge result into view
+  useEffect(() => {
+    if (mergeActiveIndex < 0 || !mergeResultsRef.current) return
+    const el = mergeResultsRef.current.children[mergeActiveIndex] as HTMLElement | undefined
+    el?.scrollIntoView({ block: 'nearest' })
+  }, [mergeActiveIndex])
 
   // Pages with triggers (hubs + any page with a mentionTrigger)
   const triggerPages = allPages.filter((p) => p.type === 'hub' || p.mentionTrigger)
@@ -94,9 +118,10 @@ export function SettingsModal({ open, onClose, onToast }: SettingsModalProps) {
   }
 
   async function handleMergeImport() {
-    if (!mergePageId) return
+    const targetId = mergeSelected?.id ?? mergePageId
+    if (!targetId) return
     try {
-      const summary = await triggerMergeImport(mergePageId)
+      const summary = await triggerMergeImport(targetId)
       if (summary) {
         onToast(summary)
         cancelMerge()
@@ -109,7 +134,30 @@ export function SettingsModal({ open, onClose, onToast }: SettingsModalProps) {
 
   function cancelMerge() {
     setMergePageId(undefined)
+    setMergeQuery('')
+    setMergeSelected(null)
+    setMergeActiveIndex(-1)
     setMerging(false)
+  }
+
+  function handleMergeKeyDown(e: React.KeyboardEvent) {
+    if (!mergeResults.length) return
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      setMergeActiveIndex((prev) => (prev < mergeResults.length - 1 ? prev + 1 : 0))
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setMergeActiveIndex((prev) => (prev > 0 ? prev - 1 : mergeResults.length - 1))
+    } else if (e.key === 'Enter' && mergeActiveIndex >= 0) {
+      e.preventDefault()
+      selectMergePage(mergeResults[mergeActiveIndex])
+    }
+  }
+
+  function selectMergePage(page: Page) {
+    setMergeSelected(page)
+    setMergePageId(page.id)
+    setMergeQuery('')
   }
 
   return (
@@ -141,20 +189,53 @@ export function SettingsModal({ open, onClose, onToast }: SettingsModalProps) {
           </button>
         </div>
         {merging && (
-          <div className={styles.listItem}>
-            <select
-              className={styles.inlineInput}
-              value={mergePageId ?? ''}
-              onChange={(e) => setMergePageId(e.target.value ? Number(e.target.value) : undefined)}
-              style={{ flex: 1 }}
-            >
-              <option value="">Select a page</option>
-              {allPages.map((p) => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
-            </select>
+          <div className={styles.mergeRow}>
+            {mergeSelected ? (
+              <div className={styles.mergeSelectedPage}>
+                <span>{mergeSelected.name}</span>
+                <button
+                  className={styles.mergeClearButton}
+                  onClick={() => { setMergeSelected(null); setMergePageId(undefined) }}
+                  aria-label="Clear selection"
+                >
+                  <CloseIcon size={10} />
+                </button>
+              </div>
+            ) : (
+              <div className={styles.mergeSearchWrapper}>
+                <SearchIcon />
+                <input
+                  className={styles.mergeSearchInput}
+                  type="text"
+                  value={mergeQuery}
+                  onChange={(e) => setMergeQuery(e.target.value)}
+                  onKeyDown={handleMergeKeyDown}
+                  placeholder="Look up a page"
+                  autoFocus
+                />
+                {mergeQuery && (
+                  <button className={styles.mergeClearButton} onClick={() => setMergeQuery('')} aria-label="Clear">
+                    <PlusIcon size={12} />
+                  </button>
+                )}
+                {mergeResults.length > 0 && (
+                  <div className={styles.mergeSearchResults} ref={mergeResultsRef}>
+                    {mergeResults.map((page, i) => (
+                      <button
+                        key={page.id}
+                        className={i === mergeActiveIndex ? styles.mergeSearchResultActive : styles.mergeSearchResult}
+                        onClick={() => selectMergePage(page)}
+                        onMouseEnter={() => setMergeActiveIndex(i)}
+                      >
+                        {page.name}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
             <button className={styles.confirmButton} onClick={handleMergeImport} aria-label="Choose file"
-              style={{ opacity: mergePageId ? 1 : 0.4, pointerEvents: mergePageId ? 'auto' : 'none' }}>{<CheckIcon />}</button>
+              style={{ opacity: mergeSelected ? 1 : 0.4, pointerEvents: mergeSelected ? 'auto' : 'none' }}>{<CheckIcon />}</button>
             <button className={styles.deleteButton} onClick={cancelMerge} aria-label="Cancel merge">{<TrashIcon />}</button>
           </div>
         )}
