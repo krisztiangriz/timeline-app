@@ -11,6 +11,8 @@ interface AppContextValue {
   setSettingsOpen: (v: boolean) => void
   helpOpen: boolean
   setHelpOpen: (v: boolean) => void
+  onboardingOpen: boolean
+  setOnboardingOpen: (v: boolean) => void
   showArchived: boolean
   setShowArchived: (v: boolean) => void
 }
@@ -26,6 +28,8 @@ const AppContext = createContext<AppContextValue>({
   setSettingsOpen: () => {},
   helpOpen: false,
   setHelpOpen: () => {},
+  onboardingOpen: false,
+  setOnboardingOpen: () => {},
   showArchived: false,
   setShowArchived: () => {},
 })
@@ -46,6 +50,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [addPageOpen, setAddPageOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [helpOpen, setHelpOpen] = useState(false)
+  const [onboardingOpen, setOnboardingOpen] = useState(() => localStorage.getItem('onboarding-completed') !== 'true')
   const [showArchived, setShowArchivedState] = useState(() => localStorage.getItem('show-archived') === 'true')
 
   function setShowArchived(v: boolean) {
@@ -90,6 +95,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         addPageOpen, setAddPageOpen,
         settingsOpen, setSettingsOpen,
         helpOpen, setHelpOpen,
+        onboardingOpen, setOnboardingOpen,
         showArchived, setShowArchived,
       }}
     >

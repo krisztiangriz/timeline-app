@@ -11,6 +11,19 @@
   cursor: pointer;
 }
 
+.checkboxLabel {
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+}
+
+.showHideRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-lg);
+}
+
 .checkbox {
   width: 16px;
   height: 16px;

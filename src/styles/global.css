@@ -90,3 +90,14 @@ a:focus-visible {
 ul, ol {
   list-style: none;
 }
+
+/* Onboarding: pulse animation on mention spans after first entry */
+[data-onboarding-highlight] [data-mention] {
+  animation: mentionPulse 1s ease-in-out 3;
+  border-radius: 3px;
+}
+
+@keyframes mentionPulse {
+  0%, 100% { background: transparent; }
+  50% { background: var(--color-border-light); }
+}
