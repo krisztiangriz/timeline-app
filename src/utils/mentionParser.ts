@@ -20,10 +20,10 @@ export function extractMentionPageIds(html: string): string[] {
  */
 export function stripSelfMention(html: string, pageId: number): string {
   const pageIdStr = String(pageId)
-  // Remove the mention span for this page (with any attributes in any order)
+  // Unwrap the mention span for this page: keep inner text, remove span tags
   let result = html.replace(
-    new RegExp(`<span[^>]*data-page-id="${pageIdStr}"[^>]*>[\\s\\S]*?</span>`, 'gi'),
-    ''
+    new RegExp(`<span[^>]*data-page-id="${pageIdStr}"[^>]*>([\\s\\S]*?)</span>`, 'gi'),
+    '$1'
   )
   // Clean up leading/trailing whitespace, &nbsp;, and <br>
   result = result.replace(/^(\s|&nbsp;|<br\s*\/?>)+/gi, '')
@@ -31,29 +31,7 @@ export function stripSelfMention(html: string, pageId: number): string {
   result = result.trim()
 
   if (!result || result === '&nbsp;') return ''
-
-  // Capitalize first visible character
-  // Find the first letter (skip HTML tags)
-  let capitalized = false
-  let output = ''
-  for (let i = 0; i < result.length; i++) {
-    if (!capitalized && /[a-z]/.test(result[i])) {
-      output += result[i].toUpperCase()
-      capitalized = true
-    } else {
-      output += result[i]
-    }
-    if (result[i] === '<') {
-      // Skip until closing >
-      const closeIdx = result.indexOf('>', i)
-      if (closeIdx > i) {
-        output = output.slice(0, -1) + result.substring(i, closeIdx + 1)
-        i = closeIdx
-      }
-    }
-  }
-
-  return output
+  return result
 }
 export function filterHtmlToMention(html: string, pageId: number): string {
   const pageIdStr = String(pageId)
