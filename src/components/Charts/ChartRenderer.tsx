@@ -69,7 +69,7 @@ function getSeriesColor(index: number, total: number) {
 }
 
 const cursorStyle = { fill: '#ECF1F9', stroke: '#ECF1F9' }
-const TP = { contentStyle: tooltipStyle, labelStyle: tooltipLabelStyle, cursor: cursorStyle }
+const TP = { contentStyle: tooltipStyle, labelStyle: tooltipLabelStyle, cursor: cursorStyle, wrapperStyle: { zIndex: 1000 } }
 const TPfb = { ...TP, itemSorter: feedbackTooltipSorter }
 const axisStroke = '#B8C5DB'
 const tickStyle = { fontSize: 10, fill: '#485670' }
