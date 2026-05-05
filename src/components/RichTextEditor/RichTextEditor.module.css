@@ -170,18 +170,19 @@
   align-items: center;
   gap: 6px;
   cursor: pointer;
+  vertical-align: top;
+  line-height: var(--line-height-base);
 }
 
 .editor [data-checkbox]::before {
   content: '';
-  display: inline-block;
+  display: block;
   width: 16px;
   height: 16px;
   border-radius: 6px;
   border: 1px solid var(--color-input-border);
   background: var(--color-input-bg);
   flex-shrink: 0;
-  vertical-align: middle;
 }
 
 .editor [data-checkbox="true"]::before {

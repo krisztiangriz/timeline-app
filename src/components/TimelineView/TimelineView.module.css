@@ -17,15 +17,40 @@
   align-self: stretch;
 }
 
-.sectionDate {
+.sectionDateContainer {
   width: 72px;
   flex-shrink: 0;
-  font-size: var(--font-size-sm);
-  line-height: var(--line-height-base);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-text-secondary);
   text-align: right;
+}
+
+.sectionDate {
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-placeholder);
   white-space: nowrap;
+}
+
+.sectionDeleteLabel {
+  display: none;
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-placeholder);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.sectionDeleteLabel:hover {
+  color: var(--color-negative);
+}
+
+.sectionDateContainer:hover .sectionDate {
+  display: none;
+}
+
+.sectionDateContainer:hover .sectionDeleteLabel {
+  display: block;
 }
 
 .sectionContent {
@@ -35,48 +60,7 @@
   flex-direction: column;
 }
 
-/* ---- Pending input row ---- */
-
-.pendingInputRow {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-sm);
-}
-
-.checkboxDecor {
-  width: 16px;
-  height: 16px;
-  border-radius: 6px;
-  border: 1px solid var(--color-input-border);
-  background: var(--color-input-bg);
-  flex-shrink: 0;
-  margin-top: 4px;
-}
-
-.checkboxInteractive {
-  width: 16px;
-  height: 16px;
-  border-radius: 6px;
-  border: 1px solid var(--color-input-border);
-  background: var(--color-input-bg);
-  flex-shrink: 0;
-  margin-top: 4px;
-  cursor: pointer;
-}
-
-.checkboxInteractive:hover {
-  border-color: var(--color-text-body);
-}
-
 /* ---- Entry row ---- */
-
-.entryRow {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-sm);
-  flex: 1;
-  min-width: 0;
-}
 
 .entryRowText {
   flex: 1;
@@ -91,27 +75,6 @@
 
 .entryRowTextDisabled * {
   color: inherit !important;
-}
-
-.entryDeleteButton {
-  width: 24px;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--color-text-tertiary);
-  border-radius: var(--radius-sm);
-  flex-shrink: 0;
-  opacity: 0;
-  transition: opacity 0.1s;
-}
-
-.entryRow:hover .entryDeleteButton {
-  opacity: 1;
-}
-
-.entryDeleteButton:hover {
-  color: var(--color-negative);
 }
 
 /* ---- Entry text ---- */

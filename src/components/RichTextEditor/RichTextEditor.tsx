@@ -39,6 +39,10 @@ interface RichTextEditorProps {
   onMentionClick?: (pageId: number) => void
   /** Called when user selects a component from the ~ picker */
   onInsertComponent?: (type: 'timeline' | 'feedback' | 'table' | 'visualization') => void
+  /** When true, new lines automatically get a checkbox prepended */
+  autoCheckbox?: boolean
+  /** Called when a checkbox is toggled to checked. Receives the text content of that line (HTML stripped of the checkbox span) and the remaining editor HTML after removal. */
+  onCheckboxComplete?: (lineHtml: string, remainingHtml: string) => void
 }
 
 export function RichTextEditor({
@@ -53,6 +57,8 @@ export function RichTextEditor({
   onEnter,
   onMentionClick,
   onInsertComponent,
+  autoCheckbox,
+  onCheckboxComplete,
 }: RichTextEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null)
   const isFocusedRef = useRef(false)
@@ -175,6 +181,31 @@ export function RichTextEditor({
     if (!el) return
     isFocusedRef.current = true
     el.removeAttribute('data-empty')
+
+    // Auto-checkbox: if editor is empty, insert first checkbox on focus
+    if (autoCheckbox && el.textContent?.trim() === '' && !el.querySelector('[data-checkbox]')) {
+      const div = document.createElement('div')
+      const checkbox = document.createElement('span')
+      checkbox.setAttribute('data-checkbox', 'false')
+      checkbox.textContent = '\u00A0'
+      div.appendChild(checkbox)
+      const trailing = document.createTextNode('\u00A0')
+      div.appendChild(trailing)
+      el.innerHTML = ''
+      el.appendChild(div)
+      // Position cursor after checkbox
+      const sel = window.getSelection()
+      if (sel) {
+        const range = document.createRange()
+        range.setStart(trailing, 0)
+        range.collapse(true)
+        sel.removeAllRanges()
+        sel.addRange(range)
+      }
+      emitChange()
+      return
+    }
+
     // Position cursor at the beginning
     const sel = window.getSelection()
     if (sel) {
@@ -193,11 +224,17 @@ export function RichTextEditor({
         // Re-show placeholder if empty and still not focused
         const el = editorRef.current
         if (el && !isFocusedRef.current) {
-          const text = el.textContent?.trim() ?? ''
-          const hasElements = el.querySelector('[data-checkbox], [data-mention]') !== null
-          if (text === '' && !hasElements) {
+          const text = el.textContent?.replace(/\u00A0/g, '').trim() ?? ''
+          const hasCheckbox = el.querySelector('[data-checkbox]') !== null
+          const hasMention = el.querySelector('[data-mention]') !== null
+          // If autoCheckbox, treat checkbox-only content (no real text) as empty
+          const effectivelyEmpty = autoCheckbox
+            ? text === '' && !hasMention
+            : text === '' && !hasCheckbox && !hasMention
+          if (effectivelyEmpty) {
             el.innerHTML = ''
             el.setAttribute('data-empty', 'true')
+            emitChange()
           }
         }
         onBlur?.()
@@ -502,6 +539,47 @@ export function RichTextEditor({
       onEnter()
       return
     }
+
+    // Auto-checkbox: on Enter, insert a new line with a checkbox
+    if (e.key === 'Enter' && !e.shiftKey && autoCheckbox) {
+      e.preventDefault()
+      const el = editorRef.current
+      if (!el) return
+      // Insert a new div with a checkbox at the cursor position
+      const newDiv = document.createElement('div')
+      const checkbox = document.createElement('span')
+      checkbox.setAttribute('data-checkbox', 'false')
+      checkbox.textContent = '\u00A0'
+      newDiv.appendChild(checkbox)
+      const trailing = document.createTextNode('\u00A0')
+      newDiv.appendChild(trailing)
+
+      const sel = window.getSelection()
+      if (sel && sel.rangeCount > 0) {
+        const range = sel.getRangeAt(0)
+        range.deleteContents()
+        // Find the current block to insert after
+        let block = range.startContainer as Node | null
+        while (block && block !== el && block.parentNode !== el) {
+          block = block.parentNode
+        }
+        if (block && block !== el) {
+          block.parentNode!.insertBefore(newDiv, block.nextSibling)
+        } else {
+          el.appendChild(newDiv)
+        }
+        // Move cursor after checkbox
+        const newRange = document.createRange()
+        newRange.setStart(trailing, 0)
+        newRange.collapse(true)
+        sel.removeAllRanges()
+        sel.addRange(newRange)
+      } else {
+        el.appendChild(newDiv)
+      }
+      emitChange()
+      return
+    }
   }
 
   function handleClick(e: React.MouseEvent) {
@@ -523,6 +601,56 @@ export function RichTextEditor({
     // Toggle checkbox
     if (target.hasAttribute('data-checkbox')) {
       const current = target.getAttribute('data-checkbox')
+      if (current === 'false' && onCheckboxComplete) {
+        // Find the line container (a div child of the editor, or the editor itself for top-level content)
+        const el = editorRef.current
+        let container = target.parentElement
+        // Walk up to find the direct child of the editor that contains this checkbox
+        while (container && container !== el && container.parentElement !== el) {
+          container = container.parentElement
+        }
+        if (container && container !== el) {
+          // Clone the container, remove the checkbox span, get remaining HTML
+          const clone = container.cloneNode(true) as HTMLElement
+          const checkboxClone = clone.querySelector('[data-checkbox]')
+          if (checkboxClone) checkboxClone.remove()
+          const lineHtml = clone.innerHTML.replace(/\u00A0/g, ' ').trim()
+          // Remove this line from the editor
+          container.remove()
+          emitChange()
+          onCheckboxComplete(lineHtml, el?.innerHTML ?? '')
+        } else if (el) {
+          // Checkbox is at the top level of the editor (no wrapper div)
+          // Get siblings of the checkbox until the next block break
+          const clone = el.cloneNode(true) as HTMLElement
+          const checkboxClone = clone.querySelector('[data-checkbox]')
+          if (checkboxClone) {
+            // Collect text content after checkbox until <br> or <div>
+            let lineContent = ''
+            let next = checkboxClone.nextSibling
+            const toRemove: Node[] = [checkboxClone]
+            while (next && next.nodeName !== 'DIV' && next.nodeName !== 'BR') {
+              if (next.nodeType === Node.TEXT_NODE) lineContent += next.textContent
+              else lineContent += (next as HTMLElement).outerHTML
+              toRemove.push(next)
+              next = next.nextSibling
+            }
+            // Remove the checkbox and its line content from the actual editor
+            let actualNext: Node | null = target.nextSibling
+            const actualToRemove: Node[] = [target]
+            while (actualNext && actualNext.nodeName !== 'DIV' && actualNext.nodeName !== 'BR') {
+              actualToRemove.push(actualNext)
+              actualNext = actualNext.nextSibling
+            }
+            // Also remove the trailing <br> if present
+            if (actualNext && actualNext.nodeName === 'BR') actualToRemove.push(actualNext)
+            for (const node of actualToRemove) node.parentNode?.removeChild(node)
+            emitChange()
+            onCheckboxComplete(lineContent.replace(/\u00A0/g, ' ').trim(), el.innerHTML)
+          }
+        }
+        return
+      }
       target.setAttribute('data-checkbox', current === 'true' ? 'false' : 'true')
       emitChange()
     }

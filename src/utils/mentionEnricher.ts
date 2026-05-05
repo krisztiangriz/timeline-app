@@ -48,3 +48,37 @@ export function enrichMentionHtml(html: string, allPages: Page[], collapse = fal
     }
   )
 }
+
+/**
+ * Extract unique trigger characters from collapsed mentions in an HTML string.
+ * Returns an array of trigger chars (e.g., ['#', '@']) for display in the gutter.
+ */
+export function extractCollapsedTriggers(html: string, allPages: Page[]): string[] {
+  if (!html || !html.includes('data-page-id')) return []
+
+  // Build lookup: pageId → trigger (only for collapsed hubs)
+  const collapsedTriggerByPageId = new Map<number, string>()
+  for (const page of allPages) {
+    if (page.mentionTrigger && page.mentionCollapsed) {
+      collapsedTriggerByPageId.set(page.id!, page.mentionTrigger)
+      for (const child of allPages) {
+        if (child.parentId === page.id) {
+          collapsedTriggerByPageId.set(child.id!, page.mentionTrigger)
+        }
+      }
+    }
+  }
+
+  if (collapsedTriggerByPageId.size === 0) return []
+
+  // Extract page IDs from mention spans
+  const regex = /data-page-id="(\d+)"/g
+  const triggers = new Set<string>()
+  let match: RegExpExecArray | null
+  while ((match = regex.exec(html)) !== null) {
+    const trigger = collapsedTriggerByPageId.get(Number(match[1]))
+    if (trigger) triggers.add(trigger)
+  }
+
+  return [...triggers]
+}

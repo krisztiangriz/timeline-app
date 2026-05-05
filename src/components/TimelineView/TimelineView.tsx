@@ -1,15 +1,14 @@
-import { useState, useMemo, useEffect, useRef, memo, useCallback } from 'react'
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { stripHtml } from '../../utils/stripHtml'
 import { filterHtmlToMentionLines } from '../../utils/mentionParser'
 
-import { useTimelineEntries, useCrossRefEntries, addEntry, updateEntry, deleteEntry } from '../../hooks/useTimeline'
+import { useTimelineEntries, useCrossRefEntries, addEntry, updateEntry, deleteEntry, mergePendingEntries } from '../../hooks/useTimeline'
 import { getPagePath } from '../../hooks/usePages'
 import { useAutocomplete } from '../../hooks/useAutocomplete'
 import { formatEntryDate, startOfDay } from '../../utils/dateUtils'
 import { TimelineEntryRow } from './TimelineEntryRow'
 import { RichTextEditor } from '../RichTextEditor/RichTextEditor'
-import { RichTextDisplay } from '../RichTextEditor/RichTextDisplay'
 import type { TimelineEntry } from '../../types'
 import styles from './TimelineView.module.css'
 
@@ -40,71 +39,15 @@ function toSentenceCase(html: string): string {
   })
 }
 
-// ---- Pending item row (component renders the checkbox, DB has plain text) ----
+/** Ensure each line in pending HTML has a checkbox. Used when migrating old entries. */
+function ensureCheckboxes(html: string): string {
+  if (!html.trim()) return ''
+  // If HTML already has checkboxes throughout, return as-is
+  if (html.includes('data-checkbox')) return html
 
-const PendingItemRow = memo(function PendingItemRow({ entry, onComplete, onUpdate, onDelete }: {
-  entry: TimelineEntry
-  onComplete: (id: number) => void
-  onUpdate: (id: number, data: { text?: string }) => void
-  onDelete: (id: number) => void
-}) {
-  const [editing, setEditing] = useState(false)
-  const [editHtml, setEditHtml] = useState(entry.text)
-  const clickPos = useRef<{ x: number; y: number } | undefined>(undefined)
-
-  function handleSave() {
-    const plain = stripHtml(editHtml).trim()
-    if (!plain) {
-      onDelete(entry.id!)
-    } else if (editHtml !== entry.text) {
-      onUpdate(entry.id!, { text: editHtml })
-    }
-    setEditing(false)
-    clickPos.current = undefined
-  }
-
-  function handleStartEditing(e: React.MouseEvent) {
-    const target = e.target as HTMLElement
-    if (target.closest('[data-page-id]')) return
-    clickPos.current = { x: e.clientX, y: e.clientY }
-    setEditHtml(entry.text)
-    setEditing(true)
-  }
-
-  const hasHtml = /<[a-z][\s\S]*>/i.test(entry.text)
-
-  return (
-    <div className={styles.pendingInputRow}>
-      <span
-        className={styles.checkboxInteractive}
-        onClick={() => onComplete(entry.id!)}
-      />
-      <div style={{ flex: 1 }}>
-        {editing ? (
-          <RichTextEditor
-            value={editHtml}
-            onChange={setEditHtml}
-            onBlur={handleSave}
-            autoFocus
-            initialClickPosition={clickPos.current}
-            collapseMentions
-          />
-        ) : (
-          <div
-            onClick={handleStartEditing}
-            style={{ cursor: 'text' }}
-          >
-            {hasHtml ? (
-              <RichTextDisplay html={entry.text} collapseMentions />
-            ) : (
-              <span className={styles.entryText}>{entry.text}</span>
-            )}
-          </div>
-        )}
-      </div>
-    </div>
-  )
-})
+  // Wrap plain text in a div with checkbox
+  return `<div><span data-checkbox="false">\u00A0</span>${html}</div>`
+}
 
 // ---- Timeline view ----
 
@@ -135,16 +78,14 @@ export function TimelineView({ pageId, title, readOnly = false }: TimelineViewPr
     return merged
   }, [directEntries, crossRefEntries])
 
-  const [pendingInput, setPendingInput] = useState('')
-
   // Split entries into pending, today (direct + cross-ref), and history groups
-  const { pendingEntries, todayEntry, todayCrossRefs, historyGroups } = useMemo(() => {
-    const pending: TimelineEntry[] = []
+  const { pendingEntry, todayEntry, todayCrossRefs, historyGroups } = useMemo(() => {
+    const pendingEntries: TimelineEntry[] = []
     const dated = new Map<string, TimelineEntry[]>()
 
     for (const entry of allEntries) {
       if (entry.isPending) {
-        pending.push(entry)
+        pendingEntries.push(entry)
       } else {
         const key = startOfDay(new Date(entry.date)).toISOString()
         const group = dated.get(key) ?? []
@@ -165,13 +106,45 @@ export function TimelineView({ pageId, title, readOnly = false }: TimelineViewPr
     const todayCrossRefEntries = todayAll.filter((e) => !directIds.has(e.id!))
     const history = sortedGroups.filter(([key]) => key !== todayKey)
 
-    // Sort pending items oldest-first so new items appear at the bottom
-    pending.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+    // Use first pending entry as the single pending record (after migration, there should be at most one)
+    const singlePending = pendingEntries[0] ?? undefined
 
-    return { pendingEntries: pending, todayEntry: todayDirect, todayCrossRefs: todayCrossRefEntries, historyGroups: history }
+    return { pendingEntry: singlePending, todayEntry: todayDirect, todayCrossRefs: todayCrossRefEntries, historyGroups: history }
   }, [allEntries, directIds])
 
-  // Today's content as a single editable block
+  // ---- Migration: merge multiple pending entries into one ----
+  const migrationDone = useRef(false)
+  useEffect(() => {
+    if (migrationDone.current) return
+    migrationDone.current = true
+    // Check if there are multiple pending entries that need merging
+    const pendingCount = allEntries.filter((e) => e.isPending).length
+    if (pendingCount > 1) {
+      mergePendingEntries(pageId)
+    }
+  }, [pageId, allEntries])
+
+  // ---- Pending section state (single editor, mirrors Today pattern) ----
+  const [pendingHtml, setPendingHtml] = useState('')
+  const pendingEntryId = useRef<number | undefined>(undefined)
+  const pendingFocusedRef = useRef(false)
+
+  // Sync pending entry from DB → local state (only when editor is not focused)
+  useEffect(() => {
+    if (pendingEntry) {
+      pendingEntryId.current = pendingEntry.id
+      if (!pendingFocusedRef.current) {
+        setPendingHtml(pendingEntry.text)
+      }
+    } else {
+      pendingEntryId.current = undefined
+      if (!pendingFocusedRef.current) {
+        setPendingHtml('')
+      }
+    }
+  }, [pendingEntry])
+
+  // ---- Today's content as a single editable block ----
   const [todayHtml, setTodayHtml] = useState('')
   const todayEntryId = useRef<number | undefined>(undefined)
   const todayFocusedRef = useRef(false)
@@ -193,19 +166,53 @@ export function TimelineView({ pageId, title, readOnly = false }: TimelineViewPr
 
   // ---- Handlers ----
 
-  async function handleAddPending() {
-    const plain = stripHtml(pendingInput).trim()
-    if (!plain) {
-      // Empty Enter — close input, revert to placeholder
-      setPendingInput('')
-      return
+  async function handlePendingSave() {
+    pendingFocusedRef.current = false
+    const plain = stripHtml(pendingHtml).replace(/\u00A0/g, '').trim()
+
+    if (pendingEntryId.current) {
+      if (!plain) {
+        await deleteEntry(pendingEntryId.current)
+        pendingEntryId.current = undefined
+      } else if (pendingHtml !== (pendingEntry?.text ?? '')) {
+        await updateEntry(pendingEntryId.current, { text: pendingHtml })
+      }
+    } else if (plain) {
+      // Ensure the new content has checkboxes
+      const htmlWithCheckboxes = ensureCheckboxes(pendingHtml)
+      const id = await addEntry({ pageId, text: htmlWithCheckboxes || pendingHtml, isPending: true })
+      pendingEntryId.current = id
     }
-    // Strip any checkbox HTML that might have been typed via []
-    const cleanText = stripCheckboxHtml(pendingInput)
+  }
+
+  async function handleCheckboxComplete(lineHtml: string, remainingHtml: string) {
+    const cleanText = toSentenceCase(stripCheckboxHtml(lineHtml).replace(/\u00A0/g, ' ').replace(/&nbsp;/g, ' ').trim())
     if (cleanText) {
-      await addEntry({ pageId, text: cleanText, isPending: true })
+      // Append to today's content
+      if (todayEntryId.current) {
+        const currentText = todayHtml
+        const newText = currentText
+          ? currentText + '<div>' + cleanText + '</div>'
+          : cleanText
+        await updateEntry(todayEntryId.current, { text: newText })
+        setTodayHtml(newText)
+      } else {
+        const newId = await addEntry({ pageId, text: cleanText, isPending: false })
+        todayEntryId.current = newId
+        setTodayHtml(cleanText)
+      }
     }
-    setPendingInput('')
+    // Immediately persist the pending record with the line removed
+    setPendingHtml(remainingHtml)
+    const plain = stripHtml(remainingHtml).trim()
+    if (pendingEntryId.current) {
+      if (!plain) {
+        await deleteEntry(pendingEntryId.current)
+        pendingEntryId.current = undefined
+      } else {
+        await updateEntry(pendingEntryId.current, { text: remainingHtml })
+      }
+    }
   }
 
   async function handleTodaySave() {
@@ -225,28 +232,6 @@ export function TimelineView({ pageId, title, readOnly = false }: TimelineViewPr
     }
   }
 
-  async function handleCompletePending(id: number) {
-    const entry = allEntries.find((e) => e.id === id)
-    if (!entry) return
-    const cleanText = toSentenceCase(stripCheckboxHtml(entry.text.trim()))
-    if (cleanText) {
-      // Append to today's content (use local state which may have unsaved edits)
-      if (todayEntryId.current) {
-        const currentText = todayHtml
-        const newText = currentText
-          ? currentText + '<div>' + cleanText + '</div>'
-          : cleanText
-        await updateEntry(todayEntryId.current, { text: newText })
-        setTodayHtml(newText)
-      } else {
-        const newId = await addEntry({ pageId, text: cleanText, isPending: false })
-        todayEntryId.current = newId
-        setTodayHtml(cleanText)
-      }
-    }
-    await deleteEntry(id)
-  }
-
   const handleUpdateEntry = useCallback(async (id: number, data: { text?: string }) => {
     await updateEntry(id, data)
   }, [])
@@ -254,6 +239,26 @@ export function TimelineView({ pageId, title, readOnly = false }: TimelineViewPr
   const handleDeleteEntry = useCallback(async (id: number) => {
     await deleteEntry(id)
   }, [])
+
+  async function handleDeletePending() {
+    if (pendingEntryId.current) {
+      await deleteEntry(pendingEntryId.current)
+      pendingEntryId.current = undefined
+      setPendingHtml('')
+    }
+  }
+
+  async function handleDeleteToday() {
+    if (todayEntryId.current) {
+      await deleteEntry(todayEntryId.current)
+      todayEntryId.current = undefined
+      setTodayHtml('')
+    }
+  }
+
+  async function handleDeleteHistoryEntry(entryId: number) {
+    await deleteEntry(entryId)
+  }
 
   const allPagesRef = useRef(allPages)
   allPagesRef.current = allPages
@@ -271,33 +276,27 @@ export function TimelineView({ pageId, title, readOnly = false }: TimelineViewPr
     <div className={styles.timeline}>
       {title && <span className={styles.sectionTitle}>{title}</span>}
 
-      {/* Pending section — only in write mode */}
+      {/* Pending section — single editor with auto-checkboxes */}
       {!readOnly && (
         <div className={styles.section}>
           <div className={styles.sectionContent}>
-            {pendingEntries.map((entry) => (
-              <PendingItemRow
-                key={entry.id}
-                entry={entry}
-                onComplete={handleCompletePending}
-                onUpdate={handleUpdateEntry}
-                onDelete={handleDeleteEntry}
+            <div onFocus={() => { pendingFocusedRef.current = true }}>
+              <RichTextEditor
+                value={pendingHtml}
+                onChange={setPendingHtml}
+                onBlur={handlePendingSave}
+                onMentionClick={handleMentionClick}
+                placeholder="Add a task…"
+                autoCheckbox
+                onCheckboxComplete={handleCheckboxComplete}
+                collapseMentions
               />
-            ))}
-            <div className={styles.pendingInputRow}>
-              <span className={styles.checkboxDecor} />
-              <div style={{ flex: 1 }}>
-                <RichTextEditor
-                  value={pendingInput}
-                  onChange={setPendingInput}
-                  onEnter={handleAddPending}
-                  onBlur={() => setPendingInput('')}
-                  placeholder="Add a task…"
-                />
-              </div>
             </div>
           </div>
-          <span className={styles.sectionDate}>Pending</span>
+          <div className={styles.sectionDateContainer}>
+            <span className={styles.sectionDate}>Pending</span>
+            <span className={styles.sectionDeleteLabel} onClick={handleDeletePending}>Delete</span>
+          </div>
         </div>
       )}
 
@@ -329,40 +328,51 @@ export function TimelineView({ pageId, title, readOnly = false }: TimelineViewPr
             ))
           })}
         </div>
-        <span className={styles.sectionDate}>Today</span>
+        <div className={styles.sectionDateContainer}>
+          <span className={styles.sectionDate}>Today</span>
+          <span className={styles.sectionDeleteLabel} onClick={handleDeleteToday}>Delete</span>
+        </div>
       </div>
 
       {/* History sections */}
-      {historyGroups.map(([dateKey, entries]) => (
-        <div key={dateKey} className={styles.section}>
-          <div className={styles.sectionContent}>
-            {entries.flatMap((entry) => {
-              const isCrossRef = !directIds.has(entry.id!)
-              if (isCrossRef) {
-                const lines = filterHtmlToMentionLines(entry.text, pageId)
-                return lines.map((lineHtml, li) => (
+      {historyGroups.map(([dateKey, entries]) => {
+        const directEntry = entries.find((e) => directIds.has(e.id!))
+        return (
+          <div key={dateKey} className={styles.section}>
+            <div className={styles.sectionContent}>
+              {entries.flatMap((entry) => {
+                const isCrossRef = !directIds.has(entry.id!)
+                if (isCrossRef) {
+                  const lines = filterHtmlToMentionLines(entry.text, pageId)
+                  return lines.map((lineHtml, li) => (
+                    <TimelineEntryRow
+                      key={`${entry.id}-${li}`}
+                      entry={{ ...entry, text: lineHtml }}
+                      onUpdate={NOOP}
+                      onDelete={NOOP}
+                      crossRefPageId={pageId}
+                    />
+                  ))
+                }
+                return [(
                   <TimelineEntryRow
-                    key={`${entry.id}-${li}`}
-                    entry={{ ...entry, text: lineHtml }}
-                    onUpdate={NOOP}
-                    onDelete={NOOP}
-                    crossRefPageId={pageId}
+                    key={entry.id}
+                    entry={entry}
+                    onUpdate={handleUpdateEntry}
+                    onDelete={handleDeleteEntry}
                   />
-                ))
-              }
-              return [(
-                <TimelineEntryRow
-                  key={entry.id}
-                  entry={entry}
-                  onUpdate={handleUpdateEntry}
-                  onDelete={handleDeleteEntry}
-                />
-              )]
-            })}
+                )]
+              })}
+            </div>
+            <div className={styles.sectionDateContainer}>
+              <span className={styles.sectionDate}>{formatEntryDate(new Date(dateKey))}</span>
+              {directEntry && (
+                <span className={styles.sectionDeleteLabel} onClick={() => handleDeleteHistoryEntry(directEntry.id!)}>Delete</span>
+              )}
+            </div>
           </div>
-          <span className={styles.sectionDate}>{formatEntryDate(new Date(dateKey))}</span>
-        </div>
-      ))}
+        )
+      })}
     </div>
   )
 }
