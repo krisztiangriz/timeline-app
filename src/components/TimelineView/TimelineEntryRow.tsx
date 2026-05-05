@@ -76,9 +76,10 @@ export const TimelineEntryRow = memo(function TimelineEntryRow({
             onBlur={handleSave}
             autoFocus
             initialClickPosition={clickPos.current}
+            collapseMentions
           />
         ) : hasHtml ? (
-          <RichTextDisplay html={displayText} />
+          <RichTextDisplay html={displayText} collapseMentions />
         ) : (
           <span className={styles.entryText}>{displayText}</span>
         )}

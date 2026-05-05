@@ -87,6 +87,7 @@ const PendingItemRow = memo(function PendingItemRow({ entry, onComplete, onUpdat
             onBlur={handleSave}
             autoFocus
             initialClickPosition={clickPos.current}
+            collapseMentions
           />
         ) : (
           <div
@@ -94,7 +95,7 @@ const PendingItemRow = memo(function PendingItemRow({ entry, onComplete, onUpdat
             style={{ cursor: 'text' }}
           >
             {hasHtml ? (
-              <RichTextDisplay html={entry.text} />
+              <RichTextDisplay html={entry.text} collapseMentions />
             ) : (
               <span className={styles.entryText}>{entry.text}</span>
             )}
@@ -312,6 +313,7 @@ export function TimelineView({ pageId, title, readOnly = false }: TimelineViewPr
                 onBlur={handleTodaySave}
                 onMentionClick={handleMentionClick}
                 placeholder="Type here…"
+                collapseMentions
               />
             </div>
           )}

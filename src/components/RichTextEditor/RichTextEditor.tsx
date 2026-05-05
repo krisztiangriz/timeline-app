@@ -31,6 +31,8 @@ interface RichTextEditorProps {
   autoFocus?: boolean
   /** Place cursor at this screen coordinate on initial focus (click-to-edit) */
   initialClickPosition?: { x: number; y: number }
+  /** When true, mentions with collapsed hubs show only the trigger character */
+  collapseMentions?: boolean
   className?: string
   onEnter?: () => void
   /** Called when user clicks a mention span with a page ID */
@@ -46,6 +48,7 @@ export function RichTextEditor({
   onBlur,
   autoFocus,
   initialClickPosition,
+  collapseMentions,
   className,
   onEnter,
   onMentionClick,
@@ -113,7 +116,7 @@ export function RichTextEditor({
     const el = editorRef.current
     if (!el) return
     if (el.innerHTML !== value) {
-      el.innerHTML = enrichMentionHtml(value, allPages)
+      el.innerHTML = enrichMentionHtml(value, allPages, collapseMentions)
     }
     const text = el.textContent?.trim() ?? ''
     const hasElements = el.querySelector('[data-checkbox], [data-mention]') !== null
@@ -354,9 +357,11 @@ export function RichTextEditor({
     if (trigger) {
       span.setAttribute('data-trigger', trigger)
       span.setAttribute('title', option.name)
-      const hub = parentHub ?? allPages.find((p) => p.id === option.id && p.mentionTrigger)
-      if (hub?.mentionCollapsed) {
-        span.setAttribute('data-collapsed', 'true')
+      if (collapseMentions) {
+        const hub = parentHub ?? allPages.find((p) => p.id === option.id && p.mentionTrigger)
+        if (hub?.mentionCollapsed) {
+          span.setAttribute('data-collapsed', 'true')
+        }
       }
     }
 

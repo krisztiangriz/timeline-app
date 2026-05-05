@@ -10,17 +10,19 @@ interface RichTextDisplayProps {
   html: string
   className?: string
   onClick?: () => void
+  /** When true, mentions with collapsed hubs show only the trigger character */
+  collapseMentions?: boolean
 }
 
 /**
  * Read-only display of rich text HTML content.
  * Clicking a mention navigates to the referenced page.
  */
-export const RichTextDisplay = memo(function RichTextDisplay({ html, className, onClick }: RichTextDisplayProps) {
+export const RichTextDisplay = memo(function RichTextDisplay({ html, className, onClick, collapseMentions }: RichTextDisplayProps) {
   const navigate = useNavigate()
   const { allPages } = useAutocomplete()
   const displayClassName = [styles.editor, className].filter(Boolean).join(' ')
-  const cleanHtml = useMemo(() => enrichMentionHtml(DOMPurify.sanitize(html), allPages), [html, allPages])
+  const cleanHtml = useMemo(() => enrichMentionHtml(DOMPurify.sanitize(html), allPages, collapseMentions), [html, allPages, collapseMentions])
 
   if (!html || html === '<br>') {
     return null

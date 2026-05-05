@@ -1,14 +1,15 @@
 import type { Page } from '../types'
 
 /**
- * Enrich mention spans in HTML with `data-trigger`, `title`, and `data-collapsed` attributes.
+ * Enrich mention spans in HTML with `data-trigger`, `title`, and optionally `data-collapsed` attributes.
  * This enables CSS-based collapsing of mention names to just the trigger character.
  *
  * @param html - The raw HTML containing mention spans
  * @param allPages - All pages to look up trigger characters and collapse settings
+ * @param collapse - When true, adds data-collapsed for hubs with mentionCollapsed (default false)
  * @returns Enriched HTML with attributes on mention spans
  */
-export function enrichMentionHtml(html: string, allPages: Page[]): string {
+export function enrichMentionHtml(html: string, allPages: Page[], collapse = false): string {
   if (!html || !html.includes('data-mention')) return html
 
   // Build lookup: pageId → { trigger, collapsed }
@@ -26,7 +27,7 @@ export function enrichMentionHtml(html: string, allPages: Page[]): string {
     }
   }
 
-  // Enrich mention spans with data-trigger, title, and data-collapsed
+  // Enrich mention spans with data-trigger, title, and optionally data-collapsed
   return html.replace(
     /<span([^>]*data-mention="true"[^>]*data-page-id="(\d+)"[^>]*)>([^<]*)<\/span>/gi,
     (match, attrs, pageIdStr, textContent) => {
@@ -34,15 +35,15 @@ export function enrichMentionHtml(html: string, allPages: Page[]): string {
       const info = mentionInfo.get(pageId)
       if (!info) return match
 
+      const collapsedAttr = collapse && info.collapsed ? ' data-collapsed="true"' : ''
+
       // Skip if already has data-trigger (re-enrichment safety)
       if (attrs.includes('data-trigger')) {
         // Still update collapsed state
-        const collapsedAttr = info.collapsed ? ' data-collapsed="true"' : ''
         const cleaned = attrs.replace(/ data-collapsed="[^"]*"/g, '')
         return `<span${cleaned}${collapsedAttr}>${textContent}</span>`
       }
 
-      const collapsedAttr = info.collapsed ? ' data-collapsed="true"' : ''
       return `<span${attrs} data-trigger="${info.trigger}" title="${textContent}"${collapsedAttr}>${textContent}</span>`
     }
   )
