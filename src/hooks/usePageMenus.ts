@@ -43,7 +43,6 @@ export function usePageMenus({
 
   const addMenuItems = useMemo<MenuEntry[]>(() => [
     { type: 'item', label: 'Add feedback', onClick: () => setFeedbackOpen(true) },
-    { type: 'separator' },
     { type: 'item', label: 'Add page', onClick: () => setAddPageOpen(true) },
   ], [setFeedbackOpen, setAddPageOpen])
 

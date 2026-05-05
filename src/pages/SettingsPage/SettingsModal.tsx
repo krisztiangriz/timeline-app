@@ -305,7 +305,7 @@ export function SettingsModal({ open, onClose, onToast }: SettingsModalProps) {
               title={page.mentionCollapsed ? 'Showing trigger only — click to show full name' : 'Showing full name — click to show trigger only'}
             >
               <div className={styles.checkbox} data-checked={!page.mentionCollapsed} />
-              <span className={styles.checkboxLabel}>Name</span>
+              <span className={styles.checkboxLabel}>Label</span>
             </button>
             <button className={styles.deleteButton} onClick={() => handleRemoveTrigger(page.id!)} aria-label={`Remove trigger from ${page.name}`}>{<TrashIcon />}</button>
           </div>
