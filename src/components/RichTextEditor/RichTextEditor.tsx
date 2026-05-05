@@ -28,6 +28,8 @@ interface RichTextEditorProps {
   placeholder?: string
   onBlur?: () => void
   autoFocus?: boolean
+  /** Place cursor at this screen coordinate on initial focus (click-to-edit) */
+  initialClickPosition?: { x: number; y: number }
   className?: string
   onEnter?: () => void
   /** Called when user clicks a mention span with a page ID */
@@ -42,6 +44,7 @@ export function RichTextEditor({
   placeholder = '',
   onBlur,
   autoFocus,
+  initialClickPosition,
   className,
   onEnter,
   onMentionClick,
@@ -130,14 +133,22 @@ export function RichTextEditor({
       editorRef.current.focus()
       const sel = window.getSelection()
       if (sel) {
-        const range = document.createRange()
-        range.setStart(editorRef.current, 0)
-        range.collapse(true)
+        let range: Range | null = null
+        // Place cursor at the click position if provided
+        if (initialClickPosition) {
+          range = document.caretRangeFromPoint(initialClickPosition.x, initialClickPosition.y)
+        }
+        // Fallback: place cursor at end of content
+        if (!range) {
+          range = document.createRange()
+          range.selectNodeContents(editorRef.current)
+          range.collapse(false)
+        }
         sel.removeAllRanges()
         sel.addRange(range)
       }
     }
-  }, [autoFocus])
+  }, [autoFocus, initialClickPosition])
 
   const emitChange = useCallback(() => {
     const el = editorRef.current

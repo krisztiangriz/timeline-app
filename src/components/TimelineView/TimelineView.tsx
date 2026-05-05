@@ -50,6 +50,7 @@ const PendingItemRow = memo(function PendingItemRow({ entry, onComplete, onUpdat
 }) {
   const [editing, setEditing] = useState(false)
   const [editHtml, setEditHtml] = useState(entry.text)
+  const clickPos = useRef<{ x: number; y: number } | undefined>(undefined)
 
   function handleSave() {
     const plain = stripHtml(editHtml).trim()
@@ -59,6 +60,15 @@ const PendingItemRow = memo(function PendingItemRow({ entry, onComplete, onUpdat
       onUpdate(entry.id!, { text: editHtml })
     }
     setEditing(false)
+    clickPos.current = undefined
+  }
+
+  function handleStartEditing(e: React.MouseEvent) {
+    const target = e.target as HTMLElement
+    if (target.closest('[data-page-id]')) return
+    clickPos.current = { x: e.clientX, y: e.clientY }
+    setEditHtml(entry.text)
+    setEditing(true)
   }
 
   const hasHtml = /<[a-z][\s\S]*>/i.test(entry.text)
@@ -76,10 +86,11 @@ const PendingItemRow = memo(function PendingItemRow({ entry, onComplete, onUpdat
             onChange={setEditHtml}
             onBlur={handleSave}
             autoFocus
+            initialClickPosition={clickPos.current}
           />
         ) : (
           <div
-            onClick={() => { setEditHtml(entry.text); setEditing(true) }}
+            onClick={handleStartEditing}
             style={{ cursor: 'text' }}
           >
             {hasHtml ? (

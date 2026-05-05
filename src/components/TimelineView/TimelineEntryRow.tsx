@@ -1,4 +1,4 @@
-import { useState, useMemo, memo } from 'react'
+import { useState, useMemo, useRef, memo } from 'react'
 import type { TimelineEntry } from '../../types'
 import { stripHtml } from '../../utils/stripHtml'
 import { filterHtmlToMention, stripSelfMention } from '../../utils/mentionParser'
@@ -27,6 +27,7 @@ export const TimelineEntryRow = memo(function TimelineEntryRow({
 }: TimelineEntryRowProps) {
   const [editing, setEditing] = useState(false)
   const [editHtml, setEditHtml] = useState(entry.text)
+  const clickPos = useRef<{ x: number; y: number } | undefined>(undefined)
 
   // For cross-ref entries, filter to only relevant lines and strip self-mention
   const displayText = useMemo(() => {
@@ -46,6 +47,17 @@ export const TimelineEntryRow = memo(function TimelineEntryRow({
       onUpdate(entry.id!, { text: editHtml })
     }
     setEditing(false)
+    clickPos.current = undefined
+  }
+
+  function handleStartEditing(e: React.MouseEvent) {
+    // Don't enter edit mode if clicking on a mention link
+    const target = e.target as HTMLElement
+    if (target.closest('[data-page-id]')) return
+
+    clickPos.current = { x: e.clientX, y: e.clientY }
+    setEditHtml(entry.text)
+    setEditing(true)
   }
 
   const hasHtml = !isPlainText(displayText)
@@ -54,10 +66,7 @@ export const TimelineEntryRow = memo(function TimelineEntryRow({
     <div className={styles.entryRow}>
       <div
         className={crossRefPageId ? styles.entryRowTextDisabled : styles.entryRowText}
-        onClick={!editing && !crossRefPageId ? () => {
-          setEditHtml(entry.text)
-          setEditing(true)
-        } : undefined}
+        onClick={!editing && !crossRefPageId ? handleStartEditing : undefined}
         style={{ cursor: editing || crossRefPageId ? 'default' : 'text' }}
       >
         {editing ? (
@@ -66,6 +75,7 @@ export const TimelineEntryRow = memo(function TimelineEntryRow({
             onChange={setEditHtml}
             onBlur={handleSave}
             autoFocus
+            initialClickPosition={clickPos.current}
           />
         ) : hasHtml ? (
           <RichTextDisplay html={displayText} />
