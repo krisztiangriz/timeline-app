@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
+  BarChart, Bar, XAxis, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend, LineChart, Line, AreaChart, Area,
 } from 'recharts'
 import {
@@ -282,9 +282,8 @@ function FeedbackDimensionChart({ config, monthCount = 12, feedbacks, pages, dim
               <Legend content={cellLegend(data.summary.map((s, i) => ({ name: s.name, color: getColor(i, data.summary.length) })))} />
             </PieChart>
           ) : (
-            <BarChart data={data.summary} layout="vertical">
-              <XAxis type="number" allowDecimals={false} tick={tickStyle} stroke={axisStroke} interval="preserveStartEnd" />
-              <YAxis type="category" dataKey="name" tick={tickStyle} stroke={axisStroke} width={120} />
+            <BarChart data={data.summary}>
+              <XAxis dataKey="name" tick={tickStyle} stroke={axisStroke} interval={0} />
               <Tooltip {...TP} />
               {data.summary.length > 1 && <Legend content={cellLegend(data.summary.map((s, i) => ({ name: s.name, color: getSeriesColor(i, data.summary.length) })))} />}
               <Bar dataKey="value">
