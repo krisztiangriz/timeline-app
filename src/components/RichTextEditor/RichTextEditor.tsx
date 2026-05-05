@@ -354,6 +354,10 @@ export function RichTextEditor({
     if (trigger) {
       span.setAttribute('data-trigger', trigger)
       span.setAttribute('title', option.name)
+      const hub = parentHub ?? allPages.find((p) => p.id === option.id && p.mentionTrigger)
+      if (hub?.mentionCollapsed) {
+        span.setAttribute('data-collapsed', 'true')
+      }
     }
 
     const parent = node.parentNode

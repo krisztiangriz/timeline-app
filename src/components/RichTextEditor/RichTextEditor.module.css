@@ -313,6 +313,7 @@
   content: attr(data-trigger);
   font-size: var(--font-size-base);
   line-height: var(--line-height-base);
+  font-family: ui-monospace, 'SF Mono', Monaco, 'Cascadia Mono', monospace;
   color: var(--color-text-placeholder);
   font-weight: var(--font-weight-medium);
 }

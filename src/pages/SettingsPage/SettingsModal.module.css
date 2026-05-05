@@ -164,7 +164,7 @@
   font-size: 11px;
   line-height: var(--line-height-base);
   height: 24px;
-  font-family: var(--font-family);
+  font-family: ui-monospace, 'SF Mono', Monaco, 'Cascadia Mono', monospace;
   color: var(--color-text-primary);
   background: var(--color-input-bg);
   flex-shrink: 0;
