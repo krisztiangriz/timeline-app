@@ -43,50 +43,45 @@ export function useCrossRefEntries(pageId?: number) {
   ) ?? []
 }
 
-/**
- * CRUD operations for timeline entries.
- */
-export function useTimelineActions() {
-  async function addEntry(
-    data: Pick<TimelineEntry, 'pageId' | 'text' | 'isPending'>
-  ): Promise<number> {
-    const now = new Date()
-    const tagRefs = extractMentionPageIds(data.text)
+// Standalone async functions — stable references, no hook overhead
 
-    const id = await db.timelineEntries.add({
-      ...data,
-      date: now,
-      tagRefs,
-      createdAt: now,
-      updatedAt: now,
-    })
+export async function addEntry(
+  data: Pick<TimelineEntry, 'pageId' | 'text' | 'isPending'>
+): Promise<number> {
+  const now = new Date()
+  const tagRefs = extractMentionPageIds(data.text)
 
-    // Update parent page's updatedAt
-    await db.pages.update(data.pageId, { updatedAt: now })
+  const id = await db.timelineEntries.add({
+    ...data,
+    date: now,
+    tagRefs,
+    createdAt: now,
+    updatedAt: now,
+  })
 
-    return id as number
+  // Update parent page's updatedAt
+  await db.pages.update(data.pageId, { updatedAt: now })
+
+  return id as number
+}
+
+export async function updateEntry(
+  id: number,
+  data: Partial<Omit<TimelineEntry, 'id' | 'createdAt'>>
+) {
+  const updates: Partial<TimelineEntry> = {
+    ...data,
+    updatedAt: new Date(),
   }
 
-  async function updateEntry(
-    id: number,
-    data: Partial<Omit<TimelineEntry, 'id' | 'createdAt'>>
-  ) {
-    const updates: Partial<TimelineEntry> = {
-      ...data,
-      updatedAt: new Date(),
-    }
-
-    // Re-parse mentions if text changed
-    if (data.text !== undefined) {
-      updates.tagRefs = extractMentionPageIds(data.text)
-    }
-
-    await db.timelineEntries.update(id, updates)
+  // Re-parse mentions if text changed
+  if (data.text !== undefined) {
+    updates.tagRefs = extractMentionPageIds(data.text)
   }
 
-  async function deleteEntry(id: number) {
-    await db.timelineEntries.delete(id)
-  }
+  await db.timelineEntries.update(id, updates)
+}
 
-  return { addEntry, updateEntry, deleteEntry }
+export async function deleteEntry(id: number) {
+  await db.timelineEntries.delete(id)
 }

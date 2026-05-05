@@ -21,16 +21,10 @@ export function useTableSort(pageKey: string, defaultKey: SortKey = 'name', defa
     })
   }, [pageKey])
 
-  // Save to DB on change
+  // Save to DB on change (single upsert)
   useEffect(() => {
     if (!loaded) return
-    db.pageSettings.where('pageKey').equals(pageKey).first().then((existing) => {
-      if (existing) {
-        db.pageSettings.update(existing.id!, { sortKey, sortDir })
-      } else {
-        db.pageSettings.add({ pageKey, sortKey, sortDir })
-      }
-    })
+    db.pageSettings.put({ pageKey, sortKey, sortDir })
   }, [pageKey, sortKey, sortDir, loaded])
 
   const toggleSort = useCallback((key: SortKey) => {

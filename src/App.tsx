@@ -4,7 +4,7 @@ import { AppProvider, useModalContext } from './hooks/useAppContext'
 import { AutocompleteProvider, useAutocomplete } from './hooks/useAutocomplete'
 import { DemoBanner } from './components/DemoBanner/DemoBanner'
 import { ToastContainer } from './components/Toast/Toast'
-import { useToast } from './hooks/useToast'
+import { ToastProvider, useToast } from './hooks/useToast'
 import { useDemoMode } from './hooks/useDemoMode'
 import { useAutoBackup } from './hooks/useAutoBackup'
 import { usePageActions, usePageByRole, getPagePath } from './hooks/usePages'
@@ -214,6 +214,7 @@ export default function App() {
     <BrowserRouter basename="/timeline-app">
       <AppProvider>
         <AutocompleteProvider>
+        <ToastProvider>
         {isDemoMode && <DemoBanner onExitDemo={clearDemoFlag} />}
         <Suspense fallback={null}>
         <Routes>
@@ -229,6 +230,7 @@ export default function App() {
         </Routes>
         </Suspense>
         <GlobalOverlays />
+        </ToastProvider>
         </AutocompleteProvider>
       </AppProvider>
     </BrowserRouter>

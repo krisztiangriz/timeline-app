@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { Modal } from '../../components/Modal/Modal'
-import { useDimensions, useDimensionActions } from '../../hooks/useDimensions'
+import { useDimensions, addDimension, deleteDimension } from '../../hooks/useDimensions'
 import { useAutocomplete } from '../../hooks/useAutocomplete'
 import { usePageActions } from '../../hooks/usePages'
 import { useModalContext, usePreferences } from '../../hooks/useAppContext'
@@ -23,7 +23,6 @@ export function SettingsModal({ open, onClose, onToast }: SettingsModalProps) {
   const { showArchived, setShowArchived } = usePreferences()
   const { setOnboardingOpen } = useModalContext()
   const { frequency, setFrequency, lastBackup } = useBackupSettings()
-  const { addDimension, deleteDimension } = useDimensionActions()
 
   // Dimension add state
   const [addingDim, setAddingDim] = useState(false)

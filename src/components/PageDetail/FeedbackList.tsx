@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { useFeedbackForSubject, useFeedbackActions } from '../../hooks/useFeedback'
+import { useFeedbackForSubject, updateFeedback, deleteFeedback } from '../../hooks/useFeedback'
 import { useDimensions } from '../../hooks/useDimensions'
 import { formatTableDate } from '../../utils/dateUtils'
 import { EmptyState } from '../EmptyState/EmptyState'
@@ -13,7 +13,6 @@ interface FeedbackListProps {
 export function FeedbackList({ subjectId }: FeedbackListProps) {
   const feedbacks = useFeedbackForSubject(subjectId)
   const dimensions = useDimensions()
-  const { updateFeedback, deleteFeedback } = useFeedbackActions()
   const dimMap = useMemo(() => new Map(dimensions.map((d) => [d.id!, d])), [dimensions])
 
   const [editingId, setEditingId] = useState<number | null>(null)

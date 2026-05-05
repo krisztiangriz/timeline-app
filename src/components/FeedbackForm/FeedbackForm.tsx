@@ -2,7 +2,7 @@ import { useState, useMemo, useRef, useEffect } from 'react'
 import { Modal } from '../Modal/Modal'
 import { useAutocomplete } from '../../hooks/useAutocomplete'
 import { useDimensions } from '../../hooks/useDimensions'
-import { useFeedbackActions } from '../../hooks/useFeedback'
+import { addFeedback } from '../../hooks/useFeedback'
 import { CloseIcon, SearchIcon, PlusIcon } from '../Icons/Icons'
 import type { FeedbackType, Page } from '../../types'
 import styles from './FeedbackForm.module.css'
@@ -17,7 +17,6 @@ interface FeedbackFormProps {
 export function FeedbackForm({ open, onClose, onSuccess }: FeedbackFormProps) {
   const { allPages } = useAutocomplete()
   const dimensions = useDimensions()
-  const { addFeedback } = useFeedbackActions()
 
   const [subjectQuery, setSubjectQuery] = useState('')
   const [selectedSubject, setSelectedSubject] = useState<Page | null>(null)

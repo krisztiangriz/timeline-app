@@ -162,8 +162,6 @@ function generateEntries(
   text: string
   tagRefs: string[]
   isPending: boolean
-  isCompleted: boolean
-  ticketId: null
   createdAt: Date
   updatedAt: Date
 }> {
@@ -173,8 +171,6 @@ function generateEntries(
     text: string
     tagRefs: string[]
     isPending: boolean
-    isCompleted: boolean
-    ticketId: null
     createdAt: Date
     updatedAt: Date
   }> = []
@@ -216,8 +212,6 @@ function generateEntries(
           text,
           tagRefs: [],
           isPending: false,
-          isCompleted: false,
-          ticketId: null,
           createdAt: entryDate,
           updatedAt: entryDate,
         })
@@ -256,8 +250,6 @@ export async function seedDemoData() {
     text: string
     tagRefs: string[]
     isPending: boolean
-    isCompleted: boolean
-    ticketId: null
     createdAt: Date
     updatedAt: Date
   }> = []

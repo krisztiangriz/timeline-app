@@ -48,12 +48,3 @@ export function enrichMentionHtml(html: string, allPages: Page[], collapse = fal
     }
   )
 }
-
-/**
- * Get the set of trigger characters that should be collapsed (show trigger only, not name).
- */
-export function getCollapsedTriggers(allPages: Page[]): string[] {
-  return allPages
-    .filter((p) => p.mentionTrigger && p.mentionCollapsed)
-    .map((p) => p.mentionTrigger!)
-}

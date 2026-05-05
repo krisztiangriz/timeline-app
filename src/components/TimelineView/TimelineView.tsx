@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { stripHtml } from '../../utils/stripHtml'
 import { filterHtmlToMentionLines } from '../../utils/mentionParser'
 
-import { useTimelineEntries, useCrossRefEntries, useTimelineActions } from '../../hooks/useTimeline'
+import { useTimelineEntries, useCrossRefEntries, addEntry, updateEntry, deleteEntry } from '../../hooks/useTimeline'
 import { getPagePath } from '../../hooks/usePages'
 import { useAutocomplete } from '../../hooks/useAutocomplete'
 import { formatEntryDate, startOfDay } from '../../utils/dateUtils'
@@ -118,7 +118,6 @@ interface TimelineViewProps {
 export function TimelineView({ pageId, title, readOnly = false }: TimelineViewProps) {
   const directEntries = useTimelineEntries(pageId)
   const crossRefEntries = useCrossRefEntries(pageId)
-  const { addEntry, updateEntry, deleteEntry } = useTimelineActions()
   const { allPages } = useAutocomplete()
   const navigate = useNavigate()
 
@@ -250,11 +249,11 @@ export function TimelineView({ pageId, title, readOnly = false }: TimelineViewPr
 
   const handleUpdateEntry = useCallback(async (id: number, data: { text?: string }) => {
     await updateEntry(id, data)
-  }, [updateEntry])
+  }, [])
 
   const handleDeleteEntry = useCallback(async (id: number) => {
     await deleteEntry(id)
-  }, [deleteEntry])
+  }, [])
 
   const allPagesRef = useRef(allPages)
   allPagesRef.current = allPages

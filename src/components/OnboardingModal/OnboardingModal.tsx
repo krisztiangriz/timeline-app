@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Modal } from '../Modal/Modal'
 import { useAutocomplete } from '../../hooks/useAutocomplete'
 import { usePageByRole } from '../../hooks/usePages'
-import { useTimelineActions } from '../../hooks/useTimeline'
+import { addEntry } from '../../hooks/useTimeline'
 import styles from './OnboardingModal.module.css'
 
 interface OnboardingModalProps {
@@ -310,7 +310,6 @@ export function OnboardingModal({ open, onClose }: OnboardingModalProps) {
   const [step, setStep] = useState(0)
   const editorRef = useRef<HTMLDivElement>(null)
   const timelinePage = usePageByRole('main-timeline')
-  const { addEntry } = useTimelineActions()
   const navigate = useNavigate()
 
   // Reset step when opened

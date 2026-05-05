@@ -16,27 +16,25 @@ export function useFeedbackForSubject(subjectId?: number) {
   ) ?? []
 }
 
-export function useFeedbackActions() {
-  async function addFeedback(
-    data: Pick<Feedback, 'subjectId' | 'type' | 'description' | 'dimensionId'>
-  ): Promise<number> {
-    const id = await db.feedbacks.add({
-      ...data,
-      createdAt: new Date(),
-    })
-    return id as number
-  }
+// Standalone async functions — stable references, no hook overhead
 
-  async function updateFeedback(
-    id: number,
-    data: Partial<Pick<Feedback, 'type' | 'description' | 'dimensionId'>>
-  ) {
-    await db.feedbacks.update(id, data)
-  }
+export async function addFeedback(
+  data: Pick<Feedback, 'subjectId' | 'type' | 'description' | 'dimensionId'>
+): Promise<number> {
+  const id = await db.feedbacks.add({
+    ...data,
+    createdAt: new Date(),
+  })
+  return id as number
+}
 
-  async function deleteFeedback(id: number) {
-    await db.feedbacks.delete(id)
-  }
+export async function updateFeedback(
+  id: number,
+  data: Partial<Pick<Feedback, 'type' | 'description' | 'dimensionId'>>
+) {
+  await db.feedbacks.update(id, data)
+}
 
-  return { addFeedback, updateFeedback, deleteFeedback }
+export async function deleteFeedback(id: number) {
+  await db.feedbacks.delete(id)
 }
