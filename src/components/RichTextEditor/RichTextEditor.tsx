@@ -8,6 +8,7 @@ import {
   type KeyboardEvent,
 } from 'react'
 import { useAutocomplete } from '../../hooks/useAutocomplete'
+import { enrichMentionHtml } from '../../utils/mentionEnricher'
 import { formatTableDate } from '../../utils/dateUtils'
 import styles from './RichTextEditor.module.css'
 
@@ -112,7 +113,7 @@ export function RichTextEditor({
     const el = editorRef.current
     if (!el) return
     if (el.innerHTML !== value) {
-      el.innerHTML = value
+      el.innerHTML = enrichMentionHtml(value, allPages)
     }
     const text = el.textContent?.trim() ?? ''
     const hasElements = el.querySelector('[data-checkbox], [data-mention]') !== null
@@ -346,6 +347,14 @@ export function RichTextEditor({
     span.setAttribute('data-page-id', String(option.id))
     span.contentEditable = 'false'
     span.appendChild(document.createTextNode(option.name))
+    // Store trigger character for CSS-based collapse
+    const mentionPage = allPages.find((p) => p.id === option.id)
+    const parentHub = mentionPage?.parentId ? allPages.find((p) => p.id === mentionPage.parentId) : undefined
+    const trigger = parentHub?.mentionTrigger ?? allPages.find((p) => p.id === option.id && p.mentionTrigger)?.mentionTrigger
+    if (trigger) {
+      span.setAttribute('data-trigger', trigger)
+      span.setAttribute('title', option.name)
+    }
 
     const parent = node.parentNode
     if (!parent) return

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import DOMPurify from 'dompurify'
 import { getPagePath } from '../../hooks/usePages'
 import { useAutocomplete } from '../../hooks/useAutocomplete'
+import { enrichMentionHtml } from '../../utils/mentionEnricher'
 import styles from './RichTextEditor.module.css'
 
 interface RichTextDisplayProps {
@@ -19,7 +20,7 @@ export const RichTextDisplay = memo(function RichTextDisplay({ html, className, 
   const navigate = useNavigate()
   const { allPages } = useAutocomplete()
   const displayClassName = [styles.editor, className].filter(Boolean).join(' ')
-  const cleanHtml = useMemo(() => DOMPurify.sanitize(html), [html])
+  const cleanHtml = useMemo(() => enrichMentionHtml(DOMPurify.sanitize(html), allPages), [html, allPages])
 
   if (!html || html === '<br>') {
     return null

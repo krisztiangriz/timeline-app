@@ -302,6 +302,27 @@
   text-underline-offset: 2px;
 }
 
+/* Collapsed mentions: show only trigger character, full name on hover via title */
+.editor [data-mention][data-collapsed] {
+  font-size: 0;
+  line-height: 0;
+  text-decoration: none;
+}
+
+.editor [data-mention][data-collapsed]::before {
+  content: attr(data-trigger);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-base);
+  color: var(--color-text-placeholder);
+  font-weight: var(--font-weight-medium);
+}
+
+.editor [data-mention][data-collapsed]:hover::before {
+  color: var(--color-text-primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 /* Hide prefix from old mentions */
 .editor [data-mention] [data-prefix] {
   display: none;

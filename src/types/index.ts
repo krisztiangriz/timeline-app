@@ -15,6 +15,7 @@ export interface Page {
   type: PageType
   role?: PageRole          // stable identifier for special pages (set on create)
   mentionTrigger?: string  // autocomplete trigger prefix — any single character for hubs
+  mentionCollapsed?: boolean // when true, mentions show only the trigger char (not the full name)
   parentId?: number        // hub grouping
   candidateStatus?: CandidateStatus // only for candidate pages
   archived?: boolean       // hidden from views unless "Show archived" is on
