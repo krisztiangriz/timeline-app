@@ -19,13 +19,15 @@
 
 .sectionDateContainer {
   width: 72px;
+  height: 24px;
   flex-shrink: 0;
-  text-align: right;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
 }
 
 .sectionDate {
   font-size: var(--font-size-sm);
-  line-height: 24px;
   font-weight: var(--font-weight-medium);
   color: var(--color-text-placeholder);
   white-space: nowrap;
@@ -34,7 +36,6 @@
 .sectionDeleteLabel {
   display: none;
   font-size: var(--font-size-sm);
-  line-height: 24px;
   font-weight: var(--font-weight-medium);
   color: var(--color-text-placeholder);
   white-space: nowrap;
