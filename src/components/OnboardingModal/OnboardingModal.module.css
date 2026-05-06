@@ -8,32 +8,11 @@
   padding: var(--space-md) 0;
 }
 
-/* ---- Media placeholder ---- */
+/* ---- Video ---- */
 
-.mediaPlaceholder {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-sm);
+.media {
   width: 100%;
-  aspect-ratio: 16 / 9;
-  max-height: 240px;
   border-radius: var(--radius-md);
-  background: var(--color-input-bg);
-  border: 1px dashed var(--color-border);
-  color: var(--color-text-placeholder);
-}
-
-.mediaIcon {
-  opacity: 0.5;
-}
-
-.mediaLabel {
-  font-size: var(--font-size-xs);
-  line-height: var(--line-height-xs);
-  color: var(--color-text-placeholder);
-  font-style: italic;
 }
 
 /* ---- Description ---- */
