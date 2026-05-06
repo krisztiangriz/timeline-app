@@ -21,22 +21,10 @@
   width: 72px;
   height: 24px;
   flex-shrink: 0;
-  text-align: right;
-}
-
-.sectionDate {
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-text-placeholder);
-  white-space: nowrap;
-}
-
-.sectionDeleteLabel {
-  display: none;
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-text-placeholder);
-  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  position: relative;
   cursor: pointer;
 }
 
@@ -48,12 +36,14 @@
 }
 
 .sectionDeleteLabel {
-  display: none;
+  position: absolute;
+  right: 0;
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
   color: var(--color-text-placeholder);
   white-space: nowrap;
-  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .sectionDeleteLabel:hover {
@@ -61,11 +51,12 @@
 }
 
 .sectionDateContainer:hover .sectionDate {
-  display: none;
+  opacity: 0;
 }
 
 .sectionDateContainer:hover .sectionDeleteLabel {
-  display: block;
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .sectionContent {
