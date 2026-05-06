@@ -30,7 +30,7 @@ export function OnboardingModal({ open, onClose }: OnboardingModalProps) {
           muted
           playsInline
         >
-          <source src="/timeline-app/timeline-app-onboarding.mp4" type="video/mp4" />
+          <source src="/timeline-app/timeline-app-promo.mp4" type="video/mp4" />
         </video>
 
         {/* Description text — replace with your copy */}
