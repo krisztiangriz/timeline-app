@@ -31,7 +31,7 @@ export function OnboardingModal({ open, onClose }: OnboardingModalProps) {
           playsInline
           onTimeUpdate={(e) => {
             const v = e.currentTarget
-            if (v.duration - v.currentTime < 1.25) {
+            if (v.duration - v.currentTime < 1) {
               v.currentTime = 0
             }
           }}
@@ -41,7 +41,7 @@ export function OnboardingModal({ open, onClose }: OnboardingModalProps) {
 
         {/* Description text — replace with your copy */}
         <p className={styles.description}>
-          Timeline is a clever, privacy focused progressive web todo app, that collects tagged input and visualizes data.
+          Timeline is a clever, privacy focused todo app, that collects tagged input and visualizes data.
         </p>
 
         {/* Get Started button */}
