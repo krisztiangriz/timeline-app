@@ -54,7 +54,7 @@ export const RichTextDisplay = memo(function RichTextDisplay({ html, className, 
       className={displayClassName}
       dangerouslySetInnerHTML={{ __html: cleanHtml }}
       onClick={handleClick}
-      style={{ cursor: onClick ? 'text' : undefined }}
+      style={{ cursor: onClick ? 'text' : 'auto' }}
     />
   )
 })

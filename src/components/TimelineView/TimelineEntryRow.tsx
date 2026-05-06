@@ -73,7 +73,7 @@ export const TimelineEntryRow = memo(function TimelineEntryRow({
     <div
       className={crossRefPageId ? styles.entryRowTextDisabled : styles.entryRowText}
       onClick={!editing && !crossRefPageId ? handleStartEditing : undefined}
-      style={{ cursor: editing || crossRefPageId ? 'default' : 'text' }}
+        style={{ cursor: editing || crossRefPageId ? 'auto' : 'text' }}
     >
       {editing ? (
         <RichTextEditor

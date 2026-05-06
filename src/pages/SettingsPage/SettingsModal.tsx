@@ -435,6 +435,8 @@ export function SettingsModal({ open, onClose, onToast }: SettingsModalProps) {
           </div>
         )}
       </div>
+
+      <span className={styles.version}>v{__APP_VERSION__}</span>
     </Modal>
   )
 }

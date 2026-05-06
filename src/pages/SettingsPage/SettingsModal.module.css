@@ -365,3 +365,12 @@
   height: 32px;
   flex: 1;
 }
+
+.version {
+  display: block;
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-xs);
+  color: var(--color-text-placeholder);
+  text-align: center;
+  padding-top: var(--space-md);
+}

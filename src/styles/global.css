@@ -1,5 +1,9 @@
 @import './tokens.css';
 
+html {
+  cursor: default;
+}
+
 *,
 *::before,
 *::after {
