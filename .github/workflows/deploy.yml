@@ -27,11 +27,10 @@ jobs:
         with:
           node-version: 20
       - run: npm ci
-      - name: Compute version
-        run: echo "APP_VERSION=1.$(git rev-list --count HEAD)" >> $GITHUB_ENV
-      - run: npm run build
-        env:
-          APP_VERSION: ${{ env.APP_VERSION }}
+      - name: Build with version
+        run: |
+          export APP_VERSION="1.$(git rev-list --count HEAD)"
+          npm run build
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
