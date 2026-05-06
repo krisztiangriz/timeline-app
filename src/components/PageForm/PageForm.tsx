@@ -224,6 +224,9 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
             <span className={styles.tabRequired}>Required</span>
           </div>
         ))}
+        {isEdit && tabs.length === 0 && !addingTab && (
+          <span className={styles.emptyHint}>Add tabs to organize page content</span>
+        )}
         {tabs.map((tab, i) => {
           const isDragging = dragIdx === i
           const isDropTarget = dropIdx === i

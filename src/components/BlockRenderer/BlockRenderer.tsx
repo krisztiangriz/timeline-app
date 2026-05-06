@@ -227,7 +227,7 @@ function TableBlock({ page }: { page: Page }) {
           <span className={tableStyles.dateCell}>{formatTableDate(child.updatedAt)}</span>
         </div>
       ))}
-      {filtered.length === 0 && <EmptyState message="No pages yet" />}
+      {filtered.length === 0 && <EmptyState message="Add pages to this hub" />}
     </div>
   )
 }

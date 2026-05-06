@@ -59,6 +59,12 @@
   gap: var(--space-sm);
 }
 
+.emptyHint {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-placeholder);
+  font-style: italic;
+}
+
 .textInput {
   padding: var(--space-sm) var(--space-md);
   border: 1px solid transparent;

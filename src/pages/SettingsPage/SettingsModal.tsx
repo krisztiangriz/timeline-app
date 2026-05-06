@@ -306,6 +306,9 @@ export function SettingsModal({ open, onClose, onToast }: SettingsModalProps) {
             <button className={styles.addButton} onClick={() => setAddingTrigger(true)} aria-label="Add trigger">{<PlusIcon />}</button>
           )}
         </div>
+        {triggerPages.length === 0 && !addingTrigger && (
+          <span className={styles.emptyHint}>Add a trigger to mention pages quickly</span>
+        )}
         {triggerPages.map((page) => (
           <div key={page.id} className={styles.listItem}>
             <span className={styles.itemName}>{page.name}</span>
@@ -398,6 +401,9 @@ export function SettingsModal({ open, onClose, onToast }: SettingsModalProps) {
           <span className={styles.sectionTitle}>Feedback dimensions</span>
           <button className={styles.addButton} onClick={() => setAddingDim(true)} aria-label="Add dimension">{<PlusIcon />}</button>
         </div>
+        {dimensions.length === 0 && !addingDim && (
+          <span className={styles.emptyHint}>Add dimensions to categorize feedback</span>
+        )}
         {dimensions.map((dim) => (
           <div key={dim.id} className={styles.listItem}>
             <span className={styles.itemName}>{dim.name}</span>

@@ -36,7 +36,7 @@ export function FeedbackList({ subjectId }: FeedbackListProps) {
   }
 
   if (feedbacks.length === 0) {
-    return <EmptyState message="No feedback yet" />
+    return <EmptyState message="Add feedback with Ctrl+Shift+F" />
   }
 
   return (

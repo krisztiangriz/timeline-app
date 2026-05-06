@@ -97,6 +97,13 @@
   background: var(--color-border-light);
 }
 
+.emptyHint {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-placeholder);
+  font-style: italic;
+  padding: var(--space-xs) 0;
+}
+
 .listItem {
   display: flex;
   align-items: center;

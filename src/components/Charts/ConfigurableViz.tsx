@@ -77,7 +77,7 @@ export function ConfigurableViz({ blockId, pageId }: ConfigurableVizProps) {
 
       {/* ---- Charts ---- */}
       {configs.length === 0 ? (
-        <EmptyState message="No charts yet" />
+        <EmptyState message="Add a chart to visualize your data" />
       ) : (
         rows.map((row, i) => {
           if (row.type === 'pair') {

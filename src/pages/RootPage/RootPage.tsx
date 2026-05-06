@@ -149,7 +149,7 @@ export function RootPage() {
               </div>
             )
           })}
-          {flatRows.length === 0 && <EmptyState message="No pages yet" />}
+          {flatRows.length === 0 && <EmptyState message="Create a page to start tracking" />}
         </div>
       </div>
     </div>
