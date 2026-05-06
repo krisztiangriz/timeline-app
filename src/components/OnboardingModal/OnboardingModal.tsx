@@ -35,8 +35,7 @@ export function OnboardingModal({ open, onClose }: OnboardingModalProps) {
 
         {/* Description text — replace with your copy */}
         <p className={styles.description}>
-          Your personal workspace for tracking project progress, colleague interactions, and ideas.
-          Everything is stored locally and works offline.
+          Timeline is a clever, privacy focused progressive web todo app, that collects tagged input and visualizes data.
         </p>
 
         {/* Get Started button */}
