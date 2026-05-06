@@ -1,16 +1,15 @@
-import { useState, useEffect, lazy, Suspense, useCallback, useMemo } from 'react'
+import { useState, useEffect, lazy, Suspense, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { RichTextEditor } from '../RichTextEditor/RichTextEditor'
 import { TimelineView } from '../TimelineView/TimelineView'
 import { FeedbackList } from '../PageDetail/FeedbackList'
 import { EmptyState } from '../EmptyState/EmptyState'
-import { useBlocks, useBlockActions, getRequiredBlockTypesSync } from '../../hooks/useBlocks'
-import { useChildPages, getPagePath, usePageTabs } from '../../hooks/usePages'
+import { useBlocks, useBlockActions } from '../../hooks/useBlocks'
+import { useChildPages, getPagePath } from '../../hooks/usePages'
 import { useAutocomplete } from '../../hooks/useAutocomplete'
 import { usePreferences } from '../../hooks/useAppContext'
 import { useTableSort } from '../../hooks/useTableSort'
 import { formatTableDate } from '../../utils/dateUtils'
-import { DragHandleIcon, CloseIcon } from '../Icons/Icons'
 import { db } from '../../db/database'
 import type { Page, Block } from '../../types'
 import styles from './BlockRenderer.module.css'
@@ -22,35 +21,27 @@ const ConfigurableViz = lazy(() =>
 
 interface BlockRendererProps {
   page: Page
-  rearrangeMode?: boolean
   /** If provided, only render blocks for this tab. If null, render page-level blocks. */
   activeTabId?: number | null
 }
 
-export function BlockRenderer({ page, rearrangeMode = false, activeTabId }: BlockRendererProps) {
+export function BlockRenderer({ page, activeTabId }: BlockRendererProps) {
   const pageId = page.id!
   // If activeTabId is provided (including null for page-level), use it. Otherwise default to null (page-level).
   const tabFilter = activeTabId === undefined ? null : activeTabId
   const blocks = useBlocks(pageId, tabFilter)
 
-  return <BlockList pageId={pageId} page={page} blocks={blocks} rearrangeMode={rearrangeMode} tabId={tabFilter ?? undefined} />
+  return <BlockList pageId={pageId} page={page} blocks={blocks} tabId={tabFilter ?? undefined} />
 }
 
 // ---- Block list ----
 
-function BlockList({ pageId, page, blocks, rearrangeMode, tabId }: {
-  pageId: number; page: Page; blocks: Block[]; rearrangeMode: boolean; tabId?: number
+function BlockList({ pageId, page, blocks, tabId }: {
+  pageId: number; page: Page; blocks: Block[]; tabId?: number
 }) {
-  const { updateBlock, deleteBlock, insertBlockAfter } = useBlockActions()
+  const { updateBlock, insertBlockAfter } = useBlockActions()
   const navigate = useNavigate()
   const { allPages } = useAutocomplete()
-
-  // Compute required block types for this page
-  const requiredTypes = useMemo(() => getRequiredBlockTypesSync(page, allPages), [page, allPages])
-
-  // Determine if the current tab is the first (overview) tab
-  const pageTabs = usePageTabs(pageId)
-  const isFirstTab = !tabId || (pageTabs.length > 0 && pageTabs[0].id === tabId)
 
   const handleMentionClick = useCallback((mentionPageId: number) => {
     const p = allPages.find((pg) => pg.id === mentionPageId)
@@ -60,28 +51,6 @@ function BlockList({ pageId, page, blocks, rearrangeMode, tabId }: {
       navigate(`/page/${mentionPageId}`)
     }
   }, [allPages, navigate])
-
-  const [dragIdx, setDragIdx] = useState<number | null>(null)
-  const [dropIdx, setDropIdx] = useState<number | null>(null)
-
-  function handleDragStart(e: React.DragEvent, idx: number) {
-    setDragIdx(idx); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', String(idx))
-  }
-  function handleDragOver(e: React.DragEvent, idx: number) {
-    if (dragIdx === null || dragIdx === idx) return; e.preventDefault(); e.dataTransfer.dropEffect = 'move'; setDropIdx(idx)
-  }
-  async function handleDrop(e: React.DragEvent, targetIdx: number) {
-    e.preventDefault()
-    if (dragIdx === null || dragIdx === targetIdx) return
-    const newBlocks = [...blocks]
-    const [moved] = newBlocks.splice(dragIdx, 1)
-    newBlocks.splice(targetIdx, 0, moved)
-    await db.transaction('rw', db.blocks, async () => {
-      for (let i = 0; i < newBlocks.length; i++) await db.blocks.update(newBlocks[i].id!, { order: i })
-    })
-    setDragIdx(null); setDropIdx(null)
-  }
-  function handleDragEnd() { setDragIdx(null); setDropIdx(null) }
 
   const handleInsertComponent = useCallback(async (afterBlockId: number, type: 'timeline' | 'feedback' | 'table' | 'visualization') => {
     await insertBlockAfter(afterBlockId, pageId, type, tabId)
@@ -93,53 +62,22 @@ function BlockList({ pageId, page, blocks, rearrangeMode, tabId }: {
   const hasContent = blocks.some((b) => b.type !== 'text' || (b.content?.trim() ?? '').length > 0)
   const defaultPlaceholder = 'Type here... (use ~ to insert components)'
 
-  const dragHandle = (
-    <div className={styles.dragHandleVisible}>
-      <DragHandleIcon />
-    </div>
-  )
-
   return (
     <div className={styles.blockList}>
-      {blocks.map((block, idx) => {
-        const isDragging = dragIdx === idx
-        const isDropTarget = dropIdx === idx
-        const blockClasses = [
-          block.type !== 'text' ? styles.componentBlock : '',
-          rearrangeMode ? styles.blockEditable : '',
-          isDragging ? styles.blockDragging : '',
-          isDropTarget ? styles.blockDropTarget : '',
-        ].filter(Boolean).join(' ')
-
-        const dragProps = rearrangeMode ? {
-          draggable: true,
-          onDragStart: (e: React.DragEvent) => handleDragStart(e, idx),
-          onDragEnd: handleDragEnd,
-          onDragOver: (e: React.DragEvent) => handleDragOver(e, idx),
-          onDrop: (e: React.DragEvent) => handleDrop(e, idx),
-        } : {}
+      {blocks.map((block) => {
+        const blockClass = block.type !== 'text' ? styles.componentBlock : undefined
 
         if (block.type === 'text') {
           return (
-            <div key={block.id} className={blockClasses || undefined} {...dragProps}>
-              {rearrangeMode && dragHandle}
+            <div key={block.id} className={blockClass}>
               <TextBlock block={block} onUpdate={(content) => updateBlock(block.id!, { content })} onInsertComponent={(type) => handleInsertComponent(block.id!, type)}
                 onMentionClick={handleMentionClick} placeholder={hasContent ? '' : defaultPlaceholder} />
             </div>
           )
         }
 
-        const isProtected = rearrangeMode && isFirstTab && requiredTypes.has(block.type) &&
-          blocks.filter((b) => b.type === block.type).length <= 1
-
         return (
-          <div key={block.id} className={blockClasses || undefined} {...dragProps}>
-            {rearrangeMode && dragHandle}
-            {rearrangeMode && !isProtected && (
-              <button className={styles.deleteBtnVisible} onClick={() => deleteBlock(block.id!)} aria-label="Delete block">
-                <CloseIcon size={10} />
-              </button>
-            )}
+          <div key={block.id} className={blockClass}>
             <ComponentBlockContent block={block} page={page} allPages={allPages} />
           </div>
         )

@@ -202,3 +202,50 @@
   background: var(--color-border-light);
   color: var(--color-text-primary);
 }
+
+/* ---- Block list editor ---- */
+
+.blockListEditor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.blockGroupTitle {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-placeholder);
+  padding: var(--space-xs) 0;
+  display: block;
+}
+
+.blockRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  height: 32px;
+  padding: 0 var(--space-xs);
+  border-radius: var(--radius-sm);
+  cursor: grab;
+}
+
+.blockRow:active {
+  cursor: grabbing;
+}
+
+.blockRowDragging {
+  opacity: 0.4;
+}
+
+.blockRowDropTarget {
+  outline: 1.5px dashed var(--color-text-body);
+  outline-offset: -1.5px;
+  border-radius: var(--radius-sm);
+}
+
+.blockRowLabel {
+  flex: 1;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+}

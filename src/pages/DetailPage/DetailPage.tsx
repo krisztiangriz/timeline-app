@@ -6,6 +6,7 @@ import { PageHeader } from '../../components/PageHeader/PageHeader'
 import { PageForm, type PageFormData } from '../../components/PageForm/PageForm'
 import { BlockRenderer } from '../../components/BlockRenderer/BlockRenderer'
 import { usePage, usePageActions, usePageTabs, getPagePath } from '../../hooks/usePages'
+import { useBlocks, useBlockActions } from '../../hooks/useBlocks'
 import { usePageMenus } from '../../hooks/usePageMenus'
 import { useAutocomplete } from '../../hooks/useAutocomplete'
 import { useToast } from '../../hooks/useToast'
@@ -35,9 +36,10 @@ export function DetailPage({ routePrefix }: DetailPageProps) {
   const { allPages } = useAutocomplete()
   const { show: showToast } = useToast()
   const { sentinelRef, isScrolled } = useStickyScroll()
-  const [rearrangeMode, setRearrangeMode] = useState(false)
   const [editPageOpen, setEditPageOpen] = useState(false)
   const [activeTabId, setActiveTabId] = useState<number | null>(null)
+  const allBlocks = useBlocks(pageId)
+  const { deleteBlock } = useBlockActions()
 
   // Candidate status dropdown state
   const [statusOpen, setStatusOpen] = useState(false)
@@ -88,7 +90,6 @@ export function DetailPage({ routePrefix }: DetailPageProps) {
     pageId, canDelete, canArchive, isArchived: !!page?.archived,
     deleteRedirect: hubPath,
     onEditPage: isMainTimeline ? undefined : () => setEditPageOpen(true),
-    onRearrange: isMainTimeline ? undefined : () => setRearrangeMode((v) => !v),
     onArchive: handleArchive,
     deletePage, pageName: page?.name, showToast,
   })
@@ -102,13 +103,29 @@ export function DetailPage({ routePrefix }: DetailPageProps) {
       mentionCollapsed: page?.mentionCollapsed,
       inheritedTrigger: parentHub?.mentionTrigger,
       inheritedFrom: parentHub?.name,
+      blocks: allBlocks.filter((b) => b.id).map((b) => ({ id: b.id!, type: b.type, tabId: b.tabId, order: b.order })),
     }
-  }, [page, tabs, allPages])
+  }, [page, tabs, allPages, allBlocks])
 
   async function handleEditSubmit(data: PageFormData) {
     if (!pageId) return
     await updatePage(pageId, { name: data.name, mentionTrigger: data.mentionTrigger, mentionCollapsed: data.mentionCollapsed })
     await updateTabs(pageId, data.tabs)
+    // Persist block order
+    if (data.blockOrder) {
+      const { db } = await import('../../db/database')
+      await db.transaction('rw', db.blocks, async () => {
+        for (const b of data.blockOrder!) {
+          await db.blocks.update(b.id, { order: b.order })
+        }
+      })
+    }
+    // Delete removed blocks
+    if (data.deletedBlockIds?.length) {
+      for (const id of data.deletedBlockIds) {
+        await deleteBlock(id)
+      }
+    }
     setEditPageOpen(false); showToast('Page updated')
   }
 
@@ -150,7 +167,7 @@ export function DetailPage({ routePrefix }: DetailPageProps) {
             <PageHeader name={page.name} onUpdateName={(name) => updatePage(pageId!, { name })} tabs={tabs} activeTabId={activeTabId} onTabChange={setActiveTabId} readOnly={isMainTimeline} />
           )}
         </div>
-        <BlockRenderer page={page} rearrangeMode={rearrangeMode} activeTabId={activeTabId} />
+        <BlockRenderer page={page} activeTabId={activeTabId} />
       </div>
       <PageForm open={editPageOpen} onClose={() => setEditPageOpen(false)} onSubmit={handleEditSubmit} initial={editInitial} isEdit protectedTabCount={protectedTabCount} />
     </div>

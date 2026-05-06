@@ -1,10 +1,18 @@
 import { useState, useEffect, useRef } from 'react'
 import { Modal } from '../Modal/Modal'
 import { DragHandleIcon, TrashIcon, CheckIcon, PlusIcon, CloseIcon } from '../Icons/Icons'
+import type { BlockType } from '../../types'
 import styles from './PageForm.module.css'
 import radio from '../../styles/radio.module.css'
 
 export type PageTemplate = 'tabbed' | 'simple' | 'text' | 'custom' | 'hub-standard' | 'hub-table'
+
+export interface BlockItem {
+  id: number
+  type: BlockType
+  tabId?: number
+  order: number
+}
 
 export interface PageFormData {
   name: string
@@ -14,8 +22,11 @@ export interface PageFormData {
   isHub: boolean
   mentionTrigger?: string
   mentionCollapsed?: boolean
-  inheritedTrigger?: string   // parent hub's trigger (display only, not submitted)
-  inheritedFrom?: string      // parent hub's name (display only)
+  inheritedTrigger?: string
+  inheritedFrom?: string
+  blocks?: BlockItem[]
+  blockOrder?: BlockItem[]
+  deletedBlockIds?: number[]
 }
 
 export interface HubInfo {
@@ -57,6 +68,106 @@ function getDefaultTemplate(hub: HubInfo | undefined): PageTemplate {
 
 const EMPTY_HUBS: HubInfo[] = []
 
+const BLOCK_TYPE_LABELS: Record<BlockType, string> = {
+  text: 'Text',
+  timeline: 'Timeline',
+  feedback: 'Feedback',
+  table: 'Table',
+  visualization: 'Visualization',
+}
+
+function BlockListEditor({ blocks, tabs, onReorder, onDelete, dragIdx, dropIdx, onDragStart, onDragEnd, onDragOver }: {
+  blocks: BlockItem[]
+  tabs: string[]
+  onReorder: (blocks: BlockItem[]) => void
+  onDelete: (id: number) => void
+  dragIdx: { group: string; idx: number } | null
+  dropIdx: { group: string; idx: number } | null
+  onDragStart: (v: { group: string; idx: number }) => void
+  onDragEnd: () => void
+  onDragOver: (v: { group: string; idx: number }) => void
+}) {
+  // Group blocks: page-level first, then by tab
+  const pageLevel = blocks.filter((b) => !b.tabId).sort((a, b) => a.order - b.order)
+  const tabGroups: { key: string; label: string; items: BlockItem[] }[] = []
+
+  // Build tab groups from the tabs array (matching by index since we don't have tab IDs in the form)
+  const tabIdSet = new Set(blocks.filter((b) => b.tabId).map((b) => b.tabId!))
+  const tabIds = [...tabIdSet].sort((a, b) => {
+    const aOrder = blocks.find((bl) => bl.tabId === a)?.order ?? 0
+    const bOrder = blocks.find((bl) => bl.tabId === b)?.order ?? 0
+    return aOrder - bOrder
+  })
+
+  for (const tabId of tabIds) {
+    const items = blocks.filter((b) => b.tabId === tabId).sort((a, b) => a.order - b.order)
+    // Try to match tab name from tabs array by position or find a label
+    const tabIndex = tabIds.indexOf(tabId)
+    const label = tabs[tabIndex] ?? `Tab ${tabIndex + 1}`
+    tabGroups.push({ key: String(tabId), label, items })
+  }
+
+  function handleDrop(group: string, targetIdx: number) {
+    if (!dragIdx || dragIdx.group !== group) return
+    const sourceIdx = dragIdx.idx
+
+    // Get the items for this group
+    const isPageLevel = group === 'page'
+    const groupItems = isPageLevel ? [...pageLevel] : [...(tabGroups.find((g) => g.key === group)?.items ?? [])]
+
+    const [moved] = groupItems.splice(sourceIdx, 1)
+    groupItems.splice(targetIdx, 0, moved)
+
+    // Rebuild full block list with updated orders
+    const updated = blocks.map((b) => {
+      const inGroup = isPageLevel ? !b.tabId : b.tabId === Number(group)
+      if (!inGroup) return b
+      const newIdx = groupItems.findIndex((g) => g.id === b.id)
+      return newIdx >= 0 ? { ...b, order: newIdx } : b
+    })
+    onReorder(updated)
+    onDragEnd()
+  }
+
+  function renderGroup(groupKey: string, items: BlockItem[]) {
+    return items.map((block, idx) => {
+      const isDragging = dragIdx?.group === groupKey && dragIdx.idx === idx
+      const isOver = dropIdx?.group === groupKey && dropIdx.idx === idx
+      let cls = styles.blockRow
+      if (isDragging) cls += ' ' + styles.blockRowDragging
+      if (isOver) cls += ' ' + styles.blockRowDropTarget
+
+      return (
+        <div key={block.id} className={cls}
+          draggable
+          onDragStart={(e) => { e.dataTransfer.effectAllowed = 'move'; onDragStart({ group: groupKey, idx }) }}
+          onDragOver={(e) => { e.preventDefault(); onDragOver({ group: groupKey, idx }) }}
+          onDrop={(e) => { e.preventDefault(); handleDrop(groupKey, idx) }}
+          onDragEnd={onDragEnd}
+        >
+          <div className={styles.dragHandle}><DragHandleIcon /></div>
+          <span className={styles.blockRowLabel}>{BLOCK_TYPE_LABELS[block.type]}</span>
+          <button className={styles.deleteButton} onClick={() => onDelete(block.id)} aria-label={`Delete ${BLOCK_TYPE_LABELS[block.type]} block`}>
+            <TrashIcon />
+          </button>
+        </div>
+      )
+    })
+  }
+
+  return (
+    <div className={styles.blockListEditor}>
+      {pageLevel.length > 0 && renderGroup('page', pageLevel)}
+      {tabGroups.map((group) => (
+        <div key={group.key}>
+          <span className={styles.blockGroupTitle}>{group.label}</span>
+          {renderGroup(group.key, group.items)}
+        </div>
+      ))}
+    </div>
+  )
+}
+
 export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHubProp, hubs = EMPTY_HUBS, protectedTabCount = 0 }: PageFormProps) {
   const [name, setName] = useState('')
   const [tabs, setTabs] = useState<string[]>([])
@@ -67,6 +178,10 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
   const [template, setTemplate] = useState<PageTemplate>('custom')
   const [trigger, setTrigger] = useState('')
   const [collapsed, setCollapsed] = useState(false)
+  const [blockList, setBlockList] = useState<BlockItem[]>([])
+  const [deletedBlockIds, setDeletedBlockIds] = useState<number[]>([])
+  const [blockDragIdx, setBlockDragIdx] = useState<{ group: string; idx: number } | null>(null)
+  const [blockDropIdx, setBlockDropIdx] = useState<{ group: string; idx: number } | null>(null)
   const [dragIdx, setDragIdx] = useState<number | null>(null)
   const [dropIdx, setDropIdx] = useState<number | null>(null)
   const prevOpen = useRef(false)
@@ -82,6 +197,10 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
       setTemplate(getDefaultTemplate(hubs.find(h => h.id === initial?.parentHubId)))
       setTrigger(initial?.mentionTrigger ?? '')
       setCollapsed(initial?.mentionCollapsed ?? false)
+      setBlockList(initial?.blocks ?? [])
+      setDeletedBlockIds([])
+      setBlockDragIdx(null)
+      setBlockDropIdx(null)
       setDragIdx(null)
       setDropIdx(null)
     }
@@ -118,7 +237,12 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
   function handleTabDragEnd() { setDragIdx(null); setDropIdx(null) }
 
   function handleSubmit() {
-    onSubmit({ name, tabs, parentHubId: isHubType ? undefined : parentHubId, template, isHub: isHubType, mentionTrigger: trigger || undefined, mentionCollapsed: collapsed || undefined })
+    onSubmit({
+      name, tabs, parentHubId: isHubType ? undefined : parentHubId, template, isHub: isHubType,
+      mentionTrigger: trigger || undefined, mentionCollapsed: collapsed || undefined,
+      blockOrder: blockList.length > 0 ? blockList : undefined,
+      deletedBlockIds: deletedBlockIds.length > 0 ? deletedBlockIds : undefined,
+    })
   }
 
   return (
@@ -298,6 +422,24 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
           </div>
         )}
       </div>}
+
+      {/* Blocks (edit mode only) */}
+      {isEdit && blockList.length > 0 && (
+        <div className={styles.section}>
+          <span className={styles.label}>Blocks</span>
+          <BlockListEditor
+            blocks={blockList}
+            tabs={tabs}
+            onReorder={setBlockList}
+            onDelete={(id) => { setBlockList((b) => b.filter((x) => x.id !== id)); setDeletedBlockIds((d) => [...d, id]) }}
+            dragIdx={blockDragIdx}
+            dropIdx={blockDropIdx}
+            onDragStart={setBlockDragIdx}
+            onDragEnd={() => { setBlockDragIdx(null); setBlockDropIdx(null) }}
+            onDragOver={setBlockDropIdx}
+          />
+        </div>
+      )}
     </Modal>
   )
 }

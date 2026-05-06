@@ -10,7 +10,6 @@ interface UsePageMenusOptions {
   isArchived?: boolean
   deleteRedirect?: string
   onEditPage?: () => void
-  onRearrange?: () => void
   onArchive?: () => void
   deletePage?: (id: number) => Promise<void>
   pageName?: string
@@ -24,7 +23,6 @@ export function usePageMenus({
   isArchived = false,
   deleteRedirect = '/',
   onEditPage,
-  onRearrange,
   onArchive,
   deletePage,
   pageName,
@@ -53,10 +51,6 @@ export function usePageMenus({
       items.push({ type: 'item', label: 'Edit page', onClick: onEditPage })
     }
 
-    if (onRearrange) {
-      items.push({ type: 'item', label: 'Rearrange', onClick: onRearrange })
-    }
-
     items.push({ type: 'item', label: 'Settings', onClick: () => setSettingsOpen(true) })
     items.push({ type: 'item', label: 'Help', onClick: () => setHelpOpen(true) })
 
@@ -71,7 +65,7 @@ export function usePageMenus({
     }
 
     return items
-  }, [onEditPage, onRearrange, canArchive, onArchive, isArchived, canDelete, pageId, deletePage, handleDelete, setSettingsOpen, setHelpOpen])
+  }, [onEditPage, canArchive, onArchive, isArchived, canDelete, pageId, deletePage, handleDelete, setSettingsOpen, setHelpOpen])
 
   return { addMenuItems, moreMenuItems }
 }
