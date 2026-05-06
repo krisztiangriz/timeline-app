@@ -256,6 +256,38 @@ export function TimelineView({ pageId, title, readOnly = false }: TimelineViewPr
     }
   }
 
+  // Auto-save handlers (persist only, no UI state changes)
+  const autoSaveToday = useCallback(async (html: string) => {
+    const plain = stripHtml(html).trim()
+    if (todayEntryId.current) {
+      if (!plain) {
+        await deleteEntry(todayEntryId.current)
+        todayEntryId.current = undefined
+      } else {
+        await updateEntry(todayEntryId.current, { text: html })
+      }
+    } else if (plain) {
+      const id = await addEntry({ pageId, text: html, isPending: false })
+      todayEntryId.current = id
+    }
+  }, [pageId])
+
+  const autoSavePending = useCallback(async (html: string) => {
+    const plain = stripHtml(html).replace(/\u00A0/g, '').trim()
+    if (pendingEntryId.current) {
+      if (!plain) {
+        await deleteEntry(pendingEntryId.current)
+        pendingEntryId.current = undefined
+      } else {
+        await updateEntry(pendingEntryId.current, { text: html })
+      }
+    } else if (plain) {
+      const htmlWithCheckboxes = ensureCheckboxes(html)
+      const id = await addEntry({ pageId, text: htmlWithCheckboxes || html, isPending: true })
+      pendingEntryId.current = id
+    }
+  }, [pageId])
+
   async function handleDeleteHistoryEntry(entryId: number) {
     await deleteEntry(entryId)
   }
@@ -285,6 +317,7 @@ export function TimelineView({ pageId, title, readOnly = false }: TimelineViewPr
                 value={pendingHtml}
                 onChange={setPendingHtml}
                 onBlur={handlePendingSave}
+                onAutoSave={autoSavePending}
                 onMentionClick={handleMentionClick}
                 placeholder="Add a task…"
                 autoCheckbox
@@ -309,6 +342,7 @@ export function TimelineView({ pageId, title, readOnly = false }: TimelineViewPr
                 value={todayHtml}
                 onChange={setTodayHtml}
                 onBlur={handleTodaySave}
+                onAutoSave={autoSaveToday}
                 onMentionClick={handleMentionClick}
                 placeholder="Type here…"
                 collapseMentions

@@ -43,6 +43,8 @@ interface RichTextEditorProps {
   autoCheckbox?: boolean
   /** Called when a checkbox is toggled to checked. Receives the text content of that line (HTML stripped of the checkbox span) and the remaining editor HTML after removal. */
   onCheckboxComplete?: (lineHtml: string, remainingHtml: string) => void
+  /** Debounced auto-save callback — fires 500ms after last input. Only persists data, no UI state changes. */
+  onAutoSave?: (html: string) => void
 }
 
 export function RichTextEditor({
@@ -59,9 +61,11 @@ export function RichTextEditor({
   onInsertComponent,
   autoCheckbox,
   onCheckboxComplete,
+  onAutoSave,
 }: RichTextEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null)
   const isFocusedRef = useRef(false)
+  const autoSaveTimer = useRef<ReturnType<typeof setTimeout>>(null)
   const [showLinkInput, setShowLinkInput] = useState(false)
   const [linkUrl, setLinkUrl] = useState('')
   const [linkPos, setLinkPos] = useState({ top: 0, left: 0 })
@@ -160,10 +164,16 @@ export function RichTextEditor({
     }
   }, [autoFocus, initialClickPosition])
 
+  // Cleanup auto-save timer on unmount
+  useEffect(() => () => {
+    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current)
+  }, [])
+
   const emitChange = useCallback(() => {
     const el = editorRef.current
     if (!el) return
-    onChange(el.innerHTML)
+    const html = el.innerHTML
+    onChange(html)
     // Toggle empty state — but never show placeholder while focused
     const text = el.textContent?.trim() ?? ''
     const hasElements = el.querySelector('[data-checkbox], [data-mention]') !== null
@@ -172,7 +182,12 @@ export function RichTextEditor({
     } else if (!isFocusedRef.current) {
       el.setAttribute('data-empty', 'true')
     }
-  }, [onChange])
+    // Debounced auto-save
+    if (onAutoSave) {
+      if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current)
+      autoSaveTimer.current = setTimeout(() => onAutoSave(html), 500)
+    }
+  }, [onChange, onAutoSave])
 
   // ---- Focus / blur: hide placeholder on focus, restore on blur if empty ----
 
@@ -187,7 +202,7 @@ export function RichTextEditor({
       const div = document.createElement('div')
       const checkbox = document.createElement('span')
       checkbox.setAttribute('data-checkbox', 'false')
-      checkbox.textContent = '\u00A0'
+      checkbox.textContent = ''
       div.appendChild(checkbox)
       const trailing = document.createTextNode('\u00A0')
       div.appendChild(trailing)
@@ -219,6 +234,12 @@ export function RichTextEditor({
 
   function handleBlur() {
     isFocusedRef.current = false
+    // Flush any pending auto-save immediately
+    if (autoSaveTimer.current) {
+      clearTimeout(autoSaveTimer.current)
+      autoSaveTimer.current = null
+      onAutoSave?.(editorRef.current?.innerHTML ?? '')
+    }
     setTimeout(() => {
       if (!showLinkInput && !mentionQuery) {
         // Re-show placeholder if empty and still not focused
@@ -452,7 +473,7 @@ export function RichTextEditor({
       }
     }
 
-    // Atomic deletion of non-editable spans (mentions)
+    // Atomic deletion of non-editable spans (mentions) + checkbox line removal
     if (e.key === 'Backspace' || e.key === 'Delete') {
       const sel = window.getSelection()
       if (sel && sel.isCollapsed && sel.rangeCount > 0) {
@@ -460,6 +481,45 @@ export function RichTextEditor({
         const offset = sel.anchorOffset
 
         if (e.key === 'Backspace') {
+          // Backspace at start of a checkbox line: remove checkbox and merge up
+          if (autoCheckbox && node?.nodeType === Node.TEXT_NODE && offset === 0) {
+            const prevSib = node.previousSibling as HTMLElement | null
+            if (prevSib?.nodeType === Node.ELEMENT_NODE && prevSib.hasAttribute('data-checkbox')) {
+              e.preventDefault()
+              const parentDiv = node.parentNode as HTMLElement | null
+              if (parentDiv && parentDiv !== editorRef.current && parentDiv.parentNode === editorRef.current) {
+                const prevBlock = parentDiv.previousSibling as HTMLElement | null
+                // Remove the checkbox span
+                prevSib.remove()
+                if (prevBlock) {
+                  // Merge remaining content into previous block
+                  const content = parentDiv.innerHTML
+                  const cleanContent = content.replace(/^\s*&nbsp;\s*$/, '').replace(/^\u00A0$/, '')
+                  if (cleanContent) {
+                    prevBlock.innerHTML += cleanContent
+                  }
+                  parentDiv.remove()
+                  // Place cursor at end of previous block
+                  const range = document.createRange()
+                  range.selectNodeContents(prevBlock)
+                  range.collapse(false)
+                  sel.removeAllRanges()
+                  sel.addRange(range)
+                } else {
+                  // First line — just remove the checkbox, keep content
+                  if (!parentDiv.textContent?.trim()) {
+                    parentDiv.remove()
+                  }
+                }
+              } else {
+                // Simple case: just remove checkbox
+                prevSib.remove()
+              }
+              emitChange()
+              return
+            }
+          }
+
           // Check if previous sibling is a non-editable span
           if (node?.nodeType === Node.TEXT_NODE && offset === 0) {
             const prev = node.previousSibling as HTMLElement | null
@@ -549,7 +609,7 @@ export function RichTextEditor({
       const newDiv = document.createElement('div')
       const checkbox = document.createElement('span')
       checkbox.setAttribute('data-checkbox', 'false')
-      checkbox.textContent = '\u00A0'
+      checkbox.textContent = ''
       newDiv.appendChild(checkbox)
       const trailing = document.createTextNode('\u00A0')
       newDiv.appendChild(trailing)
@@ -673,7 +733,7 @@ export function RichTextEditor({
           const remaining = (before + after).trimStart() || '\u00A0'
           const checkbox = document.createElement('span')
           checkbox.setAttribute('data-checkbox', 'false')
-          checkbox.textContent = '\u00A0'
+          checkbox.textContent = ''
           const parent = node.parentNode
           if (parent) {
             const textNode = document.createTextNode(remaining)

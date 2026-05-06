@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, memo } from 'react'
+import { useState, useMemo, useRef, useCallback, memo } from 'react'
 import type { TimelineEntry } from '../../types'
 import { stripHtml } from '../../utils/stripHtml'
 import { filterHtmlToMention, stripSelfMention } from '../../utils/mentionParser'
@@ -49,6 +49,14 @@ export const TimelineEntryRow = memo(function TimelineEntryRow({
     clickPos.current = undefined
   }
 
+  // Auto-save: persist without exiting edit mode
+  const handleAutoSave = useCallback((html: string) => {
+    const plain = stripHtml(html).trim()
+    if (plain && html !== entry.text) {
+      onUpdate(entry.id!, { text: html })
+    }
+  }, [entry.id, entry.text, onUpdate])
+
   function handleStartEditing(e: React.MouseEvent) {
     // Don't enter edit mode if clicking on a mention link
     const target = e.target as HTMLElement
@@ -72,6 +80,7 @@ export const TimelineEntryRow = memo(function TimelineEntryRow({
           value={editHtml}
           onChange={setEditHtml}
           onBlur={handleSave}
+          onAutoSave={handleAutoSave}
           autoFocus
           initialClickPosition={clickPos.current}
           collapseMentions

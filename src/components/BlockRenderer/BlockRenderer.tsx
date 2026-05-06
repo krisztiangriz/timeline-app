@@ -174,9 +174,10 @@ function TextBlock({ block, onUpdate, onInsertComponent, onMentionClick, placeho
   const [html, setHtml] = useState(block.content ?? '')
   useEffect(() => { setHtml(block.content ?? '') }, [block.content])
   function save() { if (html !== (block.content ?? '')) onUpdate(html) }
+  const autoSave = useCallback((h: string) => { if (h !== (block.content ?? '')) onUpdate(h) }, [block.content, onUpdate])
 
   return (
-    <RichTextEditor value={html} onChange={setHtml} onBlur={save} placeholder={placeholder ?? ''} onInsertComponent={onInsertComponent} onMentionClick={onMentionClick} />
+    <RichTextEditor value={html} onChange={setHtml} onBlur={save} onAutoSave={autoSave} placeholder={placeholder ?? ''} onInsertComponent={onInsertComponent} onMentionClick={onMentionClick} />
   )
 }
 
