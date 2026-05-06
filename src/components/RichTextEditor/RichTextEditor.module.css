@@ -168,7 +168,6 @@
 .editor [data-checkbox] {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
   cursor: pointer;
   vertical-align: middle;
   line-height: var(--line-height-base);

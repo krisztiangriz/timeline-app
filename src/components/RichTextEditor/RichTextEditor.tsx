@@ -197,30 +197,6 @@ export function RichTextEditor({
     isFocusedRef.current = true
     el.removeAttribute('data-empty')
 
-    // Auto-checkbox: if editor is empty, insert first checkbox on focus
-    if (autoCheckbox && el.textContent?.trim() === '' && !el.querySelector('[data-checkbox]')) {
-      const div = document.createElement('div')
-      const checkbox = document.createElement('span')
-      checkbox.setAttribute('data-checkbox', 'false')
-      checkbox.textContent = ''
-      div.appendChild(checkbox)
-      const trailing = document.createTextNode('\u00A0')
-      div.appendChild(trailing)
-      el.innerHTML = ''
-      el.appendChild(div)
-      // Position cursor after checkbox
-      const sel = window.getSelection()
-      if (sel) {
-        const range = document.createRange()
-        range.setStart(trailing, 0)
-        range.collapse(true)
-        sel.removeAllRanges()
-        sel.addRange(range)
-      }
-      emitChange()
-      return
-    }
-
     // Position cursor at the beginning
     const sel = window.getSelection()
     if (sel) {
@@ -600,46 +576,6 @@ export function RichTextEditor({
       return
     }
 
-    // Auto-checkbox: on Enter, insert a new line with a checkbox
-    if (e.key === 'Enter' && !e.shiftKey && autoCheckbox) {
-      e.preventDefault()
-      const el = editorRef.current
-      if (!el) return
-      // Insert a new div with a checkbox at the cursor position
-      const newDiv = document.createElement('div')
-      const checkbox = document.createElement('span')
-      checkbox.setAttribute('data-checkbox', 'false')
-      checkbox.textContent = ''
-      newDiv.appendChild(checkbox)
-      const trailing = document.createTextNode('\u00A0')
-      newDiv.appendChild(trailing)
-
-      const sel = window.getSelection()
-      if (sel && sel.rangeCount > 0) {
-        const range = sel.getRangeAt(0)
-        range.deleteContents()
-        // Find the current block to insert after
-        let block = range.startContainer as Node | null
-        while (block && block !== el && block.parentNode !== el) {
-          block = block.parentNode
-        }
-        if (block && block !== el) {
-          block.parentNode!.insertBefore(newDiv, block.nextSibling)
-        } else {
-          el.appendChild(newDiv)
-        }
-        // Move cursor after checkbox
-        const newRange = document.createRange()
-        newRange.setStart(trailing, 0)
-        newRange.collapse(true)
-        sel.removeAllRanges()
-        sel.addRange(newRange)
-      } else {
-        el.appendChild(newDiv)
-      }
-      emitChange()
-      return
-    }
   }
 
   function handleClick(e: React.MouseEvent) {
