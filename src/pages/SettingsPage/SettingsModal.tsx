@@ -30,8 +30,11 @@ export function SettingsModal({ open, onClose, onToast }: SettingsModalProps) {
 
   // Trigger add state
   const [addingTrigger, setAddingTrigger] = useState(false)
-  const [newTriggerPageId, setNewTriggerPageId] = useState<number | undefined>()
+  const [triggerSearchQuery, setTriggerSearchQuery] = useState('')
+  const [selectedTriggerPage, setSelectedTriggerPage] = useState<Page | null>(null)
+  const [triggerSearchIndex, setTriggerSearchIndex] = useState(-1)
   const [newTriggerChar, setNewTriggerChar] = useState('')
+  const triggerResultsRef = useRef<HTMLDivElement>(null)
 
   // Merge import state
   const [merging, setMerging] = useState(false)
@@ -65,6 +68,20 @@ export function SettingsModal({ open, onClose, onToast }: SettingsModalProps) {
   // Pages available to add a trigger to (no trigger yet, not main-timeline)
   const availableForTrigger = allPages.filter((p) => !p.mentionTrigger && p.role !== 'main-timeline')
 
+  // Trigger search results
+  const triggerSearchResults = useMemo(() => {
+    if (!triggerSearchQuery.trim()) return []
+    const q = triggerSearchQuery.toLowerCase()
+    return availableForTrigger.filter((p) => p.name.toLowerCase().includes(q))
+  }, [triggerSearchQuery, availableForTrigger])
+
+  useEffect(() => { setTriggerSearchIndex(-1) }, [triggerSearchResults.length])
+  useEffect(() => {
+    if (triggerSearchIndex < 0 || !triggerResultsRef.current) return
+    const el = triggerResultsRef.current.children[triggerSearchIndex] as HTMLElement | undefined
+    el?.scrollIntoView({ block: 'nearest' })
+  }, [triggerSearchIndex])
+
   async function handleTriggerChange(pageId: number, value: string) {
     const ch = value.slice(0, 1)
     if (ch === '~' || /\s/.test(ch)) return
@@ -77,15 +94,17 @@ export function SettingsModal({ open, onClose, onToast }: SettingsModalProps) {
   }
 
   async function handleAddTrigger() {
-    if (!newTriggerPageId || !newTriggerChar.trim()) return
+    if (!selectedTriggerPage || !newTriggerChar.trim()) return
     const ch = newTriggerChar.trim().slice(0, 1)
     if (ch === '~' || /\s/.test(ch)) return
-    await updatePage(newTriggerPageId, { mentionTrigger: ch })
+    await updatePage(selectedTriggerPage.id!, { mentionTrigger: ch })
     cancelAddTrigger()
   }
 
   function cancelAddTrigger() {
-    setNewTriggerPageId(undefined)
+    setTriggerSearchQuery('')
+    setSelectedTriggerPage(null)
+    setTriggerSearchIndex(-1)
     setNewTriggerChar('')
     setAddingTrigger(false)
   }
@@ -311,32 +330,64 @@ export function SettingsModal({ open, onClose, onToast }: SettingsModalProps) {
         ))}
         {addingTrigger && (
           <div className={styles.listItem}>
-            <select
-              className={styles.inlineInput}
-              value={newTriggerPageId ?? ''}
-              onChange={(e) => setNewTriggerPageId(e.target.value ? Number(e.target.value) : undefined)}
-              style={{ flex: 1 }}
-            >
-              <option value="">Select a page</option>
-              {availableForTrigger.map((p) => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
-            </select>
-            <input
-              className={styles.colorInput}
-              type="text"
-              value={newTriggerChar}
-              onChange={(e) => {
-                const ch = e.target.value.slice(0, 1)
-                if (ch === '~' || /\s/.test(ch)) return
-                setNewTriggerChar(ch)
-              }}
-              placeholder="trigger"
-              style={{ width: 52 }}
-            />
-            <button className={styles.confirmButton} onClick={handleAddTrigger} aria-label="Confirm"
-              style={{ opacity: newTriggerPageId && newTriggerChar.trim() ? 1 : 0.4, pointerEvents: newTriggerPageId && newTriggerChar.trim() ? 'auto' : 'none' }}>{<CheckIcon />}</button>
-            <button className={styles.deleteButton} onClick={cancelAddTrigger} aria-label="Cancel">{<TrashIcon />}</button>
+            <div className={styles.triggerInputGroup}>
+              {selectedTriggerPage ? (
+                <span className={styles.itemName}>
+                  {selectedTriggerPage.name}
+                  <button className={styles.clearTriggerSearch} onClick={() => { setSelectedTriggerPage(null); setTriggerSearchQuery('') }} aria-label="Clear">
+                    <CloseIcon size={10} />
+                  </button>
+                </span>
+              ) : (
+                <div className={styles.triggerSearchWrapper}>
+                  <input
+                    className={styles.inlineInput}
+                    type="text"
+                    value={triggerSearchQuery}
+                    onChange={(e) => setTriggerSearchQuery(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (!triggerSearchResults.length) return
+                      if (e.key === 'ArrowDown') { e.preventDefault(); setTriggerSearchIndex((i) => (i < triggerSearchResults.length - 1 ? i + 1 : 0)) }
+                      else if (e.key === 'ArrowUp') { e.preventDefault(); setTriggerSearchIndex((i) => (i > 0 ? i - 1 : triggerSearchResults.length - 1)) }
+                      else if (e.key === 'Enter' && triggerSearchIndex >= 0) { e.preventDefault(); setSelectedTriggerPage(triggerSearchResults[triggerSearchIndex]); setTriggerSearchQuery('') }
+                    }}
+                    placeholder="Search pages..."
+                    autoFocus
+                  />
+                  {triggerSearchResults.length > 0 && (
+                    <div className={styles.triggerSearchResults} ref={triggerResultsRef}>
+                      {triggerSearchResults.map((p, i) => (
+                        <button
+                          key={p.id}
+                          className={i === triggerSearchIndex ? styles.triggerSearchResultActive : styles.triggerSearchResult}
+                          onClick={() => { setSelectedTriggerPage(p); setTriggerSearchQuery('') }}
+                          onMouseEnter={() => setTriggerSearchIndex(i)}
+                        >
+                          {p.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+              <input
+                className={styles.colorInput}
+                type="text"
+                value={newTriggerChar}
+                onChange={(e) => {
+                  const ch = e.target.value.slice(0, 1)
+                  if (ch === '~' || /\s/.test(ch)) return
+                  setNewTriggerChar(ch)
+                }}
+                placeholder="trigger"
+                style={{ width: 52 }}
+              />
+            </div>
+            <div className={styles.triggerButtonGroup}>
+              <button className={styles.confirmButton} onClick={handleAddTrigger} aria-label="Confirm"
+                style={{ opacity: selectedTriggerPage && newTriggerChar.trim() ? 1 : 0.4, pointerEvents: selectedTriggerPage && newTriggerChar.trim() ? 'auto' : 'none' }}>{<CheckIcon />}</button>
+              <button className={styles.deleteButton} onClick={cancelAddTrigger} aria-label="Cancel">{<TrashIcon />}</button>
+            </div>
           </div>
         )}
       </div>

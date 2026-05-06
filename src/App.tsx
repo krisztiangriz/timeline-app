@@ -2,10 +2,8 @@ import { useMemo, useEffect, lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom'
 import { AppProvider, useModalContext } from './hooks/useAppContext'
 import { AutocompleteProvider, useAutocomplete } from './hooks/useAutocomplete'
-import { DemoBanner } from './components/DemoBanner/DemoBanner'
 import { ToastContainer } from './components/Toast/Toast'
 import { ToastProvider, useToast } from './hooks/useToast'
-import { useDemoMode } from './hooks/useDemoMode'
 import { useAutoBackup } from './hooks/useAutoBackup'
 import { usePageActions, usePageByRole, getPagePath } from './hooks/usePages'
 import { db } from './db/database'
@@ -65,7 +63,7 @@ function GlobalOverlays() {
 
     // Hub creation
     if (data.isHub) {
-      const pageId = await addPage({ name: data.name, type: 'hub', description: '' })
+      const pageId = await addPage({ name: data.name, type: 'hub', description: '', mentionTrigger: data.mentionTrigger })
       if (data.template !== 'hub-table') {
         await db.blocks.add({ pageId, type: 'visualization', order: 0 })
       }
@@ -82,7 +80,7 @@ function GlobalOverlays() {
       pageType = ROLE_TO_PAGE_TYPE[hub.role]
     }
 
-    const pageId = await addPage({ name: data.name, type: pageType, parentId, description: '' })
+    const pageId = await addPage({ name: data.name, type: pageType, parentId, description: '', mentionTrigger: data.mentionTrigger })
 
     // Create blocks/tabs based on selected template
     switch (data.template) {
@@ -194,13 +192,6 @@ function useEnsureDefaults() {
 
       // Projects hub
       await createHub('Projects', 'project-hub', '#')
-
-      // Seed demo data on truly fresh install (not after a purge)
-      if (localStorage.getItem('onboarding-completed') !== 'true') {
-        const { seedDemoData } = await import('./utils/demoData')
-        await seedDemoData()
-        localStorage.setItem('demo-mode', 'true')
-      }
     })()
   }, [])
 }
@@ -208,14 +199,12 @@ function useEnsureDefaults() {
 export default function App() {
   useEnsureDefaults()
   useAutoBackup()
-  const { isDemoMode, clearDemoFlag } = useDemoMode()
 
   return (
     <BrowserRouter basename="/timeline-app">
       <AppProvider>
         <AutocompleteProvider>
         <ToastProvider>
-        {isDemoMode && <DemoBanner onExitDemo={clearDemoFlag} />}
         <Suspense fallback={null}>
         <Routes>
           <Route path="/" element={<RootPage />} />

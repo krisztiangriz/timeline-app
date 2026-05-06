@@ -12,6 +12,7 @@ export interface PageFormData {
   parentHubId?: number
   template: PageTemplate
   isHub: boolean
+  mentionTrigger?: string
 }
 
 export interface HubInfo {
@@ -61,6 +62,7 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
   const [parentHubId, setParentHubId] = useState<number | undefined>(undefined)
   const [isHubType, setIsHubType] = useState(false)
   const [template, setTemplate] = useState<PageTemplate>('custom')
+  const [trigger, setTrigger] = useState('')
   const [dragIdx, setDragIdx] = useState<number | null>(null)
   const [dropIdx, setDropIdx] = useState<number | null>(null)
   const prevOpen = useRef(false)
@@ -74,6 +76,7 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
       setParentHubId(initial?.parentHubId)
       setIsHubType(false)
       setTemplate(getDefaultTemplate(hubs.find(h => h.id === initial?.parentHubId)))
+      setTrigger('')
       setDragIdx(null)
       setDropIdx(null)
     }
@@ -110,7 +113,7 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
   function handleTabDragEnd() { setDragIdx(null); setDropIdx(null) }
 
   function handleSubmit() {
-    onSubmit({ name, tabs, parentHubId: isHubType ? undefined : parentHubId, template, isHub: isHubType })
+    onSubmit({ name, tabs, parentHubId: isHubType ? undefined : parentHubId, template, isHub: isHubType, mentionTrigger: trigger || undefined })
   }
 
   return (
@@ -165,6 +168,28 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
               </div>
             ))}
             <RadioOption selected={!parentHubId} onChange={() => setParentHubId(undefined)} label="Do not add to hub" />
+          </div>
+        </div>
+      )}
+
+      {/* Trigger character (optional — for hubs and standalone root pages) */}
+      {!isEdit && !isHubProp && (isHubType || !parentHubId) && (
+        <div className={styles.section}>
+          <span className={styles.label}>Trigger (optional)</span>
+          <div className={styles.triggerRow}>
+            <input
+              className={styles.textInput}
+              type="text"
+              value={trigger}
+              onChange={(e) => {
+                const ch = e.target.value.slice(0, 1)
+                if (ch === '~' || /\s/.test(ch)) return
+                setTrigger(ch)
+              }}
+              placeholder="e.g. # @ !"
+              style={{ width: 52, fontFamily: 'ui-monospace, monospace' }}
+            />
+            <span className={styles.radioDescription}>Use single special character</span>
           </div>
         </div>
       )}

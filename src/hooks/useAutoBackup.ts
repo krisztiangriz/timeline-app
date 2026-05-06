@@ -32,13 +32,9 @@ function isDue(frequency: BackupFrequency): boolean {
 
 /**
  * Runs once on app load. If a backup is due, triggers a JSON file download.
- * Skips when in demo mode.
  */
 export function useAutoBackup() {
   useEffect(() => {
-    // Don't backup demo data
-    if (localStorage.getItem('demo-mode') === 'true') return
-
     const frequency = getFrequency()
     if (!isDue(frequency)) return
 
