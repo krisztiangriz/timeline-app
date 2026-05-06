@@ -31,7 +31,7 @@ export function OnboardingModal({ open, onClose }: OnboardingModalProps) {
           playsInline
           onTimeUpdate={(e) => {
             const v = e.currentTarget
-            if (v.duration - v.currentTime < 0.1) {
+            if (v.duration - v.currentTime < 0.5) {
               v.currentTime = 0
             }
           }}
