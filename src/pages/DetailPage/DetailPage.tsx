@@ -1,4 +1,5 @@
 import { useStickyScroll } from '../../hooks/useStickyScroll'
+import { useClickOutside } from '../../hooks/useClickOutside'
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { useParams } from 'react-router-dom'
 import { BreadcrumbNav } from '../../components/Breadcrumb/Breadcrumb'
@@ -52,14 +53,7 @@ export function DetailPage({ routePrefix }: DetailPageProps) {
   }, [tabIds, activeTabId]) // eslint-disable-line react-hooks/exhaustive-deps — tabs is derived from tabIds in the same render; using the string avoids re-runs on every Dexie live query emission
 
   // Close status dropdown on outside click
-  useEffect(() => {
-    if (!statusOpen) return
-    function handleClick(e: MouseEvent) {
-      if (statusRef.current && !statusRef.current.contains(e.target as Node)) setStatusOpen(false)
-    }
-    document.addEventListener('mousedown', handleClick)
-    return () => document.removeEventListener('mousedown', handleClick)
-  }, [statusOpen])
+  useClickOutside(statusRef, () => setStatusOpen(false), statusOpen)
 
   const parentHub = page?.parentId ? allPages.find((p) => p.id === page.parentId) : undefined
   const hubPath = parentHub ? getPagePath(parentHub, allPages) : '/'

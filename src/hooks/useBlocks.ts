@@ -30,7 +30,7 @@ export function useBlocks(pageId?: number, tabId?: number | null) {
 /**
  * Required block types for each page context (sync version for UI).
  */
-export function getRequiredBlockTypesSync(page: Page, allPages: Page[]): Set<BlockType> {
+function getRequiredBlockTypesSync(page: Page, allPages: Page[]): Set<BlockType> {
   if (page.role === 'main-timeline') return new Set(['timeline'])
   if (page.type === 'hub') return new Set(['visualization', 'table'])
 
