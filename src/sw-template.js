@@ -71,6 +71,9 @@ self.addEventListener('fetch', (event) => {
     return
   }
 
+  // Skip large media files — don't cache videos
+  if (url.pathname.match(/\.(mp4|webm|ogg|mov)$/)) return
+
   // Everything else → network-first with cache fallback
   event.respondWith(
     fetch(event.request)
@@ -81,6 +84,6 @@ self.addEventListener('fetch', (event) => {
         }
         return response
       })
-      .catch(() => caches.match(event.request))
+      .catch(() => caches.match(event.request).then((cached) => cached || new Response('', { status: 503 })))
   )
 })

@@ -1,5 +1,24 @@
 import { createContext, useContext, useEffect, useState, useCallback, useMemo, type ReactNode } from 'react'
 
+// ---- Types for page creation from trigger dropdown ----
+
+export interface AddPageInitial {
+  name?: string
+  parentHubId?: number
+  /** The trigger prefix that was used (e.g., '#') — needed for mention insertion */
+  triggerPrefix?: string
+  /** The full trigger text to find and replace in the editor (e.g., '#NewProject') */
+  triggerText?: string
+}
+
+export interface PendingMentionInsert {
+  pageId: number
+  name: string
+  prefix: string
+  /** The text to search for and replace in the editor */
+  triggerText: string
+}
+
 // ---- Modal context (open/close states for all modals) ----
 
 interface ModalContextValue {
@@ -15,6 +34,10 @@ interface ModalContextValue {
   setHelpOpen: (v: boolean) => void
   onboardingOpen: boolean
   setOnboardingOpen: (v: boolean) => void
+  addPageInitial: AddPageInitial | undefined
+  setAddPageInitial: (v: AddPageInitial | undefined) => void
+  pendingMentionInsert: PendingMentionInsert | null
+  setPendingMentionInsert: (v: PendingMentionInsert | null) => void
 }
 
 const ModalContext = createContext<ModalContextValue>({
@@ -30,6 +53,10 @@ const ModalContext = createContext<ModalContextValue>({
   setHelpOpen: () => {},
   onboardingOpen: false,
   setOnboardingOpen: () => {},
+  addPageInitial: undefined,
+  setAddPageInitial: () => {},
+  pendingMentionInsert: null,
+  setPendingMentionInsert: () => {},
 })
 
 // ---- Preferences context (user settings persisted to localStorage) ----
@@ -71,6 +98,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [helpOpen, setHelpOpen] = useState(false)
   const [onboardingOpen, setOnboardingOpen] = useState(() => localStorage.getItem('onboarding-completed') !== 'true')
+  const [addPageInitial, setAddPageInitial] = useState<AddPageInitial | undefined>(undefined)
+  const [pendingMentionInsert, setPendingMentionInsert] = useState<PendingMentionInsert | null>(null)
   const [showArchived, setShowArchivedState] = useState(() => localStorage.getItem('show-archived') === 'true')
 
   const setShowArchived = useCallback((v: boolean) => {
@@ -114,7 +143,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     settingsOpen, setSettingsOpen,
     helpOpen, setHelpOpen,
     onboardingOpen, setOnboardingOpen,
-  }), [feedbackOpen, searchOpen, addPageOpen, settingsOpen, helpOpen, onboardingOpen])
+    addPageInitial, setAddPageInitial,
+    pendingMentionInsert, setPendingMentionInsert,
+  }), [feedbackOpen, searchOpen, addPageOpen, settingsOpen, helpOpen, onboardingOpen, addPageInitial, pendingMentionInsert])
 
   const prefsValue = useMemo<PreferencesContextValue>(() => ({
     showArchived, setShowArchived,

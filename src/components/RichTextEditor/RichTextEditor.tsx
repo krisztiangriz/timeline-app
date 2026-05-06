@@ -8,6 +8,7 @@ import {
   type KeyboardEvent,
 } from 'react'
 import { useAutocomplete } from '../../hooks/useAutocomplete'
+import { useModalContext } from '../../hooks/useAppContext'
 import { enrichMentionHtml } from '../../utils/mentionEnricher'
 import { formatTableDate } from '../../utils/dateUtils'
 import styles from './RichTextEditor.module.css'
@@ -79,6 +80,7 @@ export function RichTextEditor({
 
   // Load pages for autocomplete (shared context — single subscription for all editors)
   const { allPages } = useAutocomplete()
+  const { setAddPageOpen, setAddPageInitial, pendingMentionInsert, setPendingMentionInsert } = useModalContext()
 
   // Build set of active hub trigger characters
   const hubTriggers = useMemo<Set<string>>(() =>
@@ -168,6 +170,98 @@ export function RichTextEditor({
   useEffect(() => () => {
     if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current)
   }, [])
+
+  // Consume pendingMentionInsert: find trigger text in editor and replace with mention span
+  useEffect(() => {
+    if (!pendingMentionInsert) return
+    const el = editorRef.current
+    if (!el) return
+
+    const { pageId, name, triggerText } = pendingMentionInsert
+
+    // Walk all text nodes to find the trigger text (search from end for most recent occurrence)
+    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT)
+    let foundNode: Text | null = null
+    let foundOffset = -1
+
+    const nodes: Text[] = []
+    let current: Node | null
+    while ((current = walker.nextNode())) {
+      nodes.push(current as Text)
+    }
+
+    // Search from end (last occurrence is most likely the one the user just typed)
+    for (let i = nodes.length - 1; i >= 0; i--) {
+      const textNode = nodes[i]
+      const idx = (textNode.textContent || '').lastIndexOf(triggerText)
+      if (idx !== -1) {
+        foundNode = textNode
+        foundOffset = idx
+        break
+      }
+    }
+
+    if (!foundNode || foundOffset === -1) {
+      setPendingMentionInsert(null)
+      return
+    }
+
+    // Replace the trigger text with a mention span
+    const text = foundNode.textContent || ''
+    const before = text.substring(0, foundOffset)
+    const after = text.substring(foundOffset + triggerText.length)
+
+    const span = document.createElement('span')
+    span.setAttribute('data-mention', 'true')
+    span.setAttribute('data-page-id', String(pageId))
+    span.contentEditable = 'false'
+    span.appendChild(document.createTextNode(name))
+
+    // Set trigger attribute for collapse behavior
+    const mentionPage = allPages.find((p) => p.id === pageId)
+    const parentHub = mentionPage?.parentId ? allPages.find((p) => p.id === mentionPage.parentId) : undefined
+    const trigger = parentHub?.mentionTrigger ?? allPages.find((p) => p.id === pageId && p.mentionTrigger)?.mentionTrigger
+    if (trigger) {
+      span.setAttribute('data-trigger', trigger)
+      span.setAttribute('title', name)
+      if (collapseMentions) {
+        const hub = parentHub ?? allPages.find((p) => p.id === pageId && p.mentionTrigger)
+        if (hub?.mentionCollapsed) {
+          span.setAttribute('data-collapsed', 'true')
+        }
+      }
+    }
+
+    const parent = foundNode.parentNode
+    if (!parent) {
+      setPendingMentionInsert(null)
+      return
+    }
+
+    const beforeNode = document.createTextNode(before)
+    const trailing = after ? ` ${after}` : '\u00A0'
+    const afterNode = document.createTextNode(trailing)
+
+    parent.replaceChild(afterNode, foundNode)
+    parent.insertBefore(span, afterNode)
+    parent.insertBefore(beforeNode, span)
+
+    // Focus the editor (it lost focus while the modal was open) and move cursor after the mention
+    el.focus()
+    const sel = window.getSelection()
+    if (sel) {
+      const range = document.createRange()
+      range.setStart(afterNode, 1)
+      range.collapse(true)
+      sel.removeAllRanges()
+      sel.addRange(range)
+    }
+
+    // Emit change and clear pending state
+    const html = el.innerHTML
+    onChange(html)
+    setPendingMentionInsert(null)
+  }, [pendingMentionInsert, setPendingMentionInsert, allPages, collapseMentions, onChange])
 
   const emitChange = useCallback(() => {
     const el = editorRef.current
@@ -422,6 +516,27 @@ export function RichTextEditor({
     emitChange()
   }
 
+  function handleAddPageFromDropdown() {
+    if (!mentionQuery) return
+    const prefix = mentionQuery.prefix
+    const queryText = mentionQuery.text
+    const triggerText = prefix + queryText
+
+    // Find the hub that owns this trigger
+    const triggerPage = allPages.find((p) => p.mentionTrigger === prefix && !p.archived)
+    const parentHubId = triggerPage?.type === 'hub' ? triggerPage.id : undefined
+
+    setAddPageInitial({
+      name: queryText,
+      parentHubId,
+      triggerPrefix: prefix,
+      triggerText,
+    })
+    setAddPageOpen(true)
+    setMentionQuery(null)
+    mentionRange.current = null
+  }
+
   // ---- Keyboard handler ----
 
   function handleKeyDown(e: KeyboardEvent<HTMLDivElement>) {
@@ -440,6 +555,20 @@ export function RichTextEditor({
       if (e.key === 'Enter' || e.key === 'Tab') {
         e.preventDefault()
         insertAutocomplete(autocompleteOptions[mentionIndex])
+        return
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        setMentionQuery(null)
+        return
+      }
+    }
+
+    // "Add page" option showing (no results, non-~ trigger)
+    if (mentionQuery && autocompleteOptions.length === 0 && mentionQuery.prefix !== '~') {
+      if (e.key === 'Enter' || e.key === 'Tab') {
+        e.preventDefault()
+        handleAddPageFromDropdown()
         return
       }
       if (e.key === 'Escape') {
@@ -765,6 +894,25 @@ export function RichTextEditor({
               )}
             </div>
           ))}
+        </div>
+      )}
+
+      {/* "Add page" option when no matches for a trigger lookup */}
+      {mentionQuery && autocompleteOptions.length === 0 && mentionQuery.prefix !== '~' && (
+        <div
+          className={styles.mentionDropdown}
+          style={{ top: mentionPos.top, left: mentionPos.left }}
+        >
+          <div
+            className={styles.mentionItemActive}
+            onMouseDown={(e) => {
+              e.preventDefault()
+              handleAddPageFromDropdown()
+            }}
+          >
+            <span className={styles.mentionPrefix}>+</span>
+            Add &ldquo;{mentionQuery.text || 'page'}&rdquo;
+          </div>
         </div>
       )}
     </div>

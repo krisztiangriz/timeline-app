@@ -31,6 +31,8 @@ function GlobalOverlays() {
     settingsOpen, setSettingsOpen,
     helpOpen, setHelpOpen,
     onboardingOpen, setOnboardingOpen,
+    addPageInitial, setAddPageInitial,
+    setPendingMentionInsert,
   } = useModalContext()
   const { toasts, show: showToast } = useToast()
   const { allPages } = useAutocomplete()
@@ -117,11 +119,23 @@ function GlobalOverlays() {
     setAddPageOpen(false)
     showToast('Page created')
 
-    const newPage = await db.pages.get(pageId)
-    if (newPage) {
-      navigate(getPagePath(newPage, allPages))
+    // If page was created from trigger dropdown, insert mention instead of navigating
+    if (addPageInitial?.triggerText) {
+      setPendingMentionInsert({
+        pageId,
+        name: data.name,
+        prefix: addPageInitial.triggerPrefix || '',
+        triggerText: addPageInitial.triggerText,
+      })
+      setAddPageInitial(undefined)
     } else {
-      navigate(`/page/${pageId}`)
+      setAddPageInitial(undefined)
+      const newPage = await db.pages.get(pageId)
+      if (newPage) {
+        navigate(getPagePath(newPage, allPages))
+      } else {
+        navigate(`/page/${pageId}`)
+      }
     }
   }
 
@@ -132,10 +146,10 @@ function GlobalOverlays() {
         <Suspense fallback={null}>
           <PageForm
             open={addPageOpen}
-            onClose={() => setAddPageOpen(false)}
+            onClose={() => { setAddPageOpen(false); setAddPageInitial(undefined) }}
             onSubmit={handleAddPage}
             hubs={hubs}
-            initial={{ parentHubId: defaultParentHubId }}
+            initial={{ parentHubId: addPageInitial?.parentHubId ?? defaultParentHubId, name: addPageInitial?.name }}
           />
         </Suspense>
       )}
