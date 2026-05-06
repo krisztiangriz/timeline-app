@@ -9,7 +9,6 @@ import { useChildPages, getPagePath, usePageTabs } from '../../hooks/usePages'
 import { useAutocomplete } from '../../hooks/useAutocomplete'
 import { usePreferences } from '../../hooks/useAppContext'
 import { useTableSort } from '../../hooks/useTableSort'
-import { useEntryCounts } from '../../hooks/useEntryCounts'
 import { formatTableDate } from '../../utils/dateUtils'
 import { DragHandleIcon, CloseIcon } from '../Icons/Icons'
 import { db } from '../../db/database'
@@ -208,21 +207,16 @@ function TableBlock({ page }: { page: Page }) {
   const filtered = showArchived ? children : children.filter((c) => !c.archived)
   const sorted = sortPages(filtered)
 
-  const childIds = useMemo(() => children.map((c) => c.id!), [children])
-  const entryCounts = useEntryCounts(childIds)
-
   return (
     <div className={tableStyles.table} style={{ padding: 0 }}>
       <div className={tableStyles.tableHeader}>
         <span className={tableStyles.thName} onClick={() => toggleSort('name')}>Name <span className={tableStyles.sortArrow}>{arrow('name')}</span></span>
-        <span className={tableStyles.thEntries}>Entries</span>
         <span className={tableStyles.thDate} onClick={() => toggleSort('createdAt')}>Created on <span className={tableStyles.sortArrow}>{arrow('createdAt')}</span></span>
         <span className={tableStyles.thDate} onClick={() => toggleSort('updatedAt')}>Last updated <span className={tableStyles.sortArrow}>{arrow('updatedAt')}</span></span>
       </div>
       {sorted.map((child) => (
         <div key={child.id} className={child.archived ? `${tableStyles.row} ${tableStyles.rowArchived}` : tableStyles.row} onClick={() => navigate(getPagePath(child, allPages))}>
           <div className={tableStyles.nameCell}><span className={tableStyles.rowName}>{child.name}</span></div>
-          <span className={tableStyles.entriesCell}>{entryCounts.get(child.id!) ?? 0}</span>
           <span className={tableStyles.dateCell}>{formatTableDate(child.createdAt)}</span>
           <span className={tableStyles.dateCell}>{formatTableDate(child.updatedAt)}</span>
         </div>
