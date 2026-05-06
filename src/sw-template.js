@@ -45,19 +45,20 @@ self.addEventListener('fetch', (event) => {
     return
   }
 
-  // Navigation → network-first with cached index.html fallback (offline SPA)
+  // Navigation → serve cached index.html for SPA routing (handles 404 from GitHub Pages)
   if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request)
         .then((response) => {
-          // Cache the latest index.html for offline use
           if (response.ok) {
             const clone = response.clone()
-            caches.open(CACHE_NAME).then((cache) => cache.put(BASE, clone))
+            caches.open(CACHE_NAME).then((cache) => cache.put(BASE + 'index.html', clone))
+            return response
           }
-          return response
+          // Non-OK (404) → serve cached index.html so React Router handles the route
+          return caches.match(BASE + 'index.html') || response
         })
-        .catch(() => caches.match(BASE))
+        .catch(() => caches.match(BASE + 'index.html'))
     )
     return
   }
