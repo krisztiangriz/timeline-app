@@ -131,7 +131,7 @@ export function RichTextEditor({
     } else if (text !== '' || hasElements) {
       el.removeAttribute('data-empty')
     }
-  }, [value])
+  }, [value, collapseMentions])
 
   // Use <br> for line breaks instead of wrapping in <div>
   useEffect(() => {

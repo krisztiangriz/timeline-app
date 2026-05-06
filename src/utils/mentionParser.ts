@@ -32,10 +32,10 @@ export function splitHtmlLines(html: string): string[] {
  */
 export function stripSelfMention(html: string, pageId: number): string {
   const pageIdStr = String(pageId)
-  // Unwrap the mention span for this page: keep inner text, remove span tags
+  // Unwrap the mention span for this page: remove entirely (page name is redundant on its own page)
   let result = html.replace(
-    new RegExp(`<span[^>]*data-page-id="${pageIdStr}"[^>]*>([\\s\\S]*?)</span>`, 'gi'),
-    '$1'
+    new RegExp(`<span[^>]*data-page-id="${pageIdStr}"[^>]*>[\\s\\S]*?</span>`, 'gi'),
+    ''
   )
   // Clean up leading/trailing whitespace, &nbsp;, and <br>
   result = result.replace(/^(\s|&nbsp;|<br\s*\/?>)+/gi, '')
