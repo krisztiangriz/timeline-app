@@ -9,7 +9,7 @@ export default defineConfig({
   base: '/timeline-app/',
   plugins: [react()],
   define: {
-    __APP_VERSION__: JSON.stringify(pkg.version),
+    __APP_VERSION__: JSON.stringify(process.env.APP_VERSION || pkg.version),
   },
   build: {
     rollupOptions: {

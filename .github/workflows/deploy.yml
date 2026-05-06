@@ -21,11 +21,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 20
       - run: npm ci
+      - name: Compute version
+        run: echo "APP_VERSION=1.$(git rev-list --count HEAD)" >> $GITHUB_ENV
       - run: npm run build
+        env:
+          APP_VERSION: ${{ env.APP_VERSION }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
