@@ -1,0 +1,165 @@
+/* ---- Floating guide card ---- */
+
+.card {
+  position: fixed;
+  z-index: 9000;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  width: 280px;
+  max-width: calc(100vw - 16px);
+  padding: var(--space-md);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 4px 16px var(--color-shadow), 0 1px 4px var(--color-shadow);
+  animation: guideIn 0.2s ease-out;
+}
+
+/* When not anchored, center in viewport */
+.card:not([data-floating]) {
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+/* ---- Header ---- */
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-sm);
+}
+
+.title {
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.closeButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-secondary);
+  transition: color 0.1s, background 0.1s;
+}
+
+.closeButton:hover {
+  color: var(--color-text-primary);
+  background: var(--color-surface-hover);
+}
+
+.closeButton svg {
+  width: 12px;
+  height: 12px;
+}
+
+/* ---- Image ---- */
+
+.imageWrap {
+  width: 100%;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--color-input-bg);
+}
+
+.image {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* ---- Description ---- */
+
+.description {
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-base);
+  color: var(--color-text-body);
+}
+
+/* ---- Footer ---- */
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  padding-top: var(--space-xs);
+}
+
+.stepIndicator {
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-xs);
+  color: var(--color-text-secondary);
+}
+
+.footerButtons {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.footerButton {
+  display: flex;
+  align-items: center;
+  height: 26px;
+  padding: 0 var(--space-sm);
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+  border-radius: var(--radius-sm);
+  transition: background 0.1s, color 0.1s;
+}
+
+.footerButton:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-text-primary);
+}
+
+.footerButtonPrimary {
+  composes: footerButton;
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-semibold);
+  background: var(--color-border-light);
+}
+
+.footerButtonPrimary:hover {
+  background: var(--color-border);
+}
+
+/* ---- Entrance animation ---- */
+
+@keyframes guideIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Override transform for non-anchored cards */
+.card:not([data-floating]) {
+  animation: guideInCenter 0.2s ease-out;
+}
+
+@keyframes guideInCenter {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) translateY(0);
+  }
+}

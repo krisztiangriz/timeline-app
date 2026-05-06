@@ -51,11 +51,13 @@ export function HubPage({ role }: HubPageProps) {
   const editInitial = useMemo(() => ({
     name: hub?.name ?? '',
     tabs: tabs.map((t) => t.name),
+    mentionTrigger: hub?.mentionTrigger,
+    mentionCollapsed: hub?.mentionCollapsed,
   }), [hub, tabs])
 
   async function handleEditSubmit(data: PageFormData) {
     if (!hub?.id) return
-    await updatePage(hub.id, { name: data.name })
+    await updatePage(hub.id, { name: data.name, mentionTrigger: data.mentionTrigger, mentionCollapsed: data.mentionCollapsed })
     await updateTabs(hub.id, data.tabs)
     setEditPageOpen(false); showToast('Page updated')
   }

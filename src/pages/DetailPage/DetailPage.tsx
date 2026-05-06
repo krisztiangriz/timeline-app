@@ -93,14 +93,21 @@ export function DetailPage({ routePrefix }: DetailPageProps) {
     deletePage, pageName: page?.name, showToast,
   })
 
-  const editInitial = useMemo(() => ({
-    name: page?.name ?? '',
-    tabs: tabs.map((l) => l.name),
-  }), [page, tabs])
+  const editInitial = useMemo(() => {
+    const parentHub = page?.parentId ? allPages.find((p) => p.id === page.parentId) : undefined
+    return {
+      name: page?.name ?? '',
+      tabs: tabs.map((l) => l.name),
+      mentionTrigger: page?.mentionTrigger,
+      mentionCollapsed: page?.mentionCollapsed,
+      inheritedTrigger: parentHub?.mentionTrigger,
+      inheritedFrom: parentHub?.name,
+    }
+  }, [page, tabs, allPages])
 
   async function handleEditSubmit(data: PageFormData) {
     if (!pageId) return
-    await updatePage(pageId, { name: data.name })
+    await updatePage(pageId, { name: data.name, mentionTrigger: data.mentionTrigger, mentionCollapsed: data.mentionCollapsed })
     await updateTabs(pageId, data.tabs)
     setEditPageOpen(false); showToast('Page updated')
   }

@@ -2,6 +2,7 @@ import { useMemo, useEffect, lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom'
 import { AppProvider, useModalContext } from './hooks/useAppContext'
 import { AutocompleteProvider, useAutocomplete } from './hooks/useAutocomplete'
+import { OnboardingGuidesProvider } from './hooks/useOnboardingGuides'
 import { ToastContainer } from './components/Toast/Toast'
 import { ToastProvider, useToast } from './hooks/useToast'
 import { useAutoBackup } from './hooks/useAutoBackup'
@@ -63,7 +64,7 @@ function GlobalOverlays() {
 
     // Hub creation
     if (data.isHub) {
-      const pageId = await addPage({ name: data.name, type: 'hub', description: '', mentionTrigger: data.mentionTrigger })
+      const pageId = await addPage({ name: data.name, type: 'hub', description: '', mentionTrigger: data.mentionTrigger, mentionCollapsed: data.mentionCollapsed })
       if (data.template !== 'hub-table') {
         await db.blocks.add({ pageId, type: 'visualization', order: 0 })
       }
@@ -80,7 +81,7 @@ function GlobalOverlays() {
       pageType = ROLE_TO_PAGE_TYPE[hub.role]
     }
 
-    const pageId = await addPage({ name: data.name, type: pageType, parentId, description: '', mentionTrigger: data.mentionTrigger })
+    const pageId = await addPage({ name: data.name, type: pageType, parentId, description: '', mentionTrigger: data.mentionTrigger, mentionCollapsed: data.mentionCollapsed })
 
     // Create blocks/tabs based on selected template
     switch (data.template) {
@@ -204,6 +205,7 @@ export default function App() {
     <BrowserRouter basename="/timeline-app">
       <AppProvider>
         <AutocompleteProvider>
+        <OnboardingGuidesProvider>
         <ToastProvider>
         <Suspense fallback={null}>
         <Routes>
@@ -220,6 +222,7 @@ export default function App() {
         </Suspense>
         <GlobalOverlays />
         </ToastProvider>
+        </OnboardingGuidesProvider>
         </AutocompleteProvider>
       </AppProvider>
     </BrowserRouter>

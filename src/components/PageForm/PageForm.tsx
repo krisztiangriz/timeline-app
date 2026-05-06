@@ -13,6 +13,9 @@ export interface PageFormData {
   template: PageTemplate
   isHub: boolean
   mentionTrigger?: string
+  mentionCollapsed?: boolean
+  inheritedTrigger?: string   // parent hub's trigger (display only, not submitted)
+  inheritedFrom?: string      // parent hub's name (display only)
 }
 
 export interface HubInfo {
@@ -63,6 +66,7 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
   const [isHubType, setIsHubType] = useState(false)
   const [template, setTemplate] = useState<PageTemplate>('custom')
   const [trigger, setTrigger] = useState('')
+  const [collapsed, setCollapsed] = useState(false)
   const [dragIdx, setDragIdx] = useState<number | null>(null)
   const [dropIdx, setDropIdx] = useState<number | null>(null)
   const prevOpen = useRef(false)
@@ -76,7 +80,8 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
       setParentHubId(initial?.parentHubId)
       setIsHubType(false)
       setTemplate(getDefaultTemplate(hubs.find(h => h.id === initial?.parentHubId)))
-      setTrigger('')
+      setTrigger(initial?.mentionTrigger ?? '')
+      setCollapsed(initial?.mentionCollapsed ?? false)
       setDragIdx(null)
       setDropIdx(null)
     }
@@ -113,7 +118,7 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
   function handleTabDragEnd() { setDragIdx(null); setDropIdx(null) }
 
   function handleSubmit() {
-    onSubmit({ name, tabs, parentHubId: isHubType ? undefined : parentHubId, template, isHub: isHubType, mentionTrigger: trigger || undefined })
+    onSubmit({ name, tabs, parentHubId: isHubType ? undefined : parentHubId, template, isHub: isHubType, mentionTrigger: trigger || undefined, mentionCollapsed: collapsed || undefined })
   }
 
   return (
@@ -172,25 +177,48 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
         </div>
       )}
 
-      {/* Trigger character (optional — for hubs and standalone root pages) */}
-      {!isEdit && !isHubProp && (isHubType || !parentHubId) && (
+      {/* Trigger character (optional — for hubs and standalone root pages; read-only for child pages) */}
+      {(isHubType || isHubProp || (!isEdit && !parentHubId) || (isEdit && (trigger || initial?.inheritedTrigger))) && (
         <div className={styles.section}>
-          <span className={styles.label}>Trigger (optional)</span>
-          <div className={styles.triggerRow}>
-            <input
-              className={styles.textInput}
-              type="text"
-              value={trigger}
-              onChange={(e) => {
-                const ch = e.target.value.slice(0, 1)
-                if (ch === '~' || /\s/.test(ch)) return
-                setTrigger(ch)
-              }}
-              placeholder="e.g. # @ !"
-              style={{ width: 52, fontFamily: 'ui-monospace, monospace' }}
-            />
-            <span className={styles.radioDescription}>Use single special character</span>
-          </div>
+          <span className={styles.label}>Trigger{initial?.inheritedTrigger ? '' : ' (optional)'}</span>
+          {initial?.inheritedTrigger ? (
+            <>
+              <div className={styles.triggerRow}>
+                <input
+                  className={styles.textInput}
+                  type="text"
+                  value={initial.inheritedTrigger}
+                  disabled
+                  style={{ width: 52, fontFamily: 'ui-monospace, monospace', opacity: 0.5 }}
+                />
+                <span className={styles.radioDescription}>Inherited from {initial.inheritedFrom}</span>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className={styles.triggerRow}>
+                <input
+                  className={styles.textInput}
+                  type="text"
+                  value={trigger}
+                  onChange={(e) => {
+                    const ch = e.target.value.slice(0, 1)
+                    if (ch === '~' || /\s/.test(ch)) return
+                    setTrigger(ch)
+                  }}
+                  placeholder="e.g. # @ !"
+                  style={{ width: 52, fontFamily: 'ui-monospace, monospace' }}
+                />
+                {trigger && (
+                  <button className={styles.labelToggle} onClick={() => setCollapsed(!collapsed)} type="button">
+                    <div className={styles.labelCheckbox} data-checked={!collapsed} />
+                    <span className={styles.labelText}>Label</span>
+                  </button>
+                )}
+                {!trigger && <span className={styles.radioDescription}>Use single special character</span>}
+              </div>
+            </>
+          )}
         </div>
       )}
 
