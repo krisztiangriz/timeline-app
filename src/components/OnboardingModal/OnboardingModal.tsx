@@ -29,6 +29,12 @@ export function OnboardingModal({ open, onClose }: OnboardingModalProps) {
           loop
           muted
           playsInline
+          onTimeUpdate={(e) => {
+            const v = e.currentTarget
+            if (v.duration - v.currentTime < 0.1) {
+              v.currentTime = 0
+            }
+          }}
         >
           <source src="/timeline-app/timeline-app-promo.mp4" type="video/mp4" />
         </video>
