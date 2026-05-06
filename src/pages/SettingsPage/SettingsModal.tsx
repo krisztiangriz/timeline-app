@@ -279,17 +279,13 @@ export function SettingsModal({ open, onClose, onToast }: SettingsModalProps) {
         </span>
       </div>
 
-      {/* Show / Hide */}
+      {/* Onboarding */}
       <div className={styles.section}>
-        <span className={styles.sectionTitle}>Show / Hide</span>
+        <span className={styles.sectionTitle}>Onboarding</span>
         <div className={styles.showHideRow}>
-          <button className={styles.checkboxRow} onClick={() => setShowArchived(!showArchived)}>
-            <div className={styles.checkbox} data-checked={showArchived} />
-            <span className={styles.checkboxLabel}>Show archived</span>
-          </button>
           <button className={styles.checkboxRow} onClick={toggleGuides}>
             <div className={styles.checkbox} data-checked={!guidesDisabled} />
-            <span className={styles.checkboxLabel}>Show onboarding hints</span>
+            <span className={styles.checkboxLabel}>Show hints</span>
           </button>
           <button className={styles.iconButton} onClick={() => {
             localStorage.removeItem('onboarding-completed')
@@ -300,7 +296,18 @@ export function SettingsModal({ open, onClose, onToast }: SettingsModalProps) {
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
               <path d="M12 20C14.2333 20 16.125 19.225 17.675 17.675C19.225 16.125 20 14.2333 20 12C20 9.76667 19.225 7.875 17.675 6.325C16.125 4.775 14.2333 4 12 4C10.85 4 9.75 4.2375 8.7 4.7125C7.65 5.1875 6.75 5.86667 6 6.75V4H4V11H11V9H6.8C7.33333 8.06667 8.0625 7.33333 8.9875 6.8C9.9125 6.26667 10.9167 6 12 6C13.6667 6 15.0833 6.58333 16.25 7.75C17.4167 8.91667 18 10.3333 18 12C18 13.6667 17.4167 15.0833 16.25 16.25C15.0833 17.4167 13.6667 18 12 18C10.7167 18 9.55833 17.6333 8.525 16.9C7.49167 16.1667 6.76667 15.2 6.35 14H4.25C4.71667 15.7667 5.66667 17.2083 7.1 18.325C8.53333 19.4417 10.1667 20 12 20Z" fill="currentColor" fillOpacity="0.7"/>
             </svg>
-            Reset onboarding
+            Reset
+          </button>
+        </div>
+      </div>
+
+      {/* Archived pages */}
+      <div className={styles.section}>
+        <span className={styles.sectionTitle}>Archived pages</span>
+        <div className={styles.showHideRow}>
+          <button className={styles.checkboxRow} onClick={() => setShowArchived(!showArchived)}>
+            <div className={styles.checkbox} data-checked={showArchived} />
+            <span className={styles.checkboxLabel}>Show archived</span>
           </button>
         </div>
       </div>

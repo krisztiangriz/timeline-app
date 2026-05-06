@@ -20,9 +20,8 @@
 
 .showHideRow {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--space-sm);
+  align-items: center;
+  gap: var(--space-lg);
 }
 
 .checkbox {
