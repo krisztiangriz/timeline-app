@@ -19,23 +19,25 @@ export function FeedbackForm({ open, onClose, onSuccess }: FeedbackFormProps) {
   const dimensions = useDimensions()
 
   const [subjectQuery, setSubjectQuery] = useState('')
-  const [selectedSubject, setSelectedSubject] = useState<Page | null>(null)
+  const [selectedSubjects, setSelectedSubjects] = useState<Page[]>([])
   const [activeIndex, setActiveIndex] = useState(-1)
   const resultsRef = useRef<HTMLDivElement>(null)
   const [type, setType] = useState<FeedbackType>('positive')
   const [description, setDescription] = useState('')
   const [dimensionId, setDimensionId] = useState<number | undefined>(undefined)
 
-  // Filter pages under any hub for the subject search
+  // Filter pages under any hub for the subject search — exclude already selected
   const subjectResults = useMemo(() => {
     if (!subjectQuery.trim()) return []
     const q = subjectQuery.toLowerCase()
+    const selectedIds = new Set(selectedSubjects.map((s) => s.id))
     return allPages.filter(
       (p) =>
         p.parentId && p.type !== 'hub' &&
+        !selectedIds.has(p.id) &&
         p.name.toLowerCase().includes(q)
     )
-  }, [subjectQuery, allPages])
+  }, [subjectQuery, allPages, selectedSubjects])
 
   // Reset active index when results change
   useEffect(() => { setActiveIndex(-1) }, [subjectResults.length])
@@ -57,17 +59,28 @@ export function FeedbackForm({ open, onClose, onSuccess }: FeedbackFormProps) {
       setActiveIndex((prev) => (prev > 0 ? prev - 1 : subjectResults.length - 1))
     } else if (e.key === 'Enter' && activeIndex >= 0) {
       e.preventDefault()
-      setSelectedSubject(subjectResults[activeIndex])
-      setSubjectQuery('')
+      handleSelectSubject(subjectResults[activeIndex])
     }
   }
 
-  const selectedParentHub = selectedSubject?.parentId ? allPages.find((p) => p.id === selectedSubject.parentId) : undefined
-  const isColleague = selectedSubject?.type === 'colleague' || selectedParentHub?.role === 'colleague-hub'
+  function handleSelectSubject(page: Page) {
+    setSelectedSubjects((prev) => [...prev, page])
+    setSubjectQuery('')
+  }
+
+  function handleRemoveSubject(pageId: number) {
+    setSelectedSubjects((prev) => prev.filter((p) => p.id !== pageId))
+  }
+
+  // Show dimension field if ANY selected subject is a colleague
+  const isColleague = selectedSubjects.some((s) => {
+    const hub = s.parentId ? allPages.find((p) => p.id === s.parentId) : undefined
+    return s.type === 'colleague' || hub?.role === 'colleague-hub'
+  })
 
   function reset() {
     setSubjectQuery('')
-    setSelectedSubject(null)
+    setSelectedSubjects([])
     setType('positive')
     setDescription('')
     setDimensionId(undefined)
@@ -79,14 +92,16 @@ export function FeedbackForm({ open, onClose, onSuccess }: FeedbackFormProps) {
   }
 
   async function handleSubmit() {
-    if (!selectedSubject?.id || !description.trim()) return
+    if (selectedSubjects.length === 0 || !description.trim()) return
 
-    await addFeedback({
-      subjectId: selectedSubject.id,
-      type,
-      description: description.trim(),
-      dimensionId: isColleague ? dimensionId : undefined,
-    })
+    for (const subject of selectedSubjects) {
+      await addFeedback({
+        subjectId: subject.id!,
+        type,
+        description: description.trim(),
+        dimensionId: isColleague ? dimensionId : undefined,
+      })
+    }
 
     reset()
     onClose()
@@ -94,7 +109,7 @@ export function FeedbackForm({ open, onClose, onSuccess }: FeedbackFormProps) {
   }
 
   const canSubmit =
-    selectedSubject !== null &&
+    selectedSubjects.length > 0 &&
     description.trim().length > 0 &&
     (!isColleague || dimensionId !== undefined)
 
@@ -109,55 +124,57 @@ export function FeedbackForm({ open, onClose, onSuccess }: FeedbackFormProps) {
       {/* Subject */}
       <div className={styles.section}>
         <span className={styles.label}>Subject</span>
-        {selectedSubject ? (
-          <div className={styles.selectedSubject}>
-            <span>
-              {selectedParentHub?.mentionTrigger && <span style={{ fontFamily: "ui-monospace, 'SF Mono', Monaco, 'Cascadia Mono', monospace" }}>{selectedParentHub.mentionTrigger}</span>}
-              {selectedSubject.name}
-            </span>
-            <button
-              className={styles.clearSubject}
-              onClick={() => setSelectedSubject(null)}
-            >
-              <CloseIcon size={10} />
-            </button>
-          </div>
-        ) : (
-          <div className={styles.searchWrapper}>
-            <SearchIcon />
-            <input
-              className={styles.searchInput}
-              type="text"
-              value={subjectQuery}
-              onChange={(e) => setSubjectQuery(e.target.value)}
-              onKeyDown={handleSubjectKeyDown}
-              placeholder="Look up colleagues or projects"
-              autoFocus
-            />
-            {subjectQuery && (
-              <button className={styles.clearSearch} onClick={() => setSubjectQuery('')} aria-label="Clear">
-                <PlusIcon size={12} />
-              </button>
-            )}
-            {subjectResults.length > 0 && (
-              <div className={styles.searchResults} ref={resultsRef}>
-                {subjectResults.map((page, i) => (
-                  <button
-                    key={page.id}
-                    className={i === activeIndex ? styles.searchResultActive : styles.searchResult}
-                    onClick={() => {
-                      setSelectedSubject(page)
-                      setSubjectQuery('')
-                    }}
-                    onMouseEnter={() => setActiveIndex(i)}
-                  >
-                    {page.name}
+        {/* Selected subjects as chips */}
+        {selectedSubjects.length > 0 && (
+          <div className={styles.subjectChips}>
+            {selectedSubjects.map((s) => {
+              const hub = s.parentId ? allPages.find((p) => p.id === s.parentId) : undefined
+              return (
+                <div key={s.id} className={styles.subjectChip}>
+                  <span>
+                    {hub?.mentionTrigger && <span style={{ fontFamily: "ui-monospace, 'SF Mono', Monaco, 'Cascadia Mono', monospace" }}>{hub.mentionTrigger}</span>}
+                    {s.name}
+                  </span>
+                  <button className={styles.chipRemove} onClick={() => handleRemoveSubject(s.id!)}>
+                    <CloseIcon size={10} />
                   </button>
-                ))}
-              </div>
-            )}
+                </div>
+              )
+            })}
           </div>
         )}
+        {/* Search input — always visible for adding more */}
+        <div className={styles.searchWrapper}>
+          <SearchIcon />
+          <input
+            className={styles.searchInput}
+            type="text"
+            value={subjectQuery}
+            onChange={(e) => setSubjectQuery(e.target.value)}
+            onKeyDown={handleSubjectKeyDown}
+            placeholder={selectedSubjects.length > 0 ? 'Add another...' : 'Look up colleagues or projects'}
+            autoFocus={selectedSubjects.length === 0}
+          />
+          {subjectQuery && (
+            <button className={styles.clearSearch} onClick={() => setSubjectQuery('')} aria-label="Clear">
+              <PlusIcon size={12} />
+            </button>
+          )}
+          {subjectResults.length > 0 && (
+            <div className={styles.searchResults} ref={resultsRef}>
+              {subjectResults.map((page, i) => (
+                <button
+                  key={page.id}
+                  className={i === activeIndex ? styles.searchResultActive : styles.searchResult}
+                  onClick={() => handleSelectSubject(page)}
+                  onMouseEnter={() => setActiveIndex(i)}
+                >
+                  {page.name}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Type */}
@@ -188,7 +205,7 @@ export function FeedbackForm({ open, onClose, onSuccess }: FeedbackFormProps) {
         />
       </div>
 
-      {/* Dimension (if colleague) */}
+      {/* Dimension (if any selected subject is a colleague) */}
       {isColleague && (
         <div className={styles.section}>
           <span className={styles.label}>Feedback dimension</span>

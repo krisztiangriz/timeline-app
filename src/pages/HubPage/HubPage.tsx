@@ -4,6 +4,7 @@ import { BreadcrumbNav } from '../../components/Breadcrumb/Breadcrumb'
 import { PageHeader } from '../../components/PageHeader/PageHeader'
 import { PageForm, type PageFormData } from '../../components/PageForm/PageForm'
 import { BlockRenderer } from '../../components/BlockRenderer/BlockRenderer'
+import { HubPendingSection } from '../../components/HubPendingSection/HubPendingSection'
 import { usePageByRole, usePageActions, usePageTabs, getPagePath } from '../../hooks/usePages'
 import { useBlocks, useBlockActions } from '../../hooks/useBlocks'
 import { usePageMenus } from '../../hooks/usePageMenus'
@@ -90,6 +91,7 @@ export function HubPage({ role }: HubPageProps) {
           <BreadcrumbNav items={[{ label: 'Home', path: '/' }, { label: hub.name, path: hubPath }]} addMenuItems={addMenuItems} moreMenuItems={moreMenuItems} />
           <PageHeader name={hub.name} onUpdateName={(name) => updatePage(hub.id!, { name })} />
         </div>
+        <HubPendingSection hubId={hub.id!} />
         <BlockRenderer page={hub} />
       </div>
       <PageForm open={editPageOpen} onClose={() => setEditPageOpen(false)} onSubmit={handleEditSubmit} initial={editInitial} isEdit isHub protectedTabCount={0} />

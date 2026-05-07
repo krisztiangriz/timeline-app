@@ -88,30 +88,32 @@
   background: var(--color-border-light);
 }
 
-.selectedSubject {
+.subjectChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+}
+
+.subjectChip {
   display: flex;
   align-items: center;
-  gap: var(--space-sm);
-  padding: var(--space-sm) var(--space-md);
+  gap: var(--space-xs);
+  padding: var(--space-xs) var(--space-sm);
   background: var(--color-border-light);
   border-radius: var(--radius-md);
-  font-size: var(--font-size-base);
-  height: 32px;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-base);
 }
 
-.clearSubject {
-  margin-left: auto;
-  width: 16px;
-  height: 16px;
+.chipRemove {
+  color: var(--color-text-tertiary);
   display: flex;
   align-items: center;
-  justify-content: center;
-  color: var(--color-text-tertiary);
-  border-radius: 50%;
 }
 
-.clearSubject:hover {
-  color: var(--color-text-secondary);
+.chipRemove:hover {
+  color: var(--color-text-primary);
 }
 
 .radioRow {
