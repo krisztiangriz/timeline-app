@@ -4,12 +4,13 @@ import { stripHtml } from '../../utils/stripHtml'
 import { filterHtmlToMentionLines } from '../../utils/mentionParser'
 
 import { useTimelineEntries, useCrossRefEntries, addEntry, updateEntry, deleteEntry, mergePendingEntries } from '../../hooks/useTimeline'
-import { getPagePath } from '../../hooks/usePages'
+import { usePageByRole, useChildPages, getPagePath } from '../../hooks/usePages'
 import { useAutocomplete } from '../../hooks/useAutocomplete'
 import { formatEntryDate, startOfDay } from '../../utils/dateUtils'
 import { TimelineEntryRow } from './TimelineEntryRow'
 import { RichTextEditor } from '../RichTextEditor/RichTextEditor'
-import type { TimelineEntry } from '../../types'
+import { RichTextDisplay } from '../RichTextEditor/RichTextDisplay'
+import type { TimelineEntry, Page } from '../../types'
 import styles from './TimelineView.module.css'
 
 const NOOP = () => {}
@@ -49,6 +50,19 @@ function ensureCheckboxes(html: string): string {
   return `<div><span data-checkbox="false">\u00A0</span>${html}</div>`
 }
 
+/** Split pending HTML into individual line strings (inner content of each <div>) */
+function splitPendingLines(html: string): string[] {
+  if (!html.trim()) return []
+  const lines: string[] = []
+  const regex = /<div[^>]*>([\s\S]*?)<\/div>/gi
+  let match
+  while ((match = regex.exec(html)) !== null) {
+    if (match[1].trim()) lines.push(match[1])
+  }
+  if (lines.length === 0 && html.trim()) lines.push(html.trim())
+  return lines
+}
+
 // ---- Timeline view ----
 
 interface TimelineViewProps {
@@ -56,9 +70,11 @@ interface TimelineViewProps {
   title?: string
   /** If true, only show cross-ref entries — hide pending section and today editor */
   readOnly?: boolean
+  /** Page object for determining pending filter behavior */
+  page?: Page
 }
 
-export function TimelineView({ pageId, title, readOnly = false }: TimelineViewProps) {
+export function TimelineView({ pageId, title, readOnly = false, page }: TimelineViewProps) {
   const directEntries = useTimelineEntries(pageId)
   const crossRefEntries = useCrossRefEntries(pageId)
   const { allPages } = useAutocomplete()
@@ -304,12 +320,86 @@ export function TimelineView({ pageId, title, readOnly = false }: TimelineViewPr
     }
   }, [navigate])
 
+  // ---- Filtered pending (for non-main-timeline pages) ----
+  const isMainTimeline = page?.role === 'main-timeline'
+  const mainTimelinePage = usePageByRole('main-timeline')
+  const mainTimelineEntries = useTimelineEntries(isMainTimeline ? undefined : mainTimelinePage?.id)
+  const hubChildren = useChildPages(page?.type === 'hub' ? page.id : undefined)
+
+  const mainPendingEntry = useMemo(
+    () => isMainTimeline ? undefined : mainTimelineEntries.find((e) => e.isPending),
+    [mainTimelineEntries, isMainTimeline]
+  )
+
+  // Determine which page IDs are relevant for filtering
+  const relevantIds = useMemo(() => {
+    if (isMainTimeline) return new Set<number>()
+    if (page?.type === 'hub') return new Set(hubChildren.map((c) => c.id!))
+    return new Set([pageId])
+  }, [isMainTimeline, page, pageId, hubChildren])
+
+  // Split and filter the main timeline's pending HTML
+  const { filteredLines, allMainLines } = useMemo(() => {
+    if (isMainTimeline || !mainPendingEntry?.text) return { filteredLines: [], allMainLines: [] }
+    const allLines = splitPendingLines(mainPendingEntry.text)
+    const filtered = allLines.filter((line) => {
+      const matches = line.match(/data-page-id="(\d+)"/g)
+      if (!matches) return false
+      return matches.some((m) => {
+        const id = Number(m.replace('data-page-id="', '').replace('"', ''))
+        return relevantIds.has(id)
+      })
+    })
+    return { filteredLines: filtered, allMainLines: allLines }
+  }, [isMainTimeline, mainPendingEntry?.text, relevantIds])
+
+  // Handle completion of a filtered pending item
+  async function handleFilteredComplete(lineIndex: number) {
+    if (!mainPendingEntry?.id || !mainTimelinePage?.id) return
+
+    const targetLine = filteredLines[lineIndex]
+    const cleanText = toSentenceCase(
+      stripCheckboxHtml(targetLine).replace(/\u00A0/g, ' ').replace(/&nbsp;/g, ' ').trim()
+    )
+
+    // Remove the line from the full pending HTML
+    const originalIndex = allMainLines.indexOf(targetLine)
+    if (originalIndex === -1) return
+    const remaining = [...allMainLines]
+    remaining.splice(originalIndex, 1)
+    const newHtml = remaining.length > 0 ? remaining.map((l) => `<div>${l}</div>`).join('') : ''
+
+    // Update or delete the main timeline pending entry
+    const plain = stripHtml(newHtml).trim()
+    if (plain) {
+      await updateEntry(mainPendingEntry.id, { text: newHtml })
+    } else {
+      await deleteEntry(mainPendingEntry.id)
+    }
+
+    // Append to today's entry on the main timeline
+    if (cleanText) {
+      const todayStart = startOfDay(new Date())
+      const mainTodayEntry = mainTimelineEntries.find(
+        (e) => !e.isPending && new Date(e.date) >= todayStart && e.pageId === mainTimelinePage.id
+      )
+      if (mainTodayEntry?.id) {
+        const newText = mainTodayEntry.text
+          ? mainTodayEntry.text + '<div>' + cleanText + '</div>'
+          : cleanText
+        await updateEntry(mainTodayEntry.id, { text: newText })
+      } else {
+        await addEntry({ pageId: mainTimelinePage.id, text: cleanText, isPending: false })
+      }
+    }
+  }
+
   return (
     <div className={styles.timeline}>
       {title && <span className={styles.sectionTitle}>{title}</span>}
 
-      {/* Pending section — single editor with auto-checkboxes */}
-      {!readOnly && (
+      {/* Pending section */}
+      {!readOnly && isMainTimeline && (
         <div className={styles.section}>
           <div className={styles.sectionContent}>
             <div onFocus={() => { pendingFocusedRef.current = true }}>
@@ -329,6 +419,23 @@ export function TimelineView({ pageId, title, readOnly = false }: TimelineViewPr
           <div className={styles.sectionDateContainer}>
             <span className={styles.sectionDate}>Pending</span>
             <span className={styles.sectionDeleteLabel} onClick={handleDeletePending}>Delete</span>
+          </div>
+        </div>
+      )}
+
+      {/* Filtered pending section (non-main-timeline pages) */}
+      {!readOnly && !isMainTimeline && filteredLines.length > 0 && (
+        <div className={styles.section}>
+          <div className={styles.sectionContent}>
+            {filteredLines.map((lineHtml, i) => (
+              <div key={i} className={styles.filteredPendingLine}>
+                <span className={styles.filteredCheckbox} onClick={() => handleFilteredComplete(i)} />
+                <RichTextDisplay html={stripCheckboxHtml(lineHtml)} collapseMentions />
+              </div>
+            ))}
+          </div>
+          <div className={styles.sectionDateContainer}>
+            <span className={styles.sectionDate}>Pending</span>
           </div>
         </div>
       )}

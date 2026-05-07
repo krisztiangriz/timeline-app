@@ -104,3 +104,26 @@
   font-weight: var(--font-weight-bold);
   color: var(--color-text-primary);
 }
+
+/* ---- Filtered pending lines ---- */
+
+.filteredPendingLine {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+}
+
+.filteredCheckbox {
+  width: 16px;
+  height: 16px;
+  border-radius: 6px;
+  border: 1px solid var(--color-input-border);
+  background: var(--color-input-bg);
+  flex-shrink: 0;
+  margin-top: 4px;
+  cursor: pointer;
+}
+
+.filteredCheckbox:hover {
+  border-color: var(--color-text-body);
+}

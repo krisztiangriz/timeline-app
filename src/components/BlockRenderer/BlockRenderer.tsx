@@ -122,7 +122,7 @@ function TextBlock({ block, onUpdate, onInsertComponent, onMentionClick, placeho
 
 function ComponentBlockContent({ block, page }: { block: Block; page: Page }) {
   switch (block.type) {
-    case 'timeline': return <TimelineView pageId={page.id!} />
+    case 'timeline': return <TimelineView pageId={page.id!} page={page} />
     case 'feedback': return <FeedbackList subjectId={page.id!} />
     case 'visualization': return <Suspense fallback={null}><ConfigurableViz blockId={block.id!} pageId={page.id!} /></Suspense>
     case 'table': return <TableBlock page={page} />
