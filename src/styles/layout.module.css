@@ -12,7 +12,7 @@
   flex-direction: column;
   width: 100%;
   max-width: var(--max-content-width);
-  padding: 0 var(--page-padding-inline);
+  padding: 0 var(--page-padding-inline) 100px;
 }
 
 .contentPadded {
