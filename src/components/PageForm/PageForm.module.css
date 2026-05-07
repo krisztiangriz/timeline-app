@@ -135,16 +135,6 @@
   border-radius: var(--radius-sm);
 }
 
-.tabRowDragging {
-  opacity: 0.4;
-}
-
-.tabRowDropTarget {
-  outline: 1.5px dashed var(--color-text-body);
-  outline-offset: -1.5px;
-  border-radius: var(--radius-sm);
-}
-
 .dragHandle {
   width: 16px;
   height: 16px;
@@ -215,8 +205,13 @@
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
   color: var(--color-text-placeholder);
+}
+
+.blockGroupHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   padding: var(--space-xs) 0;
-  display: block;
 }
 
 .blockRow {

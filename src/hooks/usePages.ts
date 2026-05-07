@@ -138,6 +138,7 @@ export function usePageActions() {
   async function updateTabs(pageId: number, tabs: string[]) {
     await db.transaction('rw', [db.pages, db.layouts, db.blocks, db.chartConfigs], async () => {
       const existing = await db.layouts.where('pageId').equals(pageId).sortBy('order')
+      const hadNoTabs = existing.length === 0
 
       // Safety net: determine how many leading tabs are protected
       const page = await db.pages.get(pageId)
@@ -162,17 +163,30 @@ export function usePageActions() {
         await db.layouts.add({ pageId, type: 'tab' as const, name: tabs[i], order: i })
       }
 
-      // Remove excess tabs, their blocks, and cascade chartConfigs
-      for (let i = toKeep; i < existing.length; i++) {
-        // Cascade chartConfigs for visualization blocks in this tab
-        const tabBlocks = await db.blocks.where('pageId').equals(pageId).filter((b) => b.tabId === existing[i].id!).toArray()
-        for (const b of tabBlocks) {
-          if (b.type === 'visualization') {
-            await db.chartConfigs.where('blockId').equals(b.id!).delete()
+      // Remove excess tabs — move their blocks to first remaining tab (or page-level)
+      if (toKeep < existing.length) {
+        const finalTabs = await db.layouts.where('pageId').equals(pageId).sortBy('order')
+        const firstTabId = finalTabs.length > 0 ? finalTabs[0].id! : undefined
+
+        for (let i = toKeep; i < existing.length; i++) {
+          const tabBlocks = await db.blocks.where('pageId').equals(pageId).filter((b) => b.tabId === existing[i].id!).toArray()
+          for (const b of tabBlocks) {
+            // Move block to first remaining tab (or page-level if no tabs remain)
+            await db.blocks.update(b.id!, { tabId: firstTabId })
           }
+          await db.layouts.delete(existing[i].id!)
         }
-        await db.blocks.where('pageId').equals(pageId).filter((b) => b.tabId === existing[i].id!).delete()
-        await db.layouts.delete(existing[i].id!)
+      }
+
+      // Auto-migrate: if page previously had no tabs and now has tabs, move page-level blocks to first tab
+      if (hadNoTabs && tabs.length > 0) {
+        const finalTabs = await db.layouts.where('pageId').equals(pageId).sortBy('order')
+        if (finalTabs.length > 0) {
+          const firstTabId = finalTabs[0].id!
+          await db.blocks.where('pageId').equals(pageId)
+            .filter((b) => !b.tabId)
+            .modify({ tabId: firstTabId })
+        }
       }
     })
   }

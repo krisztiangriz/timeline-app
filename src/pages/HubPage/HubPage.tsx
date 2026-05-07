@@ -55,6 +55,7 @@ export function HubPage({ role }: HubPageProps) {
     mentionTrigger: hub?.mentionTrigger,
     mentionCollapsed: hub?.mentionCollapsed,
     blocks: allBlocks.filter((b) => b.id).map((b) => ({ id: b.id!, type: b.type, tabId: b.tabId, order: b.order })),
+    tabInfo: tabs.map((t) => ({ id: t.id!, name: t.name })),
   }), [hub, tabs, allBlocks])
 
   async function handleEditSubmit(data: PageFormData) {
@@ -66,7 +67,7 @@ export function HubPage({ role }: HubPageProps) {
       const { db } = await import('../../db/database')
       await db.transaction('rw', db.blocks, async () => {
         for (const b of data.blockOrder!) {
-          await db.blocks.update(b.id, { order: b.order })
+          await db.blocks.update(b.id, { order: b.order, tabId: b.tabId })
         }
       })
     }

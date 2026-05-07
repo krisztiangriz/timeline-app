@@ -25,6 +25,7 @@ export interface PageFormData {
   inheritedTrigger?: string
   inheritedFrom?: string
   blocks?: BlockItem[]
+  tabInfo?: { id: number; name: string }[]
   blockOrder?: BlockItem[]
   deletedBlockIds?: number[]
 }
@@ -76,56 +77,81 @@ const BLOCK_TYPE_LABELS: Record<BlockType, string> = {
   visualization: 'Visualization',
 }
 
-function BlockListEditor({ blocks, tabs, onReorder, onDelete, dragIdx, dropIdx, onDragStart, onDragEnd, onDragOver }: {
+function BlockListEditor({ blocks, tabInfo, onReorder, onDelete, onDeleteTab, protectedTabCount, dragIdx, dropIdx, onDragStart, onDragEnd, onDragOver }: {
   blocks: BlockItem[]
-  tabs: string[]
+  tabInfo: { id: number; name: string }[]
   onReorder: (blocks: BlockItem[]) => void
   onDelete: (id: number) => void
+  onDeleteTab?: (index: number) => void
+  protectedTabCount: number
   dragIdx: { group: string; idx: number } | null
   dropIdx: { group: string; idx: number } | null
   onDragStart: (v: { group: string; idx: number }) => void
   onDragEnd: () => void
   onDragOver: (v: { group: string; idx: number }) => void
 }) {
-  // Group blocks: page-level first, then by tab
+  // Page-level blocks (no tabId)
   const pageLevel = blocks.filter((b) => !b.tabId).sort((a, b) => a.order - b.order)
-  const tabGroups: { key: string; label: string; items: BlockItem[] }[] = []
 
-  // Build tab groups from the tabs array (matching by index since we don't have tab IDs in the form)
-  const tabIdSet = new Set(blocks.filter((b) => b.tabId).map((b) => b.tabId!))
-  const tabIds = [...tabIdSet].sort((a, b) => {
-    const aOrder = blocks.find((bl) => bl.tabId === a)?.order ?? 0
-    const bOrder = blocks.find((bl) => bl.tabId === b)?.order ?? 0
-    return aOrder - bOrder
-  })
-
-  for (const tabId of tabIds) {
-    const items = blocks.filter((b) => b.tabId === tabId).sort((a, b) => a.order - b.order)
-    // Try to match tab name from tabs array by position or find a label
-    const tabIndex = tabIds.indexOf(tabId)
-    const label = tabs[tabIndex] ?? `Tab ${tabIndex + 1}`
-    tabGroups.push({ key: String(tabId), label, items })
-  }
+  // Build tab groups from tabInfo — every tab always renders (even with 0 blocks)
+  const tabGroups = tabInfo.map((tab) => ({
+    key: String(tab.id),
+    label: tab.name,
+    items: blocks.filter((b) => b.tabId === tab.id).sort((a, b) => a.order - b.order),
+  }))
 
   function handleDrop(group: string, targetIdx: number) {
-    if (!dragIdx || dragIdx.group !== group) return
+    if (!dragIdx) return
+    const sourceGroup = dragIdx.group
     const sourceIdx = dragIdx.idx
 
-    // Get the items for this group
-    const isPageLevel = group === 'page'
-    const groupItems = isPageLevel ? [...pageLevel] : [...(tabGroups.find((g) => g.key === group)?.items ?? [])]
+    // Determine the target tabId for the destination group
+    const targetTabId = group === 'page' ? undefined : Number(group)
 
-    const [moved] = groupItems.splice(sourceIdx, 1)
-    groupItems.splice(targetIdx, 0, moved)
+    if (sourceGroup === group) {
+      // Same-group reorder
+      const isPageLevel = group === 'page'
+      const groupItems = isPageLevel ? [...pageLevel] : [...(tabGroups.find((g) => g.key === group)?.items ?? [])]
+      const [moved] = groupItems.splice(sourceIdx, 1)
+      groupItems.splice(targetIdx, 0, moved)
 
-    // Rebuild full block list with updated orders
-    const updated = blocks.map((b) => {
-      const inGroup = isPageLevel ? !b.tabId : b.tabId === Number(group)
-      if (!inGroup) return b
-      const newIdx = groupItems.findIndex((g) => g.id === b.id)
-      return newIdx >= 0 ? { ...b, order: newIdx } : b
-    })
-    onReorder(updated)
+      const updated = blocks.map((b) => {
+        const inGroup = isPageLevel ? !b.tabId : b.tabId === Number(group)
+        if (!inGroup) return b
+        const newIdx = groupItems.findIndex((g) => g.id === b.id)
+        return newIdx >= 0 ? { ...b, order: newIdx } : b
+      })
+      onReorder(updated)
+    } else {
+      // Cross-group move: change the block's tabId and reorder both groups
+      const sourceIsPage = sourceGroup === 'page'
+      const sourceItems = sourceIsPage ? [...pageLevel] : [...(tabGroups.find((g) => g.key === sourceGroup)?.items ?? [])]
+      const targetIsPage = group === 'page'
+      const targetItems = targetIsPage ? [...pageLevel] : [...(tabGroups.find((g) => g.key === group)?.items ?? [])]
+
+      const [moved] = sourceItems.splice(sourceIdx, 1)
+      const movedWithNewTab = { ...moved, tabId: targetTabId }
+      targetItems.splice(targetIdx, 0, movedWithNewTab)
+
+      // Rebuild full block list
+      const updated = blocks.map((b) => {
+        if (b.id === moved.id) return { ...b, tabId: targetTabId, order: targetIdx }
+        // Reorder source group
+        const inSource = sourceIsPage ? !b.tabId && b.id !== moved.id : b.tabId === Number(sourceGroup) && b.id !== moved.id
+        if (inSource) {
+          const newIdx = sourceItems.findIndex((g) => g.id === b.id)
+          return newIdx >= 0 ? { ...b, order: newIdx } : b
+        }
+        // Reorder target group (excluding the moved block which is handled above)
+        const inTarget = targetIsPage ? !b.tabId : b.tabId === Number(group)
+        if (inTarget) {
+          const newIdx = targetItems.findIndex((g) => g.id === b.id)
+          return newIdx >= 0 ? { ...b, order: newIdx } : b
+        }
+        return b
+      })
+      onReorder(updated)
+    }
     onDragEnd()
   }
 
@@ -157,10 +183,21 @@ function BlockListEditor({ blocks, tabs, onReorder, onDelete, dragIdx, dropIdx, 
 
   return (
     <div className={styles.blockListEditor}>
-      {pageLevel.length > 0 && renderGroup('page', pageLevel)}
-      {tabGroups.map((group) => (
+      {renderGroup('page', pageLevel)}
+      {tabGroups.map((group, groupIdx) => (
         <div key={group.key}>
-          <span className={styles.blockGroupTitle}>{group.label}</span>
+          <div
+            className={styles.blockGroupHeader}
+            onDragOver={(e) => { e.preventDefault(); onDragOver({ group: group.key, idx: 0 }) }}
+            onDrop={(e) => { e.preventDefault(); handleDrop(group.key, 0) }}
+          >
+            <span className={styles.blockGroupTitle}>{group.label}</span>
+            {onDeleteTab && !(protectedTabCount > 0 && groupIdx < protectedTabCount) && (
+              <button className={styles.deleteButton} onClick={() => onDeleteTab(groupIdx)} aria-label={`Delete tab ${group.label}`}>
+                <TrashIcon />
+              </button>
+            )}
+          </div>
           {renderGroup(group.key, group.items)}
         </div>
       ))}
@@ -180,10 +217,9 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
   const [collapsed, setCollapsed] = useState(false)
   const [blockList, setBlockList] = useState<BlockItem[]>([])
   const [deletedBlockIds, setDeletedBlockIds] = useState<number[]>([])
+  const blocksModified = useRef(false)
   const [blockDragIdx, setBlockDragIdx] = useState<{ group: string; idx: number } | null>(null)
   const [blockDropIdx, setBlockDropIdx] = useState<{ group: string; idx: number } | null>(null)
-  const [dragIdx, setDragIdx] = useState<number | null>(null)
-  const [dropIdx, setDropIdx] = useState<number | null>(null)
   const prevOpen = useRef(false)
 
   useEffect(() => {
@@ -199,10 +235,9 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
       setCollapsed(initial?.mentionCollapsed ?? false)
       setBlockList(initial?.blocks ?? [])
       setDeletedBlockIds([])
+      blocksModified.current = false
       setBlockDragIdx(null)
       setBlockDropIdx(null)
-      setDragIdx(null)
-      setDropIdx(null)
     }
     prevOpen.current = open
   }, [open, initial, hubs])
@@ -219,28 +254,15 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
     if (newTabName.trim()) {
       setTabs((t) => [...t, newTabName.trim()])
       setNewTabName('')
+      setAddingTab(false)
     }
   }
-
-  function handleTabDragStart(e: React.DragEvent, idx: number) {
-    setDragIdx(idx); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', String(idx))
-  }
-  function handleTabDragOver(e: React.DragEvent, idx: number) {
-    if (dragIdx === null || dragIdx === idx) return; e.preventDefault(); e.dataTransfer.dropEffect = 'move'; setDropIdx(idx)
-  }
-  function handleTabDrop(e: React.DragEvent, targetIdx: number) {
-    e.preventDefault()
-    if (dragIdx === null || dragIdx === targetIdx) return
-    setTabs((prev) => { const next = [...prev]; const [moved] = next.splice(dragIdx, 1); next.splice(targetIdx, 0, moved); return next })
-    setDragIdx(null); setDropIdx(null)
-  }
-  function handleTabDragEnd() { setDragIdx(null); setDropIdx(null) }
 
   function handleSubmit() {
     onSubmit({
       name, tabs, parentHubId: isHubType ? undefined : parentHubId, template, isHub: isHubType,
       mentionTrigger: trigger || undefined, mentionCollapsed: collapsed || undefined,
-      blockOrder: blockList.length > 0 ? blockList : undefined,
+      blockOrder: blocksModified.current ? blockList : undefined,
       deletedBlockIds: deletedBlockIds.length > 0 ? deletedBlockIds : undefined,
     })
   }
@@ -359,10 +381,10 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
         </div>
       )}
 
-      {/* Tabs (edit mode OR creation with tabbed template) */}
+      {/* Layout: Tabs & Blocks (edit mode OR creation with tabbed template) */}
       {(isEdit || (!isEdit && !isHubProp && !isHubType && template === 'tabbed')) && <div className={styles.section}>
         <div className={styles.tabHeader}>
-          <span className={styles.label}>Tabs</span>
+          <span className={styles.label}>Layout</span>
           {!addingTab && (
             <button className={styles.addButton} onClick={() => setAddingTab(true)} aria-label="Add tab">
               <PlusIcon />
@@ -376,34 +398,41 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
             <span className={styles.tabRequired}>Required</span>
           </div>
         ))}
-        {isEdit && tabs.length === 0 && !addingTab && (
+        {isEdit && tabs.length === 0 && blockList.length === 0 && !addingTab && (
           <span className={styles.emptyHint}>Add tabs to organize page content</span>
         )}
-        {tabs.map((tab, i) => {
-          const isDragging = dragIdx === i
-          const isDropTarget = dropIdx === i
-          let cls = styles.tabRow
-          if (isDragging) cls += ' ' + styles.tabRowDragging
-          if (isDropTarget) cls += ' ' + styles.tabRowDropTarget
-
-          return (
-            <div key={`${tab}-${i}`} className={cls}
-              draggable
-              onDragStart={(e) => handleTabDragStart(e, i)}
-              onDragOver={(e) => handleTabDragOver(e, i)}
-              onDrop={(e) => handleTabDrop(e, i)}
-              onDragEnd={handleTabDragEnd}
-            >
-              <div className={styles.dragHandle}><DragHandleIcon /></div>
-              <span className={styles.tabRowName}>{tab}</span>
-              {!(protectedTabCount > 0 && i < protectedTabCount) && (
-                <button className={styles.deleteButton} onClick={() => setTabs((t) => t.filter((_, j) => j !== i))} aria-label={`Delete ${tab}`}>
+        {/* Blocks & Tabs unified layout */}
+        {isEdit && (blockList.length > 0 || (initial?.tabInfo ?? []).length > 0) && (
+          <BlockListEditor
+            blocks={blockList}
+            tabInfo={initial?.tabInfo ?? []}
+            onReorder={(b) => { blocksModified.current = true; setBlockList(b) }}
+            onDelete={(id) => { blocksModified.current = true; setBlockList((b) => b.filter((x) => x.id !== id)); setDeletedBlockIds((d) => [...d, id]) }}
+            onDeleteTab={(i) => setTabs((t) => t.filter((_, j) => j !== i))}
+            protectedTabCount={protectedTabCount}
+            dragIdx={blockDragIdx}
+            dropIdx={blockDropIdx}
+            onDragStart={setBlockDragIdx}
+            onDragEnd={() => { setBlockDragIdx(null); setBlockDropIdx(null) }}
+            onDragOver={setBlockDropIdx}
+          />
+        )}
+        {/* Newly added tabs (not yet in DB — shown as simple rows) */}
+        {(() => {
+          const existingTabCount = initial?.tabInfo?.length ?? 0
+          const newTabs = isEdit ? tabs.slice(existingTabCount) : tabs
+          return newTabs.map((tab, i) => {
+            const actualIdx = existingTabCount + i
+            return (
+              <div key={`new-${tab}-${i}`} className={styles.tabRow}>
+                <span className={styles.tabRowName}>{tab}</span>
+                <button className={styles.deleteButton} onClick={() => setTabs((t) => t.filter((_, j) => j !== actualIdx))} aria-label={`Delete ${tab}`}>
                   <TrashIcon />
                 </button>
-              )}
-            </div>
-          )
-        })}
+              </div>
+            )
+          })
+        })()}
         {addingTab && (
           <div className={styles.tabRow}>
             <input className={styles.textInput} style={{ flex: 1, height: 32 }} type="text" value={newTabName}
@@ -422,24 +451,6 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
           </div>
         )}
       </div>}
-
-      {/* Blocks (edit mode only) */}
-      {isEdit && blockList.length > 0 && (
-        <div className={styles.section}>
-          <span className={styles.label}>Blocks</span>
-          <BlockListEditor
-            blocks={blockList}
-            tabs={tabs}
-            onReorder={setBlockList}
-            onDelete={(id) => { setBlockList((b) => b.filter((x) => x.id !== id)); setDeletedBlockIds((d) => [...d, id]) }}
-            dragIdx={blockDragIdx}
-            dropIdx={blockDropIdx}
-            onDragStart={setBlockDragIdx}
-            onDragEnd={() => { setBlockDragIdx(null); setBlockDropIdx(null) }}
-            onDragOver={setBlockDropIdx}
-          />
-        </div>
-      )}
     </Modal>
   )
 }

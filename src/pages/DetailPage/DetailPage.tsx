@@ -98,6 +98,7 @@ export function DetailPage({ routePrefix }: DetailPageProps) {
       inheritedTrigger: parentHub?.mentionTrigger,
       inheritedFrom: parentHub?.name,
       blocks: allBlocks.filter((b) => b.id).map((b) => ({ id: b.id!, type: b.type, tabId: b.tabId, order: b.order })),
+      tabInfo: tabs.map((t) => ({ id: t.id!, name: t.name })),
     }
   }, [page, tabs, allPages, allBlocks])
 
@@ -110,7 +111,7 @@ export function DetailPage({ routePrefix }: DetailPageProps) {
       const { db } = await import('../../db/database')
       await db.transaction('rw', db.blocks, async () => {
         for (const b of data.blockOrder!) {
-          await db.blocks.update(b.id, { order: b.order })
+          await db.blocks.update(b.id, { order: b.order, tabId: b.tabId })
         }
       })
     }
