@@ -288,6 +288,7 @@
 .mentionPrefix {
   color: var(--color-text-tertiary);
   font-weight: var(--font-weight-medium);
+  font-family: ui-monospace, 'SF Mono', Monaco, 'Cascadia Mono', monospace;
 }
 
 /* Inline mention span */

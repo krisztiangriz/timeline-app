@@ -112,7 +112,8 @@ export function FeedbackForm({ open, onClose, onSuccess }: FeedbackFormProps) {
         {selectedSubject ? (
           <div className={styles.selectedSubject}>
             <span>
-              {selectedParentHub?.mentionTrigger ?? ''}{selectedSubject.name}
+              {selectedParentHub?.mentionTrigger && <span style={{ fontFamily: "ui-monospace, 'SF Mono', Monaco, 'Cascadia Mono', monospace" }}>{selectedParentHub.mentionTrigger}</span>}
+              {selectedSubject.name}
             </span>
             <button
               className={styles.clearSubject}
