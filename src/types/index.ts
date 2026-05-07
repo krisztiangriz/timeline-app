@@ -84,6 +84,7 @@ export type ChartDataSource =
   | 'feedback-sentiment'
   | 'feedback-by-dimension'
   | 'candidate-status'
+  | 'page-count'
 
 export type ChartType = 'bar' | 'line' | 'area' | 'pie'
 

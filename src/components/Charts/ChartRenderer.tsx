@@ -9,6 +9,7 @@ import {
   useCandidatesByStatus, STATUS_COLORS,
   useFeedbackByMonth, useFeedbackSummary,
   useDimensionDistribution,
+  usePageCount,
   getColor,
 } from '../../hooks/useChartData'
 import type { ChartConfig, ChartScope, ChartDataSource, ChartType, TimelineEntry, Feedback, Page, Dimension } from '../../types'
@@ -78,6 +79,7 @@ export const DATA_SOURCE_LABELS: Record<string, string> = {
   'feedback-sentiment': 'Feedback sentiment',
   'feedback-by-dimension': 'Feedback by dimension',
   'candidate-status': 'Candidate status',
+  'page-count': 'Page count',
 }
 
 export const VALID_CHART_TYPES: Record<ChartDataSource, ChartType[]> = {
@@ -85,6 +87,7 @@ export const VALID_CHART_TYPES: Record<ChartDataSource, ChartType[]> = {
   'feedback-sentiment': ['bar', 'line', 'area', 'pie'],
   'feedback-by-dimension': ['bar', 'pie'],
   'candidate-status': ['bar'],
+  'page-count': ['bar', 'line', 'area'],
 }
 
 // ---- Shared props interface ----
@@ -107,6 +110,7 @@ export function ChartRenderer(props: ChartRendererProps) {
     case 'candidate-status': return <CandidateStatusChart {...props} />
     case 'feedback-sentiment': return <FeedbackSentimentChart {...props} />
     case 'feedback-by-dimension': return <FeedbackDimensionChart {...props} />
+    case 'page-count': return <PageCountChart {...props} />
     default: return null
   }
 }
@@ -330,6 +334,35 @@ function FeedbackDimensionChart({ config, monthCount = 12, feedbacks, pages, dim
           </ResponsiveContainer>
         )
       )}
+    </ChartContainer>
+  )
+}
+
+function PageCountChart({ config, monthCount = 12, pages, containerClass }: ChartRendererProps) {
+  const scopes = config.scopes ?? []
+  const data = usePageCount(pages, scopes, monthCount)
+  const cls = useContainerClass(config, containerClass)
+  const { chartType } = config
+
+  return (
+    <ChartContainer className={cls}>
+      <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+        {(() => {
+          const ChartComp = chartType === 'line' ? LineChart : chartType === 'area' ? AreaChart : BarChart
+          return (
+            <ChartComp data={data.data}>
+              <XAxis dataKey="month" tick={tickStyle} stroke={axisStroke} interval="preserveStartEnd" />
+              <Tooltip {...TP} />
+              {chartType === 'line'
+                ? <Line type="monotone" dataKey="count" stroke={FALLBACK_COLOR} strokeWidth={2} dot={false} />
+                : chartType === 'area'
+                ? <Area type="monotone" dataKey="count" fill={FALLBACK_COLOR} stroke={FALLBACK_COLOR} fillOpacity={0.6} />
+                : <Bar dataKey="count" fill={FALLBACK_COLOR} />
+              }
+            </ChartComp>
+          )
+        })()}
+      </ResponsiveContainer>
     </ChartContainer>
   )
 }

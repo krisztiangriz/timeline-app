@@ -391,3 +391,51 @@ export function useDimensionDistribution(
     return { perChild: false as const, summary }
   }, [feedbacks, pages, dimensionNames, scopes, monthCount])
 }
+
+// ---- Page count (child page creation over time) ----
+
+export function usePageCount(
+  pages: Page[],
+  scopes: ChartScope[],
+  monthCount = 12,
+) {
+  return useMemo(() => {
+    const months = buildMonthKeys(monthCount)
+    const cutoff = getCutoff(monthCount)
+
+    // Determine which child pages to count
+    let scopedPages: Page[]
+    if (scopes.length > 0) {
+      const hubIds = new Set<number>()
+      const pageIds = new Set<number>()
+      for (const s of scopes) {
+        if (s.type === 'hub') hubIds.add(s.hubId)
+        else if (s.type === 'page') {
+          const page = pages.find((p) => p.id === s.pageId)
+          if (page?.type === 'hub') hubIds.add(page.id!)
+          else if (page?.parentId) pageIds.add(page.id!)
+        }
+      }
+      scopedPages = pages.filter((p) =>
+        (p.parentId && hubIds.has(p.parentId)) || pageIds.has(p.id!)
+      )
+    } else {
+      scopedPages = pages.filter((p) => p.parentId && p.type !== 'hub')
+    }
+
+    // Build month data
+    const monthToIdx = new Map(months.map((m, i) => [m, i]))
+    const data = months.map((m) => ({ month: formatMonthLabel(m), count: 0 }))
+
+    for (const p of scopedPages) {
+      if (!p.createdAt) continue
+      const d = new Date(p.createdAt)
+      if (d < cutoff) continue
+      const key = formatMonthKey(d)
+      const idx = monthToIdx.get(key)
+      if (idx !== undefined) data[idx].count++
+    }
+
+    return { data, keys: ['count'] }
+  }, [pages, scopes, monthCount])
+}

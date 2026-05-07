@@ -9,6 +9,7 @@ import radio from '../../styles/radio.module.css'
 const ALL_SOURCES: ChartDataSource[] = [
   'entry-count', 'feedback-sentiment',
   'feedback-by-dimension', 'candidate-status',
+  'page-count',
 ]
 
 const CHART_TYPE_LABELS: Record<ChartType, string> = {
