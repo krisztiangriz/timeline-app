@@ -16,10 +16,6 @@ import styles from './Charts.module.css'
 
 // ---- Shared constants ----
 
-function pieLabel({ name, percent }: { name?: string; percent?: number }) {
-  return `${name ?? ''} ${((percent ?? 0) * 100).toFixed(0)}%`
-}
-
 function cellLegend(items: { name: string; color: string }[]) {
   return () => (
     <div style={{ display: 'flex', justifyContent: 'center', gap: 12, flexWrap: 'wrap', paddingTop: 4 }}>
@@ -127,6 +123,37 @@ function useContainerClass(config: ChartConfig, containerClass?: string) {
   return containerClass ?? (config.chartType === 'pie' ? styles.chartContainerPie : styles.chartContainer)
 }
 
+// ---- Donut chart with right-side labels ----
+
+function DonutWithLabels({ data, colorFn, containerClass, tooltipProps }: {
+  data: { name: string; value: number }[]
+  colorFn: (i: number) => string
+  containerClass: string
+  tooltipProps?: Record<string, unknown>
+}) {
+  const total = data.reduce((s, d) => s + d.value, 0)
+  return (
+    <div className={containerClass}>
+      <div className={styles.pieLayout}>
+        <PieChart width={200} height={200} className={styles.pieChartDonut}>
+          <Pie data={data} dataKey="value" nameKey="name" innerRadius="55%" outerRadius="85%" isAnimationActive={false}>
+            {data.map((_: unknown, i: number) => <Cell key={i} fill={colorFn(i)} />)}
+          </Pie>
+          <Tooltip {...(tooltipProps ?? TP)} />
+        </PieChart>
+        <div className={styles.pieLabels}>
+          {data.map((item, i) => (
+            <span key={item.name} className={styles.pieLabelItem}>
+              <span className={styles.pieLabelDot} style={{ background: colorFn(i) }} />
+              {item.name} {total > 0 ? Math.round(item.value / total * 100) : 0}%
+            </span>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ---- Per-source chart components ----
 
 function EntryCountChart({ config, monthCount = 12, entries, pages, containerClass }: ChartRendererProps) {
@@ -138,16 +165,16 @@ function EntryCountChart({ config, monthCount = 12, entries, pages, containerCla
 
   return (
     <ChartContainer className={cls}>
+      {chartType === 'pie' ? (
+        <DonutWithLabels
+          data={data.summary}
+          colorFn={(i) => getColor(i, data.summary.length)}
+          containerClass={cls}
+          tooltipProps={TP}
+        />
+      ) : (
       <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-        {chartType === 'pie' ? (
-          <PieChart>
-            <Pie data={data.summary} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={55} label={pieLabel}>
-              {data.summary.map((_: unknown, i: number) => <Cell key={i} fill={getColor(i, data.summary.length)} />)}
-            </Pie>
-            <Tooltip {...TP} />
-            <Legend content={cellLegend(data.summary.map((s: { name: string }, i: number) => ({ name: s.name, color: getColor(i, data.summary.length) })))} />
-          </PieChart>
-        ) : (() => {
+        {(() => {
           const ChartComp = chartType === 'line' ? LineChart : chartType === 'area' ? AreaChart : BarChart
           const total = data.keys.length
           return (
@@ -164,6 +191,7 @@ function EntryCountChart({ config, monthCount = 12, entries, pages, containerCla
           )
         })()}
       </ResponsiveContainer>
+      )}
     </ChartContainer>
   )
 }
@@ -198,15 +226,16 @@ function FeedbackSentimentChart({ config, monthCount = 12, feedbacks, pages, con
 
   return (
     <ChartContainer className={cls}>
+      {chartType === 'pie' ? (
+        <DonutWithLabels
+          data={summary}
+          colorFn={(i) => FEEDBACK_COLORS[summary[i]?.name] ?? FALLBACK_COLOR}
+          containerClass={cls}
+          tooltipProps={TPfb}
+        />
+      ) : (
       <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-        {chartType === 'pie' ? (
-          <PieChart>
-            <Pie data={summary} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={55} label={pieLabel}>
-              {summary.map((s) => <Cell key={s.name} fill={FEEDBACK_COLORS[s.name] ?? FALLBACK_COLOR} />)}
-            </Pie>
-            <Tooltip {...TPfb} />
-          </PieChart>
-        ) : (() => {
+        {(() => {
           const ChartComp = chartType === 'line' ? LineChart : chartType === 'area' ? AreaChart : BarChart
           return (
             <ChartComp data={byMonth}>
@@ -235,6 +264,7 @@ function FeedbackSentimentChart({ config, monthCount = 12, feedbacks, pages, con
           )
         })()}
       </ResponsiveContainer>
+      )}
     </ChartContainer>
   )
 }
@@ -249,50 +279,57 @@ function FeedbackDimensionChart({ config, monthCount = 12, feedbacks, pages, dim
 
   return (
     <ChartContainer className={cls}>
-      <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-        {data.perChild ? (
-          chartType === 'pie' ? (() => {
-            const agg = new Map<string, number>()
-            for (const row of data.data) { for (const k of data.keys) { agg.set(k, (agg.get(k) || 0) + Number(row[k])) } }
-            const pieData = [...agg.entries()].map(([name, value]) => ({ name, value })).filter((s) => s.value > 0)
-            return (
-              <PieChart>
-                <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={55} label={pieLabel}>
-                  {pieData.map((_: unknown, i: number) => <Cell key={i} fill={getColor(i, pieData.length)} />)}
-                </Pie>
-                <Tooltip {...TP} />
-                <Legend content={cellLegend(pieData.map((s, i) => ({ name: s.name, color: getColor(i, pieData.length) })))} />
-              </PieChart>
-            )
-          })() : (
+      {data.perChild ? (
+        chartType === 'pie' ? (() => {
+          const agg = new Map<string, number>()
+          for (const row of data.data) { for (const k of data.keys) { agg.set(k, (agg.get(k) || 0) + Number(row[k])) } }
+          const pieData = [...agg.entries()].map(([name, value]) => ({ name, value })).filter((s) => s.value > 0)
+          return (
+            <DonutWithLabels
+              data={pieData}
+              colorFn={(i) => getColor(i, pieData.length)}
+              containerClass={cls}
+            />
+          )
+        })() : (
+          <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
             <BarChart data={data.data}>
               <XAxis dataKey="name" tick={tickStyle} stroke={axisStroke} interval={0} />
               <Tooltip {...TP} />
               {data.keys.length > 1 && <Legend iconType="circle" iconSize={8} wrapperStyle={legendStyle} />}
               {data.keys.map((key, i) => <Bar key={key} dataKey={key} fill={getSeriesColor(i, data.keys.length)} />)}
             </BarChart>
-          )
+          </ResponsiveContainer>
+        )
+      ) : (
+        chartType === 'pie' ? (
+          <DonutWithLabels
+            data={data.summary}
+            colorFn={(i) => getColor(i, data.summary.length)}
+            containerClass={cls}
+          />
         ) : (
-          chartType === 'pie' ? (
-            <PieChart>
-              <Pie data={data.summary} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={55} label={pieLabel}>
-                {data.summary.map((_: unknown, i: number) => <Cell key={i} fill={getColor(i, data.summary.length)} />)}
-              </Pie>
-              <Tooltip {...TP} />
-              <Legend content={cellLegend(data.summary.map((s, i) => ({ name: s.name, color: getColor(i, data.summary.length) })))} />
-            </PieChart>
-          ) : (
+          <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
             <BarChart data={data.summary}>
               <XAxis dataKey="name" tick={tickStyle} stroke={axisStroke} interval={0} />
               <Tooltip {...TP} />
-              {data.summary.length > 1 && <Legend content={cellLegend(data.summary.map((s, i) => ({ name: s.name, color: getSeriesColor(i, data.summary.length) })))} />}
+              {data.summary.length > 1 && <Legend content={() => (
+                <div style={{ display: 'flex', justifyContent: 'center', gap: 12, flexWrap: 'wrap', paddingTop: 4 }}>
+                  {data.summary.map((item, i) => (
+                    <span key={item.name} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, color: '#485670' }}>
+                      <span style={{ width: 8, height: 8, borderRadius: '50%', background: getSeriesColor(i, data.summary.length), flexShrink: 0 }} />
+                      {item.name}
+                    </span>
+                  ))}
+                </div>
+              )} />}
               <Bar dataKey="value">
                 {data.summary.map((_: unknown, i: number) => <Cell key={i} fill={getSeriesColor(i, data.summary.length)} />)}
               </Bar>
             </BarChart>
-          )
-        )}
-      </ResponsiveContainer>
+          </ResponsiveContainer>
+        )
+      )}
     </ChartContainer>
   )
 }
