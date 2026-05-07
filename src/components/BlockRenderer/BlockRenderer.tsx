@@ -78,7 +78,7 @@ function BlockList({ pageId, page, blocks, tabId }: {
 
         return (
           <div key={block.id} className={blockClass}>
-            <ComponentBlockContent block={block} page={page} allPages={allPages} />
+            <ComponentBlockContent block={block} page={page} />
           </div>
         )
       })}
@@ -120,13 +120,9 @@ function TextBlock({ block, onUpdate, onInsertComponent, onMentionClick, placeho
 
 // ---- Component block content ----
 
-function ComponentBlockContent({ block, page, allPages }: { block: Block; page: Page; allPages: Page[] }) {
-  // Timeline on generic hub children (meetings, admin) is read-only (cross-refs only)
-  const parentHub = page.parentId ? allPages.find((p) => p.id === page.parentId) : undefined
-  const timelineReadOnly = parentHub?.type === 'hub' && !parentHub.role
-
+function ComponentBlockContent({ block, page }: { block: Block; page: Page }) {
   switch (block.type) {
-    case 'timeline': return <TimelineView pageId={page.id!} readOnly={timelineReadOnly} />
+    case 'timeline': return <TimelineView pageId={page.id!} />
     case 'feedback': return <FeedbackList subjectId={page.id!} />
     case 'visualization': return <Suspense fallback={null}><ConfigurableViz blockId={block.id!} pageId={page.id!} /></Suspense>
     case 'table': return <TableBlock page={page} />
