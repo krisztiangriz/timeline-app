@@ -32,28 +32,31 @@ function getCutoff(monthCount: number): Date {
 
 // ---- Color palette for charts ----
 const CHART_COLORS = [
-  '#6699FF', // blue (primary)
-  '#45C9A1', // green
-  '#8E63E6', // purple
-  '#FB8C00', // orange
-  '#5E6E8C', // neutral
+  '#5B8DEF', // blue (primary)
+  '#2EAF7D', // green
+  '#9B6FE0', // purple
+  '#E8923B', // warm orange
+  '#3FAFB5', // teal
+  '#8494A7', // grey
 
-  '#4F83E6',
-  '#38B38E',
-  '#744FCC',
-  '#E67A00',
+  '#4A7AD4', // deeper blue
+  '#278F68', // deeper green
+  '#8055CC', // deeper purple
+  '#D17A28', // deeper orange
+  '#2E969C', // deeper teal
+  '#6B7B8F', // deeper grey
 
-  '#99BDFF',
-  '#7FE1C5',
-  '#A97FFF',
+  '#7AAAF5', // lighter blue
+  '#4DC9A0', // lighter green
+  '#B48EF0', // lighter purple
 ]
 
 const CHART_COLORS_EXTENDED = [
   ...CHART_COLORS,
-  '#2A54A3', // dark blue
-  '#2E9B7A', // dark green
-  '#5B3CA3', // dark purple
-  '#CC6A00', // dark orange
+  '#3A62B3', // dark blue
+  '#1F7A55', // dark green
+  '#6840A8', // dark purple
+  '#B86520', // dark orange
 ]
 
 export function getColor(index: number, total?: number) {
