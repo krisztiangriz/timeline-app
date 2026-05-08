@@ -40,9 +40,9 @@
 
 .sectionTitle {
   font-size: var(--font-size-sm);
-  line-height: var(--line-height-xs);
+  line-height: var(--line-height-base);
   font-weight: var(--font-weight-bold);
-  color: var(--color-text-primary);
+  color: var(--color-text-secondary);
 }
 
 .sectionDescription {
