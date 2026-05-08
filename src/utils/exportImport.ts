@@ -3,7 +3,7 @@ import DOMPurify from 'dompurify'
 import type { Page } from '../types'
 
 interface ExportData {
-  version: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10
+  version: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11
   exportedAt: string
   tags: unknown[]
   pages: unknown[]
@@ -17,6 +17,7 @@ interface ExportData {
   blocks: unknown[]
   chartConfigs: unknown[]
   abbreviationGroups?: unknown[]
+  candidateStatuses?: unknown[]
 }
 
 /**
@@ -93,7 +94,7 @@ async function ensurePageRoles(): Promise<void> {
  * Export all data from IndexedDB as a JSON string.
  */
 async function exportAllData(): Promise<string> {
-  const [tags, pages, layouts, blocks, timelineEntries, feedbacks, dimensions, pageSettings, chartConfigs] =
+  const [tags, pages, layouts, blocks, timelineEntries, feedbacks, dimensions, pageSettings, chartConfigs, candidateStatuses] =
     await Promise.all([
       db.tags.toArray(),
       db.pages.toArray(),
@@ -104,10 +105,11 @@ async function exportAllData(): Promise<string> {
       db.dimensions.toArray(),
       db.pageSettings.toArray(),
       db.chartConfigs.toArray(),
+      db.candidateStatuses.toArray(),
     ])
 
   const data: ExportData = {
-    version: 10,
+    version: 11,
     exportedAt: new Date().toISOString(),
     tags,
     pages,
@@ -119,6 +121,7 @@ async function exportAllData(): Promise<string> {
     pageSettings,
     blocks,
     chartConfigs,
+    candidateStatuses,
   }
 
   return JSON.stringify(data, null, 2)
@@ -156,7 +159,7 @@ export async function downloadBackup() {
 async function importData(jsonString: string): Promise<void> {
   const data: ExportData = JSON.parse(jsonString)
 
-  if (data.version < 1 || data.version > 10) {
+  if (data.version < 1 || data.version > 11) {
     throw new Error(`Unsupported export version: ${data.version}`)
   }
 
@@ -195,12 +198,13 @@ async function importData(jsonString: string): Promise<void> {
 
   // Run everything in a transaction so failure rolls back
   await db.transaction('rw',
-    [db.tags, db.pages, db.layouts, db.blocks, db.timelineEntries, db.feedbacks, db.dimensions, db.pageSettings, db.chartConfigs],
+    [db.tags, db.pages, db.layouts, db.blocks, db.timelineEntries, db.feedbacks, db.dimensions, db.pageSettings, db.chartConfigs, db.candidateStatuses],
     async () => {
       await Promise.all([
         db.tags.clear(), db.pages.clear(), db.layouts.clear(), db.blocks.clear(),
         db.timelineEntries.clear(), db.feedbacks.clear(),
         db.dimensions.clear(), db.pageSettings.clear(), db.chartConfigs.clear(),
+        db.candidateStatuses.clear(),
       ])
       await Promise.all([
         db.tags.bulkAdd(data.tags as never[]),
@@ -212,6 +216,7 @@ async function importData(jsonString: string): Promise<void> {
         db.dimensions.bulkAdd(data.dimensions as never[]),
         data.pageSettings?.length ? db.pageSettings.bulkAdd(data.pageSettings as never[]) : Promise.resolve(),
         data.chartConfigs?.length ? db.chartConfigs.bulkAdd(data.chartConfigs as never[]) : Promise.resolve(),
+        data.candidateStatuses?.length ? db.candidateStatuses.bulkAdd(data.candidateStatuses as never[]) : Promise.resolve(),
       ])
     }
   )

@@ -11,17 +11,9 @@ import { useBlocks, useBlockActions } from '../../hooks/useBlocks'
 import { usePageMenus } from '../../hooks/usePageMenus'
 import { useAutocomplete } from '../../hooks/useAutocomplete'
 import { useToast } from '../../hooks/useToast'
-import type { CandidateStatus } from '../../types'
+import { useCandidateStatuses } from '../../hooks/useCandidateStatuses'
 import layout from '../../styles/layout.module.css'
 import pd from '../../components/PageDetail/PageDetail.module.css'
-
-const STATUS_OPTIONS: { value: CandidateStatus; label: string }[] = [
-  { value: 'active', label: 'Active' },
-  { value: 'recommended', label: 'Recommended' },
-  { value: 'hired', label: 'Hired' },
-  { value: 'rejected', label: 'Rejected' },
-  { value: 'withdrawn', label: 'Withdrawn' },
-]
 
 interface DetailPageProps {
   /** Route prefix for breadcrumb path, e.g. 'colleagues', 'projects', 'candidates'. If undefined, uses '/page/:id'. */
@@ -45,6 +37,7 @@ export function DetailPage({ routePrefix }: DetailPageProps) {
   // Candidate status dropdown state
   const [statusOpen, setStatusOpen] = useState(false)
   const statusRef = useRef<HTMLDivElement>(null)
+  const candidateStatuses = useCandidateStatuses()
 
   const tabIds = tabs.map(t => t.id).join(',')
   useEffect(() => {
@@ -67,7 +60,8 @@ export function DetailPage({ routePrefix }: DetailPageProps) {
   const isMainTimeline = page?.role === 'main-timeline'
   const canArchive = !isMainTimeline
   const isCandidate = page?.type === 'candidate'
-  const currentStatus = STATUS_OPTIONS.find((o) => o.value === (page?.candidateStatus ?? 'active'))
+  const defaultStatus = candidateStatuses[0]?.value ?? 'active'
+  const currentStatus = candidateStatuses.find((s) => s.value === (page?.candidateStatus ?? defaultStatus))
 
   const handleArchive = useCallback(async () => {
     if (!pageId || !page) return
@@ -123,21 +117,21 @@ export function DetailPage({ routePrefix }: DetailPageProps) {
               <PageHeader name={page.name} onUpdateName={(name) => updatePage(pageId!, { name })} tabs={tabs} activeTabId={activeTabId} onTabChange={setActiveTabId} />
               <div className={pd.statusDropdown} ref={statusRef}>
                 <button className={pd.statusButton} onClick={() => setStatusOpen((v) => !v)}>
-                  {currentStatus?.label ?? 'Active'}
+                  {currentStatus?.name ?? candidateStatuses[0]?.name ?? 'Active'}
                   <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
                     <path d="M9 10.5547L5.57031 7.125L4.44531 8.25L9 12.8047L13.5547 8.25L12.4297 7.125L9 10.5547Z" fill="currentColor" fillOpacity="0.7" />
                   </svg>
                 </button>
                 {statusOpen && (
                   <div className={pd.statusMenu}>
-                    {STATUS_OPTIONS.map((opt) => (
+                    {candidateStatuses.map((status) => (
                       <button
-                        key={opt.value}
+                        key={status.value}
                         className={pd.statusMenuItem}
-                        data-active={opt.value === (page.candidateStatus ?? 'active') || undefined}
-                        onClick={() => { updatePage(pageId!, { candidateStatus: opt.value as CandidateStatus }); setStatusOpen(false) }}
+                        data-active={status.value === (page.candidateStatus ?? defaultStatus) || undefined}
+                        onClick={() => { updatePage(pageId!, { candidateStatus: status.value }); setStatusOpen(false) }}
                       >
-                        {opt.label}
+                        {status.name}
                       </button>
                     ))}
                   </div>

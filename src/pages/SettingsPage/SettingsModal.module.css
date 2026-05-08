@@ -41,7 +41,7 @@
 .sectionTitle {
   font-size: var(--font-size-sm);
   line-height: var(--line-height-xs);
-  font-weight: var(--font-weight-medium);
+  font-weight: var(--font-weight-bold);
   color: var(--color-text-primary);
 }
 

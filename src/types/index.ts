@@ -5,7 +5,12 @@ export type PageRole = 'colleague-hub' | 'candidate-hub' | 'project-hub' | 'main
 
 export type FeedbackType = 'positive' | 'neutral' | 'negative'
 
-export type CandidateStatus = 'active' | 'recommended' | 'hired' | 'rejected' | 'withdrawn'
+export interface CandidateStatusDef {
+  id?: number
+  name: string    // display label (e.g. "Active")
+  value: string   // slug/key (e.g. "active") — stored in Page.candidateStatus
+  order: number
+}
 
 // ---- Database Entities ----
 
@@ -17,7 +22,7 @@ export interface Page {
   mentionTrigger?: string  // autocomplete trigger prefix — any single character for hubs
   mentionCollapsed?: boolean // when true, mentions show only the trigger char (not the full name)
   parentId?: number        // hub grouping
-  candidateStatus?: CandidateStatus // only for candidate pages
+  candidateStatus?: string        // only for candidate pages (references CandidateStatusDef.value)
   archived?: boolean       // hidden from views unless "Show archived" is on
   description: string
   createdAt: Date

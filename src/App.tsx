@@ -207,6 +207,16 @@ function useEnsureDefaults() {
 
       // Projects hub
       await createHub('Projects', 'project-hub', '#')
+
+      // Default candidate statuses
+      const defaultStatuses = [
+        { name: 'Active', value: 'active', order: 0 },
+        { name: 'Recommended', value: 'recommended', order: 1 },
+        { name: 'Hired', value: 'hired', order: 2 },
+        { name: 'Rejected', value: 'rejected', order: 3 },
+        { name: 'Withdrawn', value: 'withdrawn', order: 4 },
+      ]
+      for (const s of defaultStatuses) await db.candidateStatuses.add(s)
     })()
   }, [])
 }

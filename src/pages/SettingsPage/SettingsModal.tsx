@@ -1,6 +1,7 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { Modal } from '../../components/Modal/Modal'
 import { useDimensions, addDimension, deleteDimension } from '../../hooks/useDimensions'
+import { useCandidateStatuses, addCandidateStatus, deleteCandidateStatus, renameCandidateStatus } from '../../hooks/useCandidateStatuses'
 import { useAutocomplete } from '../../hooks/useAutocomplete'
 import { usePageActions } from '../../hooks/usePages'
 import { useModalContext, usePreferences } from '../../hooks/useAppContext'
@@ -19,6 +20,7 @@ interface SettingsModalProps {
 
 export function SettingsModal({ open, onClose, onToast }: SettingsModalProps) {
   const dimensions = useDimensions()
+  const candidateStatuses = useCandidateStatuses()
   const { allPages } = useAutocomplete()
   const { updatePage } = usePageActions()
   const { showArchived, setShowArchived } = usePreferences()
@@ -29,6 +31,12 @@ export function SettingsModal({ open, onClose, onToast }: SettingsModalProps) {
   // Dimension add state
   const [addingDim, setAddingDim] = useState(false)
   const [newDimName, setNewDimName] = useState('')
+
+  // Candidate status state
+  const [addingStatus, setAddingStatus] = useState(false)
+  const [newStatusName, setNewStatusName] = useState('')
+  const [editingStatusId, setEditingStatusId] = useState<number | null>(null)
+  const [editingStatusName, setEditingStatusName] = useState('')
 
   // Trigger add state
   const [addingTrigger, setAddingTrigger] = useState(false)
@@ -120,6 +128,25 @@ export function SettingsModal({ open, onClose, onToast }: SettingsModalProps) {
   function cancelAddDim() {
     setNewDimName('')
     setAddingDim(false)
+  }
+
+  async function handleAddStatus() {
+    if (!newStatusName.trim()) return
+    await addCandidateStatus(newStatusName.trim())
+    setNewStatusName('')
+    setAddingStatus(false)
+  }
+
+  function cancelAddStatus() {
+    setNewStatusName('')
+    setAddingStatus(false)
+  }
+
+  async function handleRenameStatus(id: number) {
+    if (!editingStatusName.trim()) { setEditingStatusId(null); return }
+    await renameCandidateStatus(id, editingStatusName.trim())
+    setEditingStatusId(null)
+    setEditingStatusName('')
   }
 
   async function handleExport() {
@@ -405,6 +432,50 @@ export function SettingsModal({ open, onClose, onToast }: SettingsModalProps) {
                 style={{ opacity: selectedTriggerPage && newTriggerChar.trim() ? 1 : 0.4, pointerEvents: selectedTriggerPage && newTriggerChar.trim() ? 'auto' : 'none' }}>{<CheckIcon />}</button>
               <button className={styles.deleteButton} onClick={cancelAddTrigger} aria-label="Cancel">{<TrashIcon />}</button>
             </div>
+          </div>
+        )}
+      </div>
+
+      {/* Candidate statuses */}
+      <div className={styles.section}>
+        <div className={styles.listHeader}>
+          <span className={styles.sectionTitle}>Candidate statuses</span>
+          <button className={styles.addButton} onClick={() => setAddingStatus(true)} aria-label="Add status">{<PlusIcon />}</button>
+        </div>
+        <span className={styles.emptyHint}>First status is the default for new candidates</span>
+        {candidateStatuses.map((status) => (
+          <div key={status.id} className={styles.listItem}>
+            {editingStatusId === status.id ? (
+              <>
+                <input className={styles.inlineInput} type="text" value={editingStatusName}
+                  onChange={(e) => setEditingStatusName(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleRenameStatus(status.id!); if (e.key === 'Escape') setEditingStatusId(null) }}
+                  autoFocus />
+                <button className={styles.confirmButton} onClick={() => handleRenameStatus(status.id!)} aria-label="Confirm"
+                  style={{ opacity: editingStatusName.trim() ? 1 : 0.4, pointerEvents: editingStatusName.trim() ? 'auto' : 'none' }}>{<CheckIcon />}</button>
+                <button className={styles.deleteButton} onClick={() => setEditingStatusId(null)} aria-label="Cancel">{<CloseIcon size={12} />}</button>
+              </>
+            ) : (
+              <>
+                <span className={styles.itemName} onClick={() => { setEditingStatusId(status.id!); setEditingStatusName(status.name) }}
+                  style={{ cursor: 'pointer' }}>{status.name}</span>
+                <button className={styles.deleteButton}
+                  onClick={() => status.id && deleteCandidateStatus(status.id)}
+                  aria-label={`Delete ${status.name}`}
+                  style={{ opacity: candidateStatuses.length <= 1 ? 0.3 : 1, pointerEvents: candidateStatuses.length <= 1 ? 'none' : 'auto' }}
+                >{<TrashIcon />}</button>
+              </>
+            )}
+          </div>
+        ))}
+        {addingStatus && (
+          <div className={styles.listItem}>
+            <input className={styles.inlineInput} type="text" value={newStatusName} onChange={(e) => setNewStatusName(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleAddStatus(); if (e.key === 'Escape') cancelAddStatus() }}
+              placeholder="Status name" autoFocus />
+            <button className={styles.confirmButton} onClick={handleAddStatus} aria-label="Confirm"
+              style={{ opacity: newStatusName.trim() ? 1 : 0.4, pointerEvents: newStatusName.trim() ? 'auto' : 'none' }}>{<CheckIcon />}</button>
+            <button className={styles.deleteButton} onClick={cancelAddStatus} aria-label="Cancel">{<TrashIcon />}</button>
           </div>
         )}
       </div>

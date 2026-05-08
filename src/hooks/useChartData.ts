@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db/database'
-import type { TimelineEntry, Feedback, Page, ChartScope } from '../types'
+import type { TimelineEntry, Feedback, Page, ChartScope, CandidateStatusDef } from '../types'
 import { countHtmlBlocks, countMentionBlocks } from '../utils/countHtmlBlocks'
 
 // Native date helpers
@@ -263,31 +263,25 @@ export function useEntryCount(
 
 // ---- Aggregation: candidates by status ----
 
-const STATUS_ORDER = ['active', 'recommended', 'hired', 'rejected', 'withdrawn']
-const STATUS_LABELS: Record<string, string> = {
-  active: 'Active', recommended: 'Recommended', hired: 'Hired', rejected: 'Rejected', withdrawn: 'Withdrawn',
+const STATUS_PALETTE = ['#6699FF', '#45C9A1', '#34D399', '#FF6363', '#B8C5DB', '#FFB84D', '#A78BFA', '#F472B6', '#38BDF8', '#FB923C']
+
+export function getStatusColor(index: number) {
+  return STATUS_PALETTE[index % STATUS_PALETTE.length]
 }
 
-export const STATUS_COLORS: Record<string, string> = {
-  Active: '#6699FF',
-  Recommended: '#45C9A1',
-  Hired: '#34D399',
-  Rejected: '#FF6363',
-  Withdrawn: '#B8C5DB',
-}
-
-export function useCandidatesByStatus(pages: Page[]) {
+export function useCandidatesByStatus(pages: Page[], statuses: CandidateStatusDef[]) {
   return useMemo(() => {
     const candidates = pages.filter((p) => p.type === 'candidate')
     const counts = new Map<string, number>()
     for (const c of candidates) {
-      const status = STATUS_LABELS[c.candidateStatus ?? 'active']
-      counts.set(status, (counts.get(status) || 0) + 1)
+      const statusValue = c.candidateStatus ?? statuses[0]?.value ?? 'active'
+      counts.set(statusValue, (counts.get(statusValue) || 0) + 1)
     }
-    return STATUS_ORDER
-      .map((s) => ({ name: STATUS_LABELS[s], value: counts.get(STATUS_LABELS[s]) || 0 }))
-      .filter((s) => s.value > 0)
-  }, [pages])
+    return statuses
+      .map((s) => ({ name: s.name, value: s.value, count: counts.get(s.value) || 0 }))
+      .filter((s) => s.count > 0)
+      .map((s) => ({ name: s.name, value: s.count }))
+  }, [pages, statuses])
 }
 
 // ---- Aggregation: feedback sentiment by month ----

@@ -6,12 +6,13 @@ import {
 import {
   filterEntriesByScopes, filterFeedbacksByScopes,
   useEntryCount,
-  useCandidatesByStatus, STATUS_COLORS,
+  useCandidatesByStatus, getStatusColor,
   useFeedbackByMonth, useFeedbackSummary,
   useDimensionDistribution,
   usePageCount,
   getColor,
 } from '../../hooks/useChartData'
+import { useCandidateStatuses } from '../../hooks/useCandidateStatuses'
 import type { ChartConfig, ChartScope, ChartDataSource, ChartType, TimelineEntry, Feedback, Page, Dimension } from '../../types'
 import styles from './Charts.module.css'
 
@@ -201,7 +202,8 @@ function EntryCountChart({ config, monthCount = 12, entries, pages, containerCla
 }
 
 function CandidateStatusChart({ config, pages, containerClass }: ChartRendererProps) {
-  const data = useCandidatesByStatus(pages)
+  const statuses = useCandidateStatuses()
+  const data = useCandidatesByStatus(pages, statuses)
   const cls = useContainerClass(config, containerClass)
 
   return (
@@ -210,9 +212,9 @@ function CandidateStatusChart({ config, pages, containerClass }: ChartRendererPr
         <BarChart data={data}>
           <XAxis dataKey="name" tick={tickStyle} stroke={axisStroke} interval={0} />
           <Tooltip {...TP} />
-          {data.length > 1 && <Legend content={cellLegend(data.map((s, i) => ({ name: s.name, color: STATUS_COLORS[s.name] ?? getSeriesColor(i, data.length) })))} />}
+          {data.length > 1 && <Legend content={cellLegend(data.map((s, i) => ({ name: s.name, color: getStatusColor(i) })))} />}
           <Bar dataKey="value">
-            {data.map((s, i) => <Cell key={s.name || i} fill={STATUS_COLORS[s.name] ?? getSeriesColor(i, data.length)} />)}
+            {data.map((s, i) => <Cell key={s.name || i} fill={getStatusColor(i)} />)}
           </Bar>
         </BarChart>
       </ResponsiveContainer>

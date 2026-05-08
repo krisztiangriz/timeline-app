@@ -8,6 +8,7 @@ import type {
   Dimension,
   PageSetting,
   ChartConfig,
+  CandidateStatusDef,
 } from '../types'
 
 class TimelineDB extends Dexie {
@@ -20,6 +21,7 @@ class TimelineDB extends Dexie {
   dimensions!: Table<Dimension>
   pageSettings!: Table<PageSetting>
   chartConfigs!: Table<ChartConfig>
+  candidateStatuses!: Table<CandidateStatusDef>
 
   constructor() {
     super('TimelineApp')
@@ -243,6 +245,20 @@ class TimelineDB extends Dexie {
         }
         delete config.scope
       })
+    })
+    // v13: user-configurable candidate statuses
+    this.version(13).stores({
+      candidateStatuses: '++id, order',
+    }).upgrade(async (tx) => {
+      const table = tx.table('candidateStatuses')
+      const defaults = [
+        { name: 'Active', value: 'active', order: 0 },
+        { name: 'Recommended', value: 'recommended', order: 1 },
+        { name: 'Hired', value: 'hired', order: 2 },
+        { name: 'Rejected', value: 'rejected', order: 3 },
+        { name: 'Withdrawn', value: 'withdrawn', order: 4 },
+      ]
+      for (const s of defaults) await table.add(s)
     })
   }
 }
