@@ -19,7 +19,7 @@ interface ConfigurableVizProps {
   pageId: number
 }
 
-export function ConfigurableViz({ blockId, pageId }: ConfigurableVizProps) {
+export const ConfigurableViz = memo(function ConfigurableViz({ blockId, pageId }: ConfigurableVizProps) {
   const configs = useChartConfigs(blockId)
   const { allPages } = useAutocomplete()
   const allEntries = useAllEntries()
@@ -111,7 +111,7 @@ export function ConfigurableViz({ blockId, pageId }: ConfigurableVizProps) {
       />
     </div>
   )
-}
+})
 
 // ---- Chart card ----
 

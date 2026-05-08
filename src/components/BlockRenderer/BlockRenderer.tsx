@@ -1,4 +1,4 @@
-import { useState, useEffect, lazy, Suspense, useCallback } from 'react'
+import { useState, useEffect, lazy, Suspense, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { RichTextEditor } from '../RichTextEditor/RichTextEditor'
 import { TimelineView } from '../TimelineView/TimelineView'
@@ -42,15 +42,17 @@ function BlockList({ pageId, page, blocks, tabId }: {
   const { updateBlock, insertBlockAfter } = useBlockActions()
   const navigate = useNavigate()
   const { allPages } = useAutocomplete()
+  const allPagesRef = useRef(allPages)
+  allPagesRef.current = allPages
 
   const handleMentionClick = useCallback((mentionPageId: number) => {
-    const p = allPages.find((pg) => pg.id === mentionPageId)
+    const p = allPagesRef.current.find((pg) => pg.id === mentionPageId)
     if (p) {
-      navigate(getPagePath(p, allPages))
+      navigate(getPagePath(p, allPagesRef.current))
     } else {
       navigate(`/page/${mentionPageId}`)
     }
-  }, [allPages, navigate])
+  }, [navigate])
 
   const handleInsertComponent = useCallback(async (afterBlockId: number, type: 'timeline' | 'feedback' | 'table' | 'visualization') => {
     await insertBlockAfter(afterBlockId, pageId, type, tabId)

@@ -6,6 +6,7 @@ import { filterHtmlToMentionLines } from '../../utils/mentionParser'
 import { useTimelineEntries, useCrossRefEntries, addEntry, updateEntry, deleteEntry, mergePendingEntries } from '../../hooks/useTimeline'
 import { usePageByRole, useChildPages, getPagePath } from '../../hooks/usePages'
 import { useAutocomplete } from '../../hooks/useAutocomplete'
+import { useToast } from '../../hooks/useToast'
 import { formatEntryDate, startOfDay } from '../../utils/dateUtils'
 import { TimelineEntryRow } from './TimelineEntryRow'
 import { RichTextEditor } from '../RichTextEditor/RichTextEditor'
@@ -78,6 +79,7 @@ export function TimelineView({ pageId, title, readOnly = false, page }: Timeline
   const directEntries = useTimelineEntries(pageId)
   const crossRefEntries = useCrossRefEntries(pageId)
   const { allPages } = useAutocomplete()
+  const { show: showToast } = useToast()
   const navigate = useNavigate()
 
   const directIds = useMemo(() => new Set(directEntries.map((e) => e.id!)), [directEntries])
@@ -184,68 +186,71 @@ export function TimelineView({ pageId, title, readOnly = false, page }: Timeline
 
   async function handlePendingSave() {
     pendingFocusedRef.current = false
-    const plain = stripHtml(pendingHtml).replace(/\u00A0/g, '').trim()
+    try {
+      const plain = stripHtml(pendingHtml).replace(/\u00A0/g, '').trim()
 
-    if (pendingEntryId.current) {
-      if (!plain) {
-        await deleteEntry(pendingEntryId.current)
-        pendingEntryId.current = undefined
-      } else if (pendingHtml !== (pendingEntry?.text ?? '')) {
-        await updateEntry(pendingEntryId.current, { text: pendingHtml })
+      if (pendingEntryId.current) {
+        if (!plain) {
+          await deleteEntry(pendingEntryId.current)
+          pendingEntryId.current = undefined
+        } else if (pendingHtml !== (pendingEntry?.text ?? '')) {
+          await updateEntry(pendingEntryId.current, { text: pendingHtml })
+        }
+      } else if (plain) {
+        const htmlWithCheckboxes = ensureCheckboxes(pendingHtml)
+        const id = await addEntry({ pageId, text: htmlWithCheckboxes || pendingHtml, isPending: true })
+        pendingEntryId.current = id
       }
-    } else if (plain) {
-      // Ensure the new content has checkboxes
-      const htmlWithCheckboxes = ensureCheckboxes(pendingHtml)
-      const id = await addEntry({ pageId, text: htmlWithCheckboxes || pendingHtml, isPending: true })
-      pendingEntryId.current = id
-    }
+    } catch { showToast('Failed to save') }
   }
 
   async function handleCheckboxComplete(lineHtml: string, remainingHtml: string) {
-    const cleanText = toSentenceCase(stripCheckboxHtml(lineHtml).replace(/\u00A0/g, ' ').replace(/&nbsp;/g, ' ').trim())
-    if (cleanText) {
-      // Append to today's content
-      if (todayEntryId.current) {
-        const currentText = todayHtml
-        const newText = currentText
-          ? currentText + '<div>' + cleanText + '</div>'
-          : cleanText
-        await updateEntry(todayEntryId.current, { text: newText })
-        setTodayHtml(newText)
-      } else {
-        const newId = await addEntry({ pageId, text: cleanText, isPending: false })
-        todayEntryId.current = newId
-        setTodayHtml(cleanText)
+    try {
+      const cleanText = toSentenceCase(stripCheckboxHtml(lineHtml).replace(/\u00A0/g, ' ').replace(/&nbsp;/g, ' ').trim())
+      if (cleanText) {
+        if (todayEntryId.current) {
+          const currentText = todayHtml
+          const newText = currentText
+            ? currentText + '<div>' + cleanText + '</div>'
+            : cleanText
+          await updateEntry(todayEntryId.current, { text: newText })
+          setTodayHtml(newText)
+        } else {
+          const newId = await addEntry({ pageId, text: cleanText, isPending: false })
+          todayEntryId.current = newId
+          setTodayHtml(cleanText)
+        }
       }
-    }
-    // Immediately persist the pending record with the line removed
-    setPendingHtml(remainingHtml)
-    const plain = stripHtml(remainingHtml).trim()
-    if (pendingEntryId.current) {
-      if (!plain) {
-        await deleteEntry(pendingEntryId.current)
-        pendingEntryId.current = undefined
-      } else {
-        await updateEntry(pendingEntryId.current, { text: remainingHtml })
+      setPendingHtml(remainingHtml)
+      const plain = stripHtml(remainingHtml).trim()
+      if (pendingEntryId.current) {
+        if (!plain) {
+          await deleteEntry(pendingEntryId.current)
+          pendingEntryId.current = undefined
+        } else {
+          await updateEntry(pendingEntryId.current, { text: remainingHtml })
+        }
       }
-    }
+    } catch { showToast('Failed to save') }
   }
 
   async function handleTodaySave() {
     todayFocusedRef.current = false
-    const plain = stripHtml(todayHtml).trim()
+    try {
+      const plain = stripHtml(todayHtml).trim()
 
-    if (todayEntryId.current) {
-      if (!plain) {
-        await deleteEntry(todayEntryId.current)
-        todayEntryId.current = undefined
-      } else if (todayHtml !== (todayEntry?.text ?? '')) {
-        await updateEntry(todayEntryId.current, { text: todayHtml })
+      if (todayEntryId.current) {
+        if (!plain) {
+          await deleteEntry(todayEntryId.current)
+          todayEntryId.current = undefined
+        } else if (todayHtml !== (todayEntry?.text ?? '')) {
+          await updateEntry(todayEntryId.current, { text: todayHtml })
+        }
+      } else if (plain) {
+        const id = await addEntry({ pageId, text: todayHtml, isPending: false })
+        todayEntryId.current = id
       }
-    } else if (plain) {
-      const id = await addEntry({ pageId, text: todayHtml, isPending: false })
-      todayEntryId.current = id
-    }
+    } catch { showToast('Failed to save') }
   }
 
   const handleUpdateEntry = useCallback(async (id: number, data: { text?: string }) => {
@@ -339,59 +344,66 @@ export function TimelineView({ pageId, title, readOnly = false, page }: Timeline
   }, [isMainTimeline, page, pageId, hubChildren])
 
   // Split and filter the main timeline's pending HTML
-  const { filteredLines, allMainLines } = useMemo(() => {
-    if (isMainTimeline || !mainPendingEntry?.text) return { filteredLines: [], allMainLines: [] }
+  const { filteredLines, filteredOriginalIndices, allMainLines } = useMemo(() => {
+    if (isMainTimeline || !mainPendingEntry?.text) return { filteredLines: [], filteredOriginalIndices: [], allMainLines: [] }
     const allLines = splitPendingLines(mainPendingEntry.text)
-    const filtered = allLines.filter((line) => {
+    const filtered: string[] = []
+    const indices: number[] = []
+    allLines.forEach((line, i) => {
       const matches = line.match(/data-page-id="(\d+)"/g)
-      if (!matches) return false
-      return matches.some((m) => {
+      if (!matches) return
+      const isRelevant = matches.some((m) => {
         const id = Number(m.replace('data-page-id="', '').replace('"', ''))
         return relevantIds.has(id)
       })
+      if (isRelevant) {
+        filtered.push(line)
+        indices.push(i)
+      }
     })
-    return { filteredLines: filtered, allMainLines: allLines }
+    return { filteredLines: filtered, filteredOriginalIndices: indices, allMainLines: allLines }
   }, [isMainTimeline, mainPendingEntry?.text, relevantIds])
 
   // Handle completion of a filtered pending item
   async function handleFilteredComplete(lineIndex: number) {
     if (!mainPendingEntry?.id || !mainTimelinePage?.id) return
-
-    const targetLine = filteredLines[lineIndex]
-    const cleanText = toSentenceCase(
-      stripCheckboxHtml(targetLine).replace(/\u00A0/g, ' ').replace(/&nbsp;/g, ' ').trim()
-    )
-
-    // Remove the line from the full pending HTML
-    const originalIndex = allMainLines.indexOf(targetLine)
-    if (originalIndex === -1) return
-    const remaining = [...allMainLines]
-    remaining.splice(originalIndex, 1)
-    const newHtml = remaining.length > 0 ? remaining.map((l) => `<div>${l}</div>`).join('') : ''
-
-    // Update or delete the main timeline pending entry
-    const plain = stripHtml(newHtml).trim()
-    if (plain) {
-      await updateEntry(mainPendingEntry.id, { text: newHtml })
-    } else {
-      await deleteEntry(mainPendingEntry.id)
-    }
-
-    // Append to today's entry on the main timeline
-    if (cleanText) {
-      const todayStart = startOfDay(new Date())
-      const mainTodayEntry = mainTimelineEntries.find(
-        (e) => !e.isPending && new Date(e.date) >= todayStart && e.pageId === mainTimelinePage.id
+    try {
+      const targetLine = filteredLines[lineIndex]
+      const cleanText = toSentenceCase(
+        stripCheckboxHtml(targetLine).replace(/\u00A0/g, ' ').replace(/&nbsp;/g, ' ').trim()
       )
-      if (mainTodayEntry?.id) {
-        const newText = mainTodayEntry.text
-          ? mainTodayEntry.text + '<div>' + cleanText + '</div>'
-          : cleanText
-        await updateEntry(mainTodayEntry.id, { text: newText })
+
+      // Remove the line from the full pending HTML using tracked index
+      const originalIndex = filteredOriginalIndices[lineIndex]
+      if (originalIndex === undefined) return
+      const remaining = [...allMainLines]
+      remaining.splice(originalIndex, 1)
+      const newHtml = remaining.length > 0 ? remaining.map((l) => `<div>${l}</div>`).join('') : ''
+
+      // Update or delete the main timeline pending entry
+      const plain = stripHtml(newHtml).trim()
+      if (plain) {
+        await updateEntry(mainPendingEntry.id, { text: newHtml })
       } else {
-        await addEntry({ pageId: mainTimelinePage.id, text: cleanText, isPending: false })
+        await deleteEntry(mainPendingEntry.id)
       }
-    }
+
+      // Append to today's entry on the main timeline
+      if (cleanText) {
+        const todayStart = startOfDay(new Date())
+        const mainTodayEntry = mainTimelineEntries.find(
+          (e) => !e.isPending && new Date(e.date) >= todayStart && e.pageId === mainTimelinePage.id
+        )
+        if (mainTodayEntry?.id) {
+          const newText = mainTodayEntry.text
+            ? mainTodayEntry.text + '<div>' + cleanText + '</div>'
+            : cleanText
+          await updateEntry(mainTodayEntry.id, { text: newText })
+        } else {
+          await addEntry({ pageId: mainTimelinePage.id, text: cleanText, isPending: false })
+        }
+      }
+    } catch { showToast('Failed to save') }
   }
 
   return (
