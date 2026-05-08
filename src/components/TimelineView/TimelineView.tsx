@@ -135,12 +135,11 @@ export function TimelineView({ pageId, title, readOnly = false, page }: Timeline
   useEffect(() => {
     if (migrationDone.current) return
     migrationDone.current = true
-    // Check if there are multiple pending entries that need merging
     const pendingCount = allEntries.filter((e) => e.isPending).length
     if (pendingCount > 1) {
       mergePendingEntries(pageId)
     }
-  }, [pageId, allEntries])
+  }, [pageId]) // eslint-disable-line react-hooks/exhaustive-deps — guarded by migrationDone ref, only needs to run once per mount
 
   // ---- Pending section state (single editor, mirrors Today pattern) ----
   const [pendingHtml, setPendingHtml] = useState('')
@@ -430,7 +429,7 @@ export function TimelineView({ pageId, title, readOnly = false, page }: Timeline
           </div>
           <div className={styles.sectionDateContainer}>
             <span className={styles.sectionDate}>Pending</span>
-            <span className={styles.sectionDeleteLabel} onClick={handleDeletePending}>Delete</span>
+            <button className={styles.sectionDeleteLabel} onClick={handleDeletePending}>Delete</button>
           </div>
         </div>
       )}
@@ -440,8 +439,16 @@ export function TimelineView({ pageId, title, readOnly = false, page }: Timeline
         <div className={styles.section}>
           <div className={styles.sectionContent}>
             {filteredLines.map((lineHtml, i) => (
-              <div key={i} className={styles.filteredPendingLine}>
-                <span className={styles.filteredCheckbox} onClick={() => handleFilteredComplete(i)} />
+              <div key={filteredOriginalIndices[i]} className={styles.filteredPendingLine}>
+                <span
+                  className={styles.filteredCheckbox}
+                  onClick={() => handleFilteredComplete(i)}
+                  role="checkbox"
+                  aria-checked="false"
+                  aria-label="Complete task"
+                  tabIndex={0}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleFilteredComplete(i) } }}
+                />
                 <RichTextDisplay html={stripCheckboxHtml(lineHtml)} collapseMentions />
               </div>
             ))}
@@ -483,7 +490,7 @@ export function TimelineView({ pageId, title, readOnly = false, page }: Timeline
         </div>
         <div className={styles.sectionDateContainer}>
           <span className={styles.sectionDate}>Today</span>
-          <span className={styles.sectionDeleteLabel} onClick={handleDeleteToday}>Delete</span>
+          <button className={styles.sectionDeleteLabel} onClick={handleDeleteToday}>Delete</button>
         </div>
       </div>
 
@@ -520,7 +527,7 @@ export function TimelineView({ pageId, title, readOnly = false, page }: Timeline
             <div className={styles.sectionDateContainer}>
               <span className={styles.sectionDate}>{formatEntryDate(new Date(dateKey))}</span>
               {directEntry && (
-                <span className={styles.sectionDeleteLabel} onClick={() => handleDeleteHistoryEntry(directEntry.id!)}>Delete</span>
+                <button className={styles.sectionDeleteLabel} onClick={() => handleDeleteHistoryEntry(directEntry.id!)}>Delete</button>
               )}
             </div>
           </div>

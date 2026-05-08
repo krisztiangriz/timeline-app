@@ -79,10 +79,10 @@ export const ConfigurableViz = memo(function ConfigurableViz({ blockId, pageId }
       {configs.length === 0 ? (
         <EmptyState message="Add a chart to visualize your data" />
       ) : (
-        rows.map((row, i) => {
+        rows.map((row) => {
           if (row.type === 'pair') {
             return (
-              <div key={i} className={styles.chartPair}>
+              <div key={`pair-${row.time!.id}`} className={styles.chartPair}>
                 <div className={styles.chartPairLeft}>
                   <ChartCard config={row.time!} monthCount={range} entries={allEntries} feedbacks={allFeedbacks} pages={allPages} dimensions={dimensions} onEdit={setEditing} onDelete={handleDelete} />
                 </div>
@@ -93,7 +93,7 @@ export const ConfigurableViz = memo(function ConfigurableViz({ blockId, pageId }
             )
           }
           return (
-            <div key={i} className={styles.chartSection}>
+            <div key={`single-${row.config!.id}`} className={styles.chartSection}>
               <ChartCard config={row.config!} monthCount={range} entries={allEntries} feedbacks={allFeedbacks} pages={allPages} dimensions={dimensions} onEdit={setEditing} onDelete={handleDelete} />
             </div>
           )

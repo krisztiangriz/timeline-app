@@ -81,9 +81,9 @@ export function Modal({
 
   return (
     <div className={styles.overlay} onClick={onClose}>
-      <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+      <div className={styles.modal} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="modal-title">
         <div className={scrolledTop ? styles.headerBorder : styles.header}>
-          <h1 className={styles.title}>{title}</h1>
+          <h1 className={styles.title} id="modal-title">{title}</h1>
           <button className={styles.closeButton} onClick={onClose} aria-label="Close">
             <CloseIcon />
           </button>

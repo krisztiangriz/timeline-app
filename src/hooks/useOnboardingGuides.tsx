@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, type ReactNode } from 'react'
+import { createContext, useContext, useState, useCallback, useMemo, type ReactNode } from 'react'
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -8,6 +8,7 @@ export interface GuideStep {
   title: string
   description: string
   image?: string
+  video?: string
 }
 
 export interface GuideDefinition {
@@ -182,24 +183,38 @@ export function OnboardingGuidesProvider({ children }: { children: ReactNode }) 
     return registry.get(id)
   }, [registry])
 
+  const contextValue = useMemo<OnboardingGuidesContextValue>(() => ({
+    guidesDisabled,
+    disableAllGuides,
+    enableAllGuides,
+    toggleGuides,
+    registerGuide,
+    triggerGuide,
+    dismissGuide,
+    nextStep,
+    prevStep,
+    isGuideDismissed,
+    resetAllGuides,
+    activeGuide,
+    getGuideDefinition,
+  }), [
+    guidesDisabled,
+    disableAllGuides,
+    enableAllGuides,
+    toggleGuides,
+    registerGuide,
+    triggerGuide,
+    dismissGuide,
+    nextStep,
+    prevStep,
+    isGuideDismissed,
+    resetAllGuides,
+    activeGuide,
+    getGuideDefinition,
+  ])
+
   return (
-    <OnboardingGuidesContext.Provider
-      value={{
-        guidesDisabled,
-        disableAllGuides,
-        enableAllGuides,
-        toggleGuides,
-        registerGuide,
-        triggerGuide,
-        dismissGuide,
-        nextStep,
-        prevStep,
-        isGuideDismissed,
-        resetAllGuides,
-        activeGuide,
-        getGuideDefinition,
-      }}
-    >
+    <OnboardingGuidesContext.Provider value={contextValue}>
       {children}
     </OnboardingGuidesContext.Provider>
   )

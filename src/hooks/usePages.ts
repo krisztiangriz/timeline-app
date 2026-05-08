@@ -120,10 +120,11 @@ export function usePageActions() {
         for (const child of children) {
           await deleteRecursive(child.id!)
         }
-        // Cascade: delete chartConfigs for visualization blocks
+        // Cascade: batch delete chartConfigs for visualization blocks
         const vizBlocks = await db.blocks.where('pageId').equals(pageId).filter((b) => b.type === 'visualization').toArray()
-        for (const b of vizBlocks) {
-          await db.chartConfigs.where('blockId').equals(b.id!).delete()
+        const vizBlockIds = vizBlocks.map((b) => b.id!)
+        if (vizBlockIds.length > 0) {
+          await db.chartConfigs.where('blockId').anyOf(vizBlockIds).delete()
         }
         await db.blocks.where('pageId').equals(pageId).delete()
         await db.layouts.where('pageId').equals(pageId).delete()
@@ -266,4 +267,24 @@ export function getPagePath(page: Page, allPages: Page[]): string {
   }
 
   return `/page/${page.id}`
+}
+
+/** Persist block order and delete removed blocks after a page edit */
+export async function persistBlockEdits(
+  blockOrder?: { id: number; order: number; tabId?: number }[],
+  deletedBlockIds?: number[],
+  deleteBlock?: (id: number) => Promise<void>,
+) {
+  if (blockOrder) {
+    await db.transaction('rw', db.blocks, async () => {
+      for (const b of blockOrder) {
+        await db.blocks.update(b.id, { order: b.order, tabId: b.tabId })
+      }
+    })
+  }
+  if (deletedBlockIds?.length && deleteBlock) {
+    for (const id of deletedBlockIds) {
+      await deleteBlock(id)
+    }
+  }
 }

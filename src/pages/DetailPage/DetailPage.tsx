@@ -6,7 +6,7 @@ import { BreadcrumbNav } from '../../components/Breadcrumb/Breadcrumb'
 import { PageHeader } from '../../components/PageHeader/PageHeader'
 import { PageForm, type PageFormData } from '../../components/PageForm/PageForm'
 import { BlockRenderer } from '../../components/BlockRenderer/BlockRenderer'
-import { usePage, usePageActions, usePageTabs, getPagePath } from '../../hooks/usePages'
+import { usePage, usePageActions, usePageTabs, getPagePath, persistBlockEdits } from '../../hooks/usePages'
 import { useBlocks, useBlockActions } from '../../hooks/useBlocks'
 import { usePageMenus } from '../../hooks/usePageMenus'
 import { useAutocomplete } from '../../hooks/useAutocomplete'
@@ -106,21 +106,7 @@ export function DetailPage({ routePrefix }: DetailPageProps) {
     if (!pageId) return
     await updatePage(pageId, { name: data.name, mentionTrigger: data.mentionTrigger, mentionCollapsed: data.mentionCollapsed })
     await updateTabs(pageId, data.tabs)
-    // Persist block order
-    if (data.blockOrder) {
-      const { db } = await import('../../db/database')
-      await db.transaction('rw', db.blocks, async () => {
-        for (const b of data.blockOrder!) {
-          await db.blocks.update(b.id, { order: b.order, tabId: b.tabId })
-        }
-      })
-    }
-    // Delete removed blocks
-    if (data.deletedBlockIds?.length) {
-      for (const id of data.deletedBlockIds) {
-        await deleteBlock(id)
-      }
-    }
+    await persistBlockEdits(data.blockOrder, data.deletedBlockIds, deleteBlock)
     setEditPageOpen(false); showToast('Page updated')
   }
 
