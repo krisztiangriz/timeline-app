@@ -293,15 +293,15 @@
 
 /* Inline mention span */
 .editor [data-mention] {
-  color: var(--color-text-placeholder);
+  color: inherit;
   font-weight: var(--font-weight-medium);
   cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 .editor [data-mention]:hover {
-  color: var(--color-text-primary);
-  text-decoration: underline;
-  text-underline-offset: 2px;
+  color: var(--color-text-tertiary);
 }
 
 /* Collapsed mentions: show only trigger character, full name on hover via title */
