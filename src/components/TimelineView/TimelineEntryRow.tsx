@@ -1,7 +1,6 @@
-import { useState, useMemo, useRef, useCallback, memo } from 'react'
+import { useState, useRef, useCallback, memo } from 'react'
 import type { TimelineEntry } from '../../types'
 import { stripHtml } from '../../utils/stripHtml'
-import { filterHtmlToMention, stripSelfMention } from '../../utils/mentionParser'
 import { RichTextEditor } from '../RichTextEditor/RichTextEditor'
 import { RichTextDisplay } from '../RichTextEditor/RichTextDisplay'
 import styles from './TimelineView.module.css'
@@ -14,29 +13,19 @@ interface TimelineEntryRowProps {
   entry: TimelineEntry
   onUpdate: (id: number, data: { text?: string }) => void
   onDelete: (id: number) => void
-  /** If set, only show lines that reference this page ID (cross-ref mode) */
-  crossRefPageId?: number
+  /** If true, entry is a cross-reference (read-only, muted style) */
+  crossRef?: boolean
 }
 
 export const TimelineEntryRow = memo(function TimelineEntryRow({
   entry,
   onUpdate,
   onDelete,
-  crossRefPageId,
+  crossRef,
 }: TimelineEntryRowProps) {
   const [editing, setEditing] = useState(false)
   const [editHtml, setEditHtml] = useState(entry.text)
   const clickPos = useRef<{ x: number; y: number } | undefined>(undefined)
-
-  // For cross-ref entries, filter to only relevant lines and strip self-mention
-  const displayText = useMemo(() => {
-    if (!crossRefPageId) return entry.text
-    const filtered = filterHtmlToMention(entry.text, crossRefPageId)
-    return stripSelfMention(filtered, crossRefPageId)
-  }, [entry.text, crossRefPageId])
-
-  // Hide cross-ref entries that are empty after stripping the self-mention
-  if (crossRefPageId && !displayText) return null
 
   function handleSave() {
     const plain = stripHtml(editHtml).trim()
@@ -67,13 +56,13 @@ export const TimelineEntryRow = memo(function TimelineEntryRow({
     setEditing(true)
   }
 
-  const hasHtml = !isPlainText(displayText)
+  const hasHtml = !isPlainText(entry.text)
 
   return (
     <div
-      className={crossRefPageId ? styles.entryRowTextDisabled : styles.entryRowText}
-      onClick={!editing && !crossRefPageId ? handleStartEditing : undefined}
-        style={{ cursor: editing || crossRefPageId ? 'auto' : 'text' }}
+      className={crossRef ? styles.entryRowTextDisabled : styles.entryRowText}
+      onClick={!editing && !crossRef ? handleStartEditing : undefined}
+        style={{ cursor: editing || crossRef ? 'auto' : 'text' }}
     >
       {editing ? (
         <RichTextEditor
@@ -86,9 +75,9 @@ export const TimelineEntryRow = memo(function TimelineEntryRow({
           collapseMentions
         />
       ) : hasHtml ? (
-        <RichTextDisplay html={displayText} collapseMentions />
+        <RichTextDisplay html={entry.text} collapseMentions />
       ) : (
-        <span className={styles.entryText}>{displayText}</span>
+        <span className={styles.entryText}>{entry.text}</span>
       )}
     </div>
   )

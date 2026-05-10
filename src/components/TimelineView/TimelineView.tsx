@@ -1,7 +1,6 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { stripHtml } from '../../utils/stripHtml'
-import { filterHtmlToMentionLines } from '../../utils/mentionParser'
 
 import { useTimelineEntries, useCrossRefEntries, addEntry, updateEntry, deleteEntry, mergePendingEntries } from '../../hooks/useTimeline'
 import { usePageByRole, useChildPages, getPagePath } from '../../hooks/usePages'
@@ -475,18 +474,15 @@ export function TimelineView({ pageId, title, readOnly = false, page }: Timeline
               />
             </div>
           )}
-          {todayCrossRefs.flatMap((entry) => {
-            const lines = filterHtmlToMentionLines(entry.text, pageId)
-            return lines.map((lineHtml, li) => (
-              <TimelineEntryRow
-                key={`${entry.id}-${li}`}
-                entry={{ ...entry, text: lineHtml }}
-                onUpdate={NOOP}
-                onDelete={NOOP}
-                crossRefPageId={pageId}
-              />
-            ))
-          })}
+          {todayCrossRefs.map((entry) => (
+            <TimelineEntryRow
+              key={entry.id}
+              entry={entry}
+              onUpdate={NOOP}
+              onDelete={NOOP}
+              crossRef
+            />
+          ))}
         </div>
         <div className={styles.sectionDateContainer}>
           <span className={styles.sectionDate}>Today</span>
@@ -500,28 +496,17 @@ export function TimelineView({ pageId, title, readOnly = false, page }: Timeline
         return (
           <div key={dateKey} className={styles.section}>
             <div className={styles.sectionContent}>
-              {entries.flatMap((entry) => {
+              {entries.map((entry) => {
                 const isCrossRef = !directIds.has(entry.id!)
-                if (isCrossRef) {
-                  const lines = filterHtmlToMentionLines(entry.text, pageId)
-                  return lines.map((lineHtml, li) => (
-                    <TimelineEntryRow
-                      key={`${entry.id}-${li}`}
-                      entry={{ ...entry, text: lineHtml }}
-                      onUpdate={NOOP}
-                      onDelete={NOOP}
-                      crossRefPageId={pageId}
-                    />
-                  ))
-                }
-                return [(
+                return (
                   <TimelineEntryRow
                     key={entry.id}
                     entry={entry}
-                    onUpdate={handleUpdateEntry}
-                    onDelete={handleDeleteEntry}
+                    onUpdate={isCrossRef ? NOOP : handleUpdateEntry}
+                    onDelete={isCrossRef ? NOOP : handleDeleteEntry}
+                    crossRef={isCrossRef}
                   />
-                )]
+                )
               })}
             </div>
             <div className={styles.sectionDateContainer}>
