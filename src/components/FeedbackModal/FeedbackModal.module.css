@@ -1,14 +1,14 @@
 .section {
   display: flex;
   flex-direction: column;
-  gap: var(--space-xs);
 }
 
 .label {
   font-size: var(--font-size-sm);
-  line-height: var(--line-height-xs);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-text-primary);
+  line-height: var(--line-height-base);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-secondary);
+  padding-bottom: var(--space-xs);
 }
 
 .searchWrapper {
@@ -25,11 +25,6 @@
 
 .searchWrapper:focus-within {
   border-color: var(--color-input-border);
-}
-
-.searchIcon {
-  flex-shrink: 0;
-  color: var(--color-text-primary);
 }
 
 .searchInput {
@@ -92,56 +87,64 @@
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-xs);
+  padding-top: var(--space-xs);
 }
 
 .subjectChip {
   display: flex;
   align-items: center;
   gap: var(--space-xs);
-  padding: var(--space-xs) var(--space-sm);
+  padding: var(--space-2xs) var(--space-sm);
   background: var(--color-border-light);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  line-height: var(--line-height-base);
+  line-height: var(--line-height-sm);
 }
 
 .chipRemove {
-  color: var(--color-text-tertiary);
+  width: 14px;
+  height: 14px;
   display: flex;
   align-items: center;
+  justify-content: center;
+  color: var(--color-text-tertiary);
+  cursor: pointer;
+  border-radius: 50%;
 }
 
 .chipRemove:hover {
-  color: var(--color-text-primary);
+  color: var(--color-text-secondary);
 }
 
-.radioRow {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-lg);
-  height: 32px;
-  align-items: center;
+.triggerChar {
+  font-family: ui-monospace, 'SF Mono', Monaco, 'Cascadia Mono', monospace;
 }
 
 .textarea {
   width: 100%;
   min-height: 80px;
-  padding: var(--space-sm) var(--space-md);
-  border: 1px solid transparent;
-  border-radius: var(--radius-md);
+  padding: var(--space-sm);
   font-size: var(--font-size-base);
   line-height: var(--line-height-base);
-  resize: none;
   font-family: var(--font-family);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
   background: var(--color-input-bg);
+  resize: none;
 }
 
 .textarea:focus {
   border-color: var(--color-input-border);
+  outline: none;
 }
 
-.dimensionList {
+.optionsRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-lg);
+}
+
+.optionsVertical {
   display: flex;
   flex-direction: column;
   gap: var(--space-xs);

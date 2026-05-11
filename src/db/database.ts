@@ -5,10 +5,10 @@ import type {
   Block,
   TimelineEntry,
   Feedback,
-  Dimension,
   PageSetting,
   ChartConfig,
-  CandidateStatusDef,
+  HubProperty,
+  PagePropertyValue,
 } from '../types'
 
 class TimelineDB extends Dexie {
@@ -18,10 +18,10 @@ class TimelineDB extends Dexie {
   blocks!: Table<Block>
   timelineEntries!: Table<TimelineEntry>
   feedbacks!: Table<Feedback>
-  dimensions!: Table<Dimension>
   pageSettings!: Table<PageSetting>
   chartConfigs!: Table<ChartConfig>
-  candidateStatuses!: Table<CandidateStatusDef>
+  hubProperties!: Table<HubProperty>
+  pagePropertyValues!: Table<PagePropertyValue>
 
   constructor() {
     super('TimelineApp')
@@ -259,6 +259,71 @@ class TimelineDB extends Dexie {
         { name: 'Withdrawn', value: 'withdrawn', order: 4 },
       ]
       for (const s of defaults) await table.add(s)
+    })
+    // v14: backfill color on candidate statuses
+    this.version(14).stores({}).upgrade(async (tx) => {
+      const colors = ['#7EB3FF', '#6DD4B1', '#B497F0', '#FFB870', '#6CC7CC']
+      const table = tx.table('candidateStatuses')
+      const all = await table.toArray()
+      for (let i = 0; i < all.length; i++) {
+        const record = all[i] as { id?: number; color?: string }
+        if (!record.color && record.id != null) {
+          await table.update(record.id, { color: colors[i % colors.length] })
+        }
+      }
+    })
+    // v15: hub-level configurable properties (replaces candidateStatuses)
+    this.version(15).stores({
+      hubProperties: '++id, hubId, [hubId+order]',
+      pagePropertyValues: '++id, pageId, propertyId, [pageId+propertyId]',
+      candidateStatuses: null,
+    }).upgrade(async (tx) => {
+      const hubProps = tx.table('hubProperties')
+      const propValues = tx.table('pagePropertyValues')
+      const pages = tx.table('pages')
+      const oldStatuses = tx.table('candidateStatuses')
+
+      // Find candidate hub
+      const allPages = await pages.toArray() as Page[]
+      const candidateHub = allPages.find((p: Page) => p.role === 'candidate-hub')
+      if (!candidateHub?.id) return
+
+      // Read old statuses
+      const statuses = await oldStatuses.orderBy('order').toArray() as { id?: number; name: string; value: string; color?: string; order: number }[]
+      if (statuses.length === 0) return
+
+      // Create a "Status" hub property with all old status options
+      const defaultColors = ['#4A9AF5', '#3BB88E', '#9B7CE0', '#E07090', '#7B8FA6']
+      const options = statuses.map((s, i) => ({
+        value: s.value,
+        label: s.name,
+        color: s.color ?? defaultColors[i % defaultColors.length],
+      }))
+
+      const propertyId = await hubProps.add({
+        hubId: candidateHub.id,
+        name: 'Status',
+        type: 'select',
+        options,
+        order: 0,
+      })
+
+      // Migrate page candidateStatus values to pagePropertyValues
+      const candidates = allPages.filter((p: Page) => p.type === 'candidate')
+      for (const page of candidates) {
+        const statusValue = (page as unknown as { candidateStatus?: string }).candidateStatus ?? statuses[0].value
+        await propValues.add({
+          pageId: page.id!,
+          propertyId: propertyId as number,
+          value: statusValue,
+        })
+      }
+    })
+    // v16: no-op (reserved for future use)
+    this.version(16).stores({})
+    // v17: drop legacy dimensions table (feedback properties are now configured per-hub via PropertyEditor)
+    this.version(17).stores({
+      dimensions: null,
     })
   }
 }

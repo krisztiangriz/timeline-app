@@ -1,0 +1,29 @@
+.picker {
+  z-index: 9999;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  padding: var(--space-sm);
+  background: #FFFFFF;
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-sm);
+  box-shadow: 0px 2px 8px #5E6E8C33;
+}
+
+.swatch {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: border-color 0.1s;
+}
+
+.swatch:hover {
+  border-color: var(--color-text-tertiary);
+}
+
+.swatchActive {
+  composes: swatch;
+  border-color: var(--color-text-primary);
+}

@@ -4,7 +4,6 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding-bottom: var(--space-lg);
 }
 
 /* ---- Range toggle ---- */
@@ -219,14 +218,14 @@
 .formSection {
   display: flex;
   flex-direction: column;
-  gap: var(--space-sm);
 }
 
 .formLabel {
   font-size: var(--font-size-sm);
   line-height: var(--line-height-base);
-  font-weight: var(--font-weight-semibold);
+  font-weight: var(--font-weight-bold);
   color: var(--color-text-secondary);
+  padding-bottom: var(--space-xs);
 }
 
 .radioRow {

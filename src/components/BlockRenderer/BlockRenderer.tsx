@@ -74,9 +74,9 @@ function BlockList({ pageId, page, blocks, tabId }: {
             <div key={block.id} className={blockClass}>
               <TextBlock block={block} onUpdate={(content) => updateBlock(block.id!, { content })} onInsertComponent={(type) => handleInsertComponent(block.id!, type)}
                 onMentionClick={handleMentionClick} placeholder={hasContent ? '' : defaultPlaceholder} />
-            </div>
-          )
-        }
+    </div>
+  )
+}
 
         return (
           <div key={block.id} className={blockClass}>

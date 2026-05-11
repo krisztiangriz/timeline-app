@@ -1,18 +1,16 @@
-import React, { useState, memo } from 'react'
+import { useState, memo } from 'react'
 import { EmptyState } from '../EmptyState/EmptyState'
 import { CloseIcon } from '../Icons/Icons'
+import { RangeToggle, type RangeMonths } from '../RangeToggle/RangeToggle'
 import { ChartRenderer, DATA_SOURCE_LABELS } from './ChartRenderer'
 import { AddChartModal } from './AddChartModal'
 import { useChartConfigs, addChartConfig, updateChartConfig, deleteChartConfig } from '../../hooks/useChartConfigs'
 import { useAutocomplete } from '../../hooks/useAutocomplete'
-import { useAllEntries, useAllFeedbacks } from '../../hooks/useChartData'
-import { useDimensions } from '../../hooks/useDimensions'
-import type { ChartConfig, ChartDataSource, ChartType, ChartScope, TimelineEntry, Feedback, Page, Dimension } from '../../types'
+import { useAllEntries } from '../../hooks/useChartData'
+import { useLiveQuery } from 'dexie-react-hooks'
+import { db } from '../../db/database'
+import type { ChartConfig, ChartDataSource, ChartType, ChartScope, TimelineEntry, Page, HubProperty, PagePropertyValue, Feedback } from '../../types'
 import styles from './Charts.module.css'
-
-type RangeMonths = 3 | 6 | 12
-const RANGE_OPTIONS: RangeMonths[] = [3, 6, 12]
-const RANGE_LABELS: Record<RangeMonths, string> = { 3: '3M', 6: '6M', 12: '12M' }
 
 interface ConfigurableVizProps {
   blockId: number
@@ -23,11 +21,12 @@ export const ConfigurableViz = memo(function ConfigurableViz({ blockId, pageId }
   const configs = useChartConfigs(blockId)
   const { allPages } = useAutocomplete()
   const allEntries = useAllEntries()
-  const allFeedbacks = useAllFeedbacks()
-  const dimensions = useDimensions()
+  const allHubProperties = useLiveQuery(() => db.hubProperties.toArray(), []) ?? []
+  const allFeedbacks = useLiveQuery(() => db.feedbacks.toArray(), []) ?? []
+  const allPropertyValues = useLiveQuery(() => db.pagePropertyValues.toArray(), []) ?? []
   const [range, setRangeState] = useState<RangeMonths>(() => {
     const stored = localStorage.getItem(`viz-range-${blockId}`)
-    return stored === '3' ? 3 : stored === '6' ? 6 : 12
+    return stored === '0' ? 0 : stored === '3' ? 3 : stored === '6' ? 6 : 12
   })
   const [addOpen, setAddOpen] = useState(false)
   const [editing, setEditing] = useState<ChartConfig | undefined>()
@@ -37,16 +36,16 @@ export const ConfigurableViz = memo(function ConfigurableViz({ blockId, pageId }
     localStorage.setItem(`viz-range-${blockId}`, String(r))
   }
 
-  async function handleAdd(name: string, dataSource: ChartDataSource, chartType: ChartType, scopes?: ChartScope[]) {
-    await addChartConfig(blockId, name, dataSource, chartType, scopes)
+  async function handleAdd(name: string, dataSource: ChartDataSource, chartType: ChartType, scopes?: ChartScope[], propertyId?: number) {
+    try { await addChartConfig(blockId, name, dataSource, chartType, scopes, propertyId) } catch { /* DB error */ }
   }
 
-  async function handleUpdate(id: number, name: string, dataSource: ChartDataSource, chartType: ChartType, scopes?: ChartScope[]) {
-    await updateChartConfig(id, { name, dataSource, chartType, scopes })
+  async function handleUpdate(id: number, name: string, dataSource: ChartDataSource, chartType: ChartType, scopes?: ChartScope[], propertyId?: number) {
+    try { await updateChartConfig(id, { name, dataSource, chartType, scopes, propertyId }) } catch { /* DB error */ }
   }
 
   async function handleDelete(id: number) {
-    await deleteChartConfig(id)
+    try { await deleteChartConfig(id) } catch { /* DB error */ }
   }
 
   const rows = buildRows(configs)
@@ -55,19 +54,7 @@ export const ConfigurableViz = memo(function ConfigurableViz({ blockId, pageId }
     <div className={styles.vizPage}>
       {/* ---- Controls ---- */}
       <div className={styles.vizControls}>
-        <div className={styles.rangeToggle}>
-          {RANGE_OPTIONS.map((r, i) => (
-            <React.Fragment key={r}>
-              {i > 0 && <div className={styles.rangeSeparator} />}
-              <button
-                className={range === r ? styles.rangeButtonActive : styles.rangeButton}
-                onClick={() => setRange(r)}
-              >
-                {RANGE_LABELS[r]}
-              </button>
-            </React.Fragment>
-          ))}
-        </div>
+        <RangeToggle value={range} onChange={setRange} />
         <button className={styles.chartEditBtn} onClick={() => setAddOpen(true)} aria-label="Add chart">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
             <path d="M7.25 8.75V14H8.75V8.75H14V7.25H8.75V2H7.25V7.25H2V8.75H7.25Z" fill="currentColor" />
@@ -84,17 +71,17 @@ export const ConfigurableViz = memo(function ConfigurableViz({ blockId, pageId }
             return (
               <div key={`pair-${row.time!.id}`} className={styles.chartPair}>
                 <div className={styles.chartPairLeft}>
-                  <ChartCard config={row.time!} monthCount={range} entries={allEntries} feedbacks={allFeedbacks} pages={allPages} dimensions={dimensions} onEdit={setEditing} onDelete={handleDelete} />
+                  <ChartCard config={row.time!} monthCount={range} entries={allEntries} pages={allPages} hubProperties={allHubProperties} feedbacks={allFeedbacks} propertyValues={allPropertyValues} onEdit={setEditing} onDelete={handleDelete} />
                 </div>
                 <div className={styles.chartPairRight}>
-                  <ChartCard config={row.pie!} monthCount={range} entries={allEntries} feedbacks={allFeedbacks} pages={allPages} dimensions={dimensions} onEdit={setEditing} onDelete={handleDelete} isPie />
+                  <ChartCard config={row.pie!} monthCount={range} entries={allEntries} pages={allPages} hubProperties={allHubProperties} feedbacks={allFeedbacks} propertyValues={allPropertyValues} onEdit={setEditing} onDelete={handleDelete} isPie />
                 </div>
               </div>
             )
           }
           return (
             <div key={`single-${row.config!.id}`} className={styles.chartSection}>
-              <ChartCard config={row.config!} monthCount={range} entries={allEntries} feedbacks={allFeedbacks} pages={allPages} dimensions={dimensions} onEdit={setEditing} onDelete={handleDelete} />
+              <ChartCard config={row.config!} monthCount={range} entries={allEntries} pages={allPages} hubProperties={allHubProperties} feedbacks={allFeedbacks} propertyValues={allPropertyValues} onEdit={setEditing} onDelete={handleDelete} />
             </div>
           )
         })
@@ -119,19 +106,21 @@ const ChartCard = memo(function ChartCard({
   config,
   monthCount,
   entries,
-  feedbacks,
   pages,
-  dimensions,
+  hubProperties,
+  feedbacks,
+  propertyValues,
   onEdit,
   onDelete,
   isPie,
 }: {
   config: ChartConfig
-  monthCount: 3 | 6 | 12
+  monthCount: 0 | 3 | 6 | 12
   entries: TimelineEntry[]
-  feedbacks: Feedback[]
   pages: Page[]
-  dimensions: Dimension[]
+  hubProperties: HubProperty[]
+  feedbacks: Feedback[]
+  propertyValues: PagePropertyValue[]
   onEdit: (c: ChartConfig) => void
   onDelete: (id: number) => void
   isPie?: boolean
@@ -155,9 +144,10 @@ const ChartCard = memo(function ChartCard({
         config={config}
         monthCount={monthCount}
         entries={entries}
-        feedbacks={feedbacks}
         pages={pages}
-        dimensions={dimensions}
+        hubProperties={hubProperties}
+        feedbacks={feedbacks}
+        propertyValues={propertyValues}
         containerClass={isPie ? styles.chartContainerPie : styles.chartContainer}
       />
     </div>
@@ -172,7 +162,7 @@ function buildRows(configs: ChartConfig[]): ChartRow[] {
   const rows: ChartRow[] = []
   const used = new Set<number>()
 
-  const timeSources = new Set(['entry-count', 'feedback-sentiment'])
+  const timeSources = new Set(['entry-count', 'feedback-over-time'])
 
   for (const c of configs) {
     if (used.has(c.id!)) continue

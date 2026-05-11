@@ -1,15 +1,20 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { createPortal } from 'react-dom'
+import { useLiveQuery } from 'dexie-react-hooks'
+import { db } from '../../db/database'
 import { Modal } from '../Modal/Modal'
 import { DATA_SOURCE_LABELS, VALID_CHART_TYPES } from './ChartRenderer'
-import type { ChartDataSource, ChartType, ChartConfig, ChartScope, Page } from '../../types'
+import type { ChartDataSource, ChartType, ChartConfig, ChartScope, Page, HubProperty } from '../../types'
 import styles from './Charts.module.css'
 import radio from '../../styles/radio.module.css'
 
 const ALL_SOURCES: ChartDataSource[] = [
-  'entry-count', 'feedback-sentiment',
-  'feedback-by-dimension', 'candidate-status',
+  'entry-count',
   'page-count',
+  'feedback-by-type',
+  'feedback-by-dimension',
+  'feedback-over-time',
+  'feedback-per-page',
 ]
 
 const CHART_TYPE_LABELS: Record<ChartType, string> = {
@@ -78,9 +83,9 @@ function DropdownPanel({ anchorRef, children }: { anchorRef: React.RefObject<HTM
 interface AddChartModalProps {
   open: boolean
   onClose: () => void
-  onAdd: (name: string, dataSource: ChartDataSource, chartType: ChartType, scopes?: ChartScope[]) => void
+  onAdd: (name: string, dataSource: ChartDataSource, chartType: ChartType, scopes?: ChartScope[], propertyId?: number) => void
   editing?: ChartConfig
-  onUpdate?: (id: number, name: string, dataSource: ChartDataSource, chartType: ChartType, scopes?: ChartScope[]) => void
+  onUpdate?: (id: number, name: string, dataSource: ChartDataSource, chartType: ChartType, scopes?: ChartScope[], propertyId?: number) => void
   pageId: number
   allPages: Page[]
 }
@@ -90,6 +95,7 @@ export function AddChartModal({ open, onClose, onAdd, editing, onUpdate, pageId,
   const [scopes, setScopes] = useState<ChartScope[]>([])
   const [source, setSource] = useState<ChartDataSource>(editing?.dataSource ?? 'entry-count')
   const [type, setType] = useState<ChartType>(editing?.chartType ?? 'bar')
+  const [propertyId, setPropertyId] = useState<number | undefined>(editing?.propertyId)
   const [scopeOpen, setScopeOpen] = useState(false)
   const [sourceOpen, setSourceOpen] = useState(false)
   const prevOpen = useRef(false)
@@ -98,6 +104,10 @@ export function AddChartModal({ open, onClose, onAdd, editing, onUpdate, pageId,
   const sourceRef = useRef<HTMLDivElement>(null)
   const scopeTriggerRef = useRef<HTMLButtonElement>(null)
   const sourceTriggerRef = useRef<HTMLButtonElement>(null)
+
+  // Load all hub properties for the property picker
+  const allHubProperties = useLiveQuery(() => db.hubProperties.toArray(), []) ?? [] as HubProperty[]
+  const pageProperties = allHubProperties.filter((p: HubProperty) => !p.scope || p.scope === 'page')
 
   // Build scope options: grouped tree — "This page", main-timeline, hubs with children, standalone pages
   const scopeOptions = useMemo<ScopeOption[]>(() => {
@@ -168,6 +178,7 @@ export function AddChartModal({ open, onClose, onAdd, editing, onUpdate, pageId,
         setScopes(editing.scopes ?? [])
         setSource(editing.dataSource)
         setType(editing.chartType)
+        setPropertyId(editing.propertyId)
         userEditedName.current = true
       } else {
         setName(DATA_SOURCE_LABELS['entry-count'] ?? '')
@@ -178,6 +189,7 @@ export function AddChartModal({ open, onClose, onAdd, editing, onUpdate, pageId,
         setScopes(defaultScope)
         setSource('entry-count')
         setType('bar')
+        setPropertyId(undefined)
         userEditedName.current = false
       }
     }
@@ -187,9 +199,14 @@ export function AddChartModal({ open, onClose, onAdd, editing, onUpdate, pageId,
   // Auto-fill name from data source label when source changes (only if user hasn't customized it)
   useEffect(() => {
     if (!userEditedName.current) {
-      setName(DATA_SOURCE_LABELS[source] ?? '')
+      if (source === 'property-distribution' && propertyId) {
+        const prop = pageProperties.find((p: HubProperty) => p.id === propertyId)
+        setName(prop?.name ?? '')
+      } else {
+        setName(DATA_SOURCE_LABELS[source] ?? '')
+      }
     }
-  }, [source])
+  }, [source, propertyId, pageProperties])
 
   const validTypes = VALID_CHART_TYPES[source] ?? (['bar'] as ChartType[])
   const effectiveType = validTypes.includes(type) ? type : validTypes[0]
@@ -197,10 +214,11 @@ export function AddChartModal({ open, onClose, onAdd, editing, onUpdate, pageId,
   function handleConfirm() {
     const chartName = name.trim() || (DATA_SOURCE_LABELS[source] ?? 'Chart')
     const scopesValue = scopes.length > 0 ? scopes : undefined
+    const propId = source === 'property-distribution' ? propertyId : undefined
     if (editing && onUpdate) {
-      onUpdate(editing.id!, chartName, source, effectiveType, scopesValue)
+      onUpdate(editing.id!, chartName, source, effectiveType, scopesValue, propId)
     } else {
-      onAdd(chartName, source, effectiveType, scopesValue)
+      onAdd(chartName, source, effectiveType, scopesValue, propId)
     }
     onClose()
   }
@@ -261,7 +279,7 @@ export function AddChartModal({ open, onClose, onAdd, editing, onUpdate, pageId,
           </div>
         </div>
 
-        {/* Data source — single-select dropdown */}
+        {/* Data source — unified dropdown (built-in + hub properties) */}
         <div className={styles.formSection}>
           <span className={styles.formLabel}>Data source</span>
           <div className={styles.scopeDropdown} ref={sourceRef}>
@@ -271,7 +289,9 @@ export function AddChartModal({ open, onClose, onAdd, editing, onUpdate, pageId,
               type="button"
               ref={sourceTriggerRef}
             >
-              <span>{DATA_SOURCE_LABELS[source]}</span>
+              <span>{source === 'property-distribution'
+                ? (pageProperties.find((p: HubProperty) => p.id === propertyId)?.name ?? 'Select property...')
+                : DATA_SOURCE_LABELS[source]}</span>
               <svg className={sourceOpen ? styles.scopeChevronOpen : styles.scopeChevron} width="16" height="16" viewBox="0 0 24 24" fill="none">
                 <path d="M12 13.0729L7.42708 8.5L5.92708 10L12 16.0729L18.0729 10L16.5729 8.5L12 13.0729Z" fill="currentColor" />
               </svg>
@@ -282,16 +302,33 @@ export function AddChartModal({ open, onClose, onAdd, editing, onUpdate, pageId,
                   <button
                     key={s}
                     className={styles.scopeOption}
-                    onClick={() => { setSource(s); setSourceOpen(false) }}
+                    onClick={() => { setSource(s); setPropertyId(undefined); setSourceOpen(false) }}
                     type="button"
                   >
                     <div
                       className={styles.scopeRadio}
-                      data-checked={source === s}
+                      data-checked={source === s && !propertyId}
                     />
                     {DATA_SOURCE_LABELS[s]}
                   </button>
                 ))}
+                {pageProperties.length > 0 && pageProperties.map((prop: HubProperty) => {
+                  const hub = allPages.find((p) => p.id === prop.hubId)
+                  return (
+                    <button
+                      key={`prop-${prop.id}`}
+                      className={styles.scopeOption}
+                      onClick={() => { setSource('property-distribution'); setPropertyId(prop.id); setSourceOpen(false) }}
+                      type="button"
+                    >
+                      <div
+                        className={styles.scopeRadio}
+                        data-checked={source === 'property-distribution' && propertyId === prop.id}
+                      />
+                      {hub ? `${hub.name} — ${prop.name}` : prop.name}
+                    </button>
+                  )
+                })}
               </DropdownPanel>
             )}
           </div>

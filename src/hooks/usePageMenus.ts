@@ -28,7 +28,7 @@ export function usePageMenus({
   pageName,
   showToast,
 }: UsePageMenusOptions) {
-  const { setFeedbackOpen, setAddPageOpen, setSettingsOpen, setHelpOpen } = useModalContext()
+  const { setSettingsOpen, setHelpOpen } = useModalContext()
   const navigate = useNavigate()
 
   const handleDelete = useCallback(async () => {
@@ -39,16 +39,11 @@ export function usePageMenus({
     navigate(deleteRedirect)
   }, [pageId, deletePage, pageName, showToast, navigate, deleteRedirect])
 
-  const addMenuItems = useMemo<MenuEntry[]>(() => [
-    { type: 'item', label: 'Add feedback', onClick: () => setFeedbackOpen(true) },
-    { type: 'item', label: 'Add page', onClick: () => setAddPageOpen(true) },
-  ], [setFeedbackOpen, setAddPageOpen])
-
   const moreMenuItems = useMemo<MenuEntry[]>(() => {
     const items: MenuEntry[] = []
 
     if (onEditPage) {
-      items.push({ type: 'item', label: 'Edit page', onClick: onEditPage })
+      items.push({ type: 'item', label: 'Edit', onClick: onEditPage })
     }
 
     items.push({ type: 'item', label: 'Settings', onClick: () => setSettingsOpen(true) })
@@ -67,5 +62,5 @@ export function usePageMenus({
     return items
   }, [onEditPage, canArchive, onArchive, isArchived, canDelete, pageId, deletePage, handleDelete, setSettingsOpen, setHelpOpen])
 
-  return { addMenuItems, moreMenuItems }
+  return { moreMenuItems }
 }

@@ -1,17 +1,17 @@
 import { useStickyScroll } from '../../hooks/useStickyScroll'
-import { useClickOutside } from '../../hooks/useClickOutside'
-import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import { useParams } from 'react-router-dom'
 import { BreadcrumbNav } from '../../components/Breadcrumb/Breadcrumb'
 import { PageHeader } from '../../components/PageHeader/PageHeader'
 import { PageForm, type PageFormData } from '../../components/PageForm/PageForm'
 import { BlockRenderer } from '../../components/BlockRenderer/BlockRenderer'
+import { PropertyRow } from '../../components/PropertyRow/PropertyRow'
 import { usePage, usePageActions, usePageTabs, getPagePath, persistBlockEdits } from '../../hooks/usePages'
 import { useBlocks, useBlockActions } from '../../hooks/useBlocks'
 import { usePageMenus } from '../../hooks/usePageMenus'
 import { useAutocomplete } from '../../hooks/useAutocomplete'
 import { useToast } from '../../hooks/useToast'
-import { useCandidateStatuses } from '../../hooks/useCandidateStatuses'
+import { useHubPageProperties, usePagePropertyValues, setPagePropertyValue, getPagePropertyValue } from '../../hooks/useHubProperties'
 import layout from '../../styles/layout.module.css'
 import pd from '../../components/PageDetail/PageDetail.module.css'
 
@@ -34,21 +34,17 @@ export function DetailPage({ routePrefix }: DetailPageProps) {
   const allBlocks = useBlocks(pageId)
   const { deleteBlock } = useBlockActions()
 
-  // Candidate status dropdown state
-  const [statusOpen, setStatusOpen] = useState(false)
-  const statusRef = useRef<HTMLDivElement>(null)
-  const candidateStatuses = useCandidateStatuses()
+  // Hub properties
+  const parentHub = page?.parentId ? allPages.find((p) => p.id === page.parentId) : undefined
+  const hubProperties = useHubPageProperties(parentHub?.id)
+  const propertyValues = usePagePropertyValues(pageId)
 
   const tabIds = tabs.map(t => t.id).join(',')
   useEffect(() => {
     if (tabs.length > 0 && !tabs.some((t) => t.id === activeTabId)) setActiveTabId(tabs[0].id!)
     else if (tabs.length === 0) setActiveTabId(null)
-  }, [tabIds, activeTabId]) // eslint-disable-line react-hooks/exhaustive-deps — tabs is derived from tabIds in the same render; using the string avoids re-runs on every Dexie live query emission
+  }, [tabIds, activeTabId]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Close status dropdown on outside click
-  useClickOutside(statusRef, () => setStatusOpen(false), statusOpen)
-
-  const parentHub = page?.parentId ? allPages.find((p) => p.id === page.parentId) : undefined
   const hubPath = parentHub ? getPagePath(parentHub, allPages) : '/'
   const pagePath = routePrefix ? `/${routePrefix}/${page?.id}` : `/page/${page?.id}`
 
@@ -59,9 +55,6 @@ export function DetailPage({ routePrefix }: DetailPageProps) {
   const canDelete = !page?.role
   const isMainTimeline = page?.role === 'main-timeline'
   const canArchive = !isMainTimeline
-  const isCandidate = page?.type === 'candidate'
-  const defaultStatus = candidateStatuses[0]?.value ?? 'active'
-  const currentStatus = candidateStatuses.find((s) => s.value === (page?.candidateStatus ?? defaultStatus))
 
   const handleArchive = useCallback(async () => {
     if (!pageId || !page) return
@@ -74,7 +67,7 @@ export function DetailPage({ routePrefix }: DetailPageProps) {
     }
   }, [pageId, page, archivePage, unarchivePage, showToast])
 
-  const { addMenuItems, moreMenuItems } = usePageMenus({
+  const { moreMenuItems } = usePageMenus({
     pageId, canDelete, canArchive, isArchived: !!page?.archived,
     deleteRedirect: hubPath,
     onEditPage: isMainTimeline ? undefined : () => setEditPageOpen(true),
@@ -98,10 +91,14 @@ export function DetailPage({ routePrefix }: DetailPageProps) {
 
   async function handleEditSubmit(data: PageFormData) {
     if (!pageId) return
-    await updatePage(pageId, { name: data.name, mentionTrigger: data.mentionTrigger, mentionCollapsed: data.mentionCollapsed })
-    await updateTabs(pageId, data.tabs)
-    await persistBlockEdits(data.blockOrder, data.deletedBlockIds, deleteBlock)
-    setEditPageOpen(false); showToast('Page updated')
+    try {
+      await updatePage(pageId, { name: data.name, mentionTrigger: data.mentionTrigger, mentionCollapsed: data.mentionCollapsed })
+      await updateTabs(pageId, data.tabs)
+      await persistBlockEdits(data.blockOrder, data.deletedBlockIds, deleteBlock)
+      setEditPageOpen(false); showToast('Page updated')
+    } catch {
+      showToast('Failed to update page')
+    }
   }
 
   if (!page) return null
@@ -111,40 +108,43 @@ export function DetailPage({ routePrefix }: DetailPageProps) {
       <div className={layout.contentPadded}>
         <div ref={sentinelRef} />
         <div className={isScrolled ? layout.stickyHeaderScrolled : layout.stickyHeader}>
-          <BreadcrumbNav items={[{ label: 'Home', path: '/' }, ...(parentHub ? [{ label: parentHub.name, path: hubPath }] : []), { label: page.name, path: pagePath }]} addMenuItems={addMenuItems} moreMenuItems={moreMenuItems} />
-          {isCandidate ? (
-            <div className={pd.titleRow}>
-              <PageHeader name={page.name} onUpdateName={(name) => updatePage(pageId!, { name })} tabs={tabs} activeTabId={activeTabId} onTabChange={setActiveTabId} />
-              <div className={pd.statusDropdown} ref={statusRef}>
-                <button className={pd.statusButton} onClick={() => setStatusOpen((v) => !v)}>
-                  {currentStatus?.name ?? candidateStatuses[0]?.name ?? 'Active'}
-                  <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-                    <path d="M9 10.5547L5.57031 7.125L4.44531 8.25L9 12.8047L13.5547 8.25L12.4297 7.125L9 10.5547Z" fill="currentColor" fillOpacity="0.7" />
-                  </svg>
-                </button>
-                {statusOpen && (
-                  <div className={pd.statusMenu}>
-                    {candidateStatuses.map((status) => (
-                      <button
-                        key={status.value}
-                        className={pd.statusMenuItem}
-                        data-active={status.value === (page.candidateStatus ?? defaultStatus) || undefined}
-                        onClick={() => { updatePage(pageId!, { candidateStatus: status.value }); setStatusOpen(false) }}
-                      >
-                        {status.name}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
+          <BreadcrumbNav items={[{ label: 'Home', path: '/' }, ...(parentHub ? [{ label: parentHub.name, path: hubPath }] : []), { label: page.name, path: pagePath }]} moreMenuItems={moreMenuItems} />
+          {hubProperties.length === 1 ? (
+            <PageHeader
+              name={page.name}
+              onUpdateName={(name) => updatePage(pageId!, { name })}
+              tabs={tabs}
+              activeTabId={activeTabId}
+              onTabChange={setActiveTabId}
+              actions={
+                <PropertyRow
+                  property={hubProperties[0]}
+                  value={getPagePropertyValue(propertyValues, hubProperties[0].id!)}
+                  onChange={(value) => setPagePropertyValue(pageId!, hubProperties[0].id!, value)}
+                />
+              }
+            />
           ) : (
-            <PageHeader name={page.name} onUpdateName={(name) => updatePage(pageId!, { name })} tabs={tabs} activeTabId={activeTabId} onTabChange={setActiveTabId} readOnly={isMainTimeline} />
+            <>
+              <PageHeader name={page.name} onUpdateName={(name) => updatePage(pageId!, { name })} tabs={tabs} activeTabId={activeTabId} onTabChange={setActiveTabId} />
+              {hubProperties.length > 1 && (
+                <div className={pd.propertyRow}>
+                  {hubProperties.map((prop) => (
+                    <PropertyRow
+                      key={prop.id}
+                      property={prop}
+                      value={getPagePropertyValue(propertyValues, prop.id!)}
+                      onChange={(value) => setPagePropertyValue(pageId!, prop.id!, value)}
+                    />
+                  ))}
+                </div>
+              )}
+            </>
           )}
         </div>
         <BlockRenderer page={page} activeTabId={activeTabId} />
       </div>
-      <PageForm open={editPageOpen} onClose={() => setEditPageOpen(false)} onSubmit={handleEditSubmit} initial={editInitial} isEdit protectedTabCount={protectedTabCount} />
+      <PageForm open={editPageOpen} onClose={() => setEditPageOpen(false)} onSubmit={handleEditSubmit} initial={editInitial} isEdit isHub={page.type === 'hub' || undefined} hubId={page.type === 'hub' ? page.id : undefined} protectedTabCount={protectedTabCount} />
     </div>
   )
 }

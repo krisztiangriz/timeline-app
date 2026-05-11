@@ -3,9 +3,91 @@
 .feedbackList {
   display: flex;
   flex-direction: column;
-  gap: var(--space-md);
+  gap: var(--space-sm);
   align-self: stretch;
 }
+
+.feedbackListHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.feedbackAddButton {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-secondary);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.feedbackAddButton:hover {
+  background: var(--color-border-light);
+}
+
+/* ---- Feedback modal ---- */
+
+.feedbackModalSection {
+  display: flex;
+  flex-direction: column;
+}
+
+.feedbackModalLabel {
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-base);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-secondary);
+  padding-bottom: var(--space-xs);
+}
+
+.feedbackModalOptions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-lg);
+}
+
+.feedbackModalOptionsVertical {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.feedbackModalTextarea {
+  width: 100%;
+  min-height: 80px;
+  padding: var(--space-sm);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-base);
+  font-family: var(--font-family);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: var(--color-input-bg);
+  resize: none;
+}
+
+.feedbackModalTextarea:focus {
+  border-color: var(--color-input-border);
+  outline: none;
+}
+
+.feedbackRichInput {
+  min-height: 32px;
+  padding: var(--space-xs) var(--space-sm);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-base);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: var(--color-input-bg);
+}
+
+.feedbackRichInput:focus-within {
+  border-color: var(--color-input-border);
+}
+
+/* ---- Feedback items ---- */
 
 .feedbackItem {
   display: flex;
@@ -20,29 +102,6 @@
   gap: var(--space-sm);
   font-size: var(--font-size-sm);
   line-height: var(--line-height-base);
-}
-
-.feedbackIndicator {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  flex-shrink: 0;
-  margin-left: auto;
-}
-
-.feedbackIndicatorPositive {
-  composes: feedbackIndicator;
-  background: var(--color-accent-green);
-}
-
-.feedbackIndicatorNeutral {
-  composes: feedbackIndicator;
-  background: var(--color-surface-hover);
-}
-
-.feedbackIndicatorNegative {
-  composes: feedbackIndicator;
-  background: var(--color-negative);
 }
 
 .feedbackDimension {
@@ -74,117 +133,31 @@
 }
 
 .feedbackDeleteButton {
-  width: 24px;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--color-text-tertiary);
-  border-radius: var(--radius-sm);
-  flex-shrink: 0;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-placeholder);
+  white-space: nowrap;
+  margin-left: auto;
   opacity: 0;
-  transition: opacity 0.1s;
+  pointer-events: none;
+  cursor: pointer;
 }
 
 .feedbackItem:hover .feedbackDeleteButton {
   opacity: 1;
+  pointer-events: auto;
 }
 
 .feedbackDeleteButton:hover {
   color: var(--color-negative);
 }
 
-.feedbackEditTextarea {
-  font-size: var(--font-size-base);
-  line-height: var(--line-height-base);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-text-primary);
-  font-family: inherit;
-  width: 100%;
-  min-height: 48px;
-  padding: var(--space-xs) var(--space-sm);
-  border: 1px solid var(--color-input-border);
-  border-radius: var(--radius-sm);
-  background: var(--color-input-bg);
-  resize: vertical;
-  white-space: pre-wrap;
-}
+/* ---- Hub property row (compact metadata) ---- */
 
-.feedbackEditTextarea:focus {
-  outline: none;
-  border-color: var(--color-text-body);
-}
-
-/* ---- Candidate status ---- */
-
-.titleRow {
+.propertyRow {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-}
-
-.statusDropdown {
-  position: relative;
-}
-
-.statusButton {
-  display: flex;
-  align-items: center;
+  flex-wrap: wrap;
   gap: var(--space-xs);
-  font-size: var(--font-size-sm);
-  line-height: var(--line-height-sm);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-text-secondary);
-  padding: var(--space-xs) var(--space-sm);
-  border-radius: var(--radius-sm);
-  height: 32px;
-  cursor: pointer;
-}
-
-.statusButton:hover {
-  background: var(--color-surface-hover);
-  color: var(--color-text-primary);
-}
-
-.statusMenu {
-  position: absolute;
-  top: 100%;
-  right: 0;
-  z-index: 200;
-  display: flex;
-  flex-direction: column;
-  min-width: 140px;
-  padding: var(--space-sm) var(--space-md);
-  background: var(--color-surface);
-  border-radius: var(--radius-lg);
-  box-shadow: 0px 2px 8px var(--color-shadow);
-  animation: statusMenuIn 0.12s ease-out;
-}
-
-.statusMenuItem {
-  display: flex;
-  align-items: center;
-  height: 32px;
-  font-size: var(--font-size-base);
-  line-height: var(--line-height-base);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-text-secondary);
-  text-align: left;
-  white-space: nowrap;
-  cursor: pointer;
-}
-
-.statusMenuItem:hover {
-  color: var(--color-text-primary);
-}
-
-.statusMenuItem[data-active] {
-  color: var(--color-text-primary);
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-
-@keyframes statusMenuIn {
-  from { opacity: 0; transform: translateY(-4px); }
-  to { opacity: 1; transform: translateY(0); }
+  padding-bottom: var(--space-sm);
 }

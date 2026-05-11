@@ -1,7 +1,6 @@
 .section {
   display: flex;
   flex-direction: column;
-  gap: var(--space-xs);
 }
 
 .checkboxRow {
@@ -102,6 +101,32 @@
   color: var(--color-text-placeholder);
   font-style: italic;
   padding: var(--space-xs) 0;
+}
+
+.colorSwatchWrapper {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.paletteRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  padding: var(--space-xs) 0;
+}
+
+.colorSwatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: border-color 0.1s;
+}
+
+.colorSwatch:hover {
+  border-color: var(--color-text-tertiary);
 }
 
 .listItem {

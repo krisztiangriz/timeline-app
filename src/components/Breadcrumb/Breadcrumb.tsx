@@ -8,22 +8,25 @@ import styles from './Breadcrumb.module.css'
 
 interface BreadcrumbNavProps {
   items: BreadcrumbItem[]
-  addMenuItems?: MenuEntry[]
   moreMenuItems?: MenuEntry[]
 }
 
 export function BreadcrumbNav({
   items,
-  addMenuItems,
   moreMenuItems,
 }: BreadcrumbNavProps) {
-  const { searchOpen, setSearchOpen, setAddPageOpen } = useModalContext()
+  const { searchOpen, setSearchOpen, setAddPageOpen, setFeedbackOpen } = useModalContext()
 
   const addTrigger = (
     <button className={styles.actionButton} aria-label="Add">
       <PlusIcon />
     </button>
   )
+
+  const addMenuItems: MenuEntry[] = [
+    { type: 'item', label: 'Add page', onClick: () => setAddPageOpen(true) },
+    { type: 'item', label: 'Add feedback', onClick: () => setFeedbackOpen(true) },
+  ]
 
   const moreTrigger = (
     <button className={styles.actionButton} aria-label="More">
@@ -76,9 +79,7 @@ export function BreadcrumbNav({
       )}
 
       <div className={styles.actions}>
-        {addMenuItems && addMenuItems.length > 0 && (
-          <ContextMenu items={addMenuItems} trigger={addTrigger} />
-        )}
+        <ContextMenu items={addMenuItems} trigger={addTrigger} />
 
         {moreMenuItems && moreMenuItems.length > 0 && (
           <ContextMenu items={moreMenuItems} trigger={moreTrigger} />

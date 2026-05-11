@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, Fragment } from 'react'
+import { useState, useRef, useEffect, Fragment, type ReactNode } from 'react'
 import type { Tab } from '../../types'
 import styles from './PageHeader.module.css'
 
@@ -10,6 +10,8 @@ interface PageHeaderProps {
   onTabChange?: (tabId: number) => void
   /** If true, title is not editable (e.g., Home page) */
   readOnly?: boolean
+  /** Optional actions rendered to the right of the title */
+  actions?: ReactNode
 }
 
 export function PageHeader({
@@ -19,6 +21,7 @@ export function PageHeader({
   activeTabId,
   onTabChange,
   readOnly = false,
+  actions,
 }: PageHeaderProps) {
   const [editing, setEditing] = useState(false)
   const [editValue, setEditValue] = useState(name)
@@ -44,28 +47,31 @@ export function PageHeader({
   }
 
   return (
-    <>
-      {editing && !readOnly ? (
-        <input
-          ref={inputRef}
-          className={styles.titleInput}
-          value={editValue}
-          onChange={(e) => setEditValue(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') handleSave()
-            if (e.key === 'Escape') { setEditValue(name); setEditing(false) }
-          }}
-          onBlur={handleSave}
-        />
-      ) : (
-        <div
-          className={styles.title}
-          onClick={readOnly ? undefined : () => setEditing(true)}
-          style={{ cursor: readOnly ? 'default' : 'text' }}
-        >
-          {name}
-        </div>
-      )}
+    <div className={styles.header}>
+      <div className={styles.titleRow}>
+        {editing && !readOnly ? (
+          <input
+            ref={inputRef}
+            className={styles.titleInput}
+            value={editValue}
+            onChange={(e) => setEditValue(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') handleSave()
+              if (e.key === 'Escape') { setEditValue(name); setEditing(false) }
+            }}
+            onBlur={handleSave}
+          />
+        ) : (
+          <div
+            className={styles.title}
+            onClick={readOnly ? undefined : () => setEditing(true)}
+            style={{ cursor: readOnly ? 'default' : 'text' }}
+          >
+            {name}
+          </div>
+        )}
+        {actions && <div className={styles.actions}>{actions}</div>}
+      </div>
 
       {tabs.length > 0 && (
         <div className={styles.tabGroup}>
@@ -82,6 +88,6 @@ export function PageHeader({
           ))}
         </div>
       )}
-    </>
+    </div>
   )
 }

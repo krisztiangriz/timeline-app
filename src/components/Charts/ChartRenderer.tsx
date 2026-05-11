@@ -4,19 +4,20 @@ import {
   PieChart, Pie, Cell, Legend, LineChart, Line, AreaChart, Area,
 } from 'recharts'
 import {
-  filterEntriesByScopes, filterFeedbacksByScopes,
+  filterEntriesByScopes,
   useEntryCount,
-  useCandidatesByStatus, getStatusColor,
-  useFeedbackByMonth, useFeedbackSummary,
-  useDimensionDistribution,
+  usePagesByProperty,
   usePageCount,
   getColor,
 } from '../../hooks/useChartData'
-import { useCandidateStatuses } from '../../hooks/useCandidateStatuses'
-import type { ChartConfig, ChartScope, ChartDataSource, ChartType, TimelineEntry, Feedback, Page, Dimension } from '../../types'
+import { useChartPalette } from '../../hooks/useChartPalette'
+import { EmptyState } from '../EmptyState/EmptyState'
+import type { ChartConfig, ChartScope, ChartDataSource, ChartType, TimelineEntry, Page } from '../../types'
 import styles from './Charts.module.css'
 
 // ---- Shared constants ----
+
+const EMPTY_SCOPES: ChartScope[] = []
 
 function cellLegend(items: { name: string; color: string }[]) {
   return () => (
@@ -55,20 +56,15 @@ const tooltipStyle: React.CSSProperties = {
   border: 'none', padding: '8px 12px', fontSize: 12, lineHeight: '20px', color: '#5E6E8C',
 }
 const tooltipLabelStyle: React.CSSProperties = { color: '#334055', fontWeight: 600, fontSize: 12 }
-const FEEDBACK_COLORS: Record<string, string> = { Positive: '#45C9A1', Neutral: '#ECF1F9', Negative: '#FF6363' }
-const FEEDBACK_NEUTRAL_STROKE = '#B8C5DB'
-const FEEDBACK_TOOLTIP_ORDER: Record<string, number> = { Positive: 0, Neutral: 1, Negative: 2 }
-const feedbackTooltipSorter = (a: { dataKey?: unknown }) => FEEDBACK_TOOLTIP_ORDER[String(a.dataKey)] ?? 9
 const FALLBACK_COLOR = '#B8C5DB'
 
 /** Use grey for single-series charts, color palette for 2+ series */
-function getSeriesColor(index: number, total: number) {
-  return total < 2 ? FALLBACK_COLOR : getColor(index, total)
+function getSeriesColor(index: number, total: number, palette: string[]) {
+  return total < 2 ? FALLBACK_COLOR : getColor(index, palette)
 }
 
 const cursorStyle = { fill: '#ECF1F9', stroke: '#ECF1F9' }
 const TP = { contentStyle: tooltipStyle, labelStyle: tooltipLabelStyle, cursor: cursorStyle, wrapperStyle: { zIndex: 1000 } }
-const TPfb = { ...TP, itemSorter: feedbackTooltipSorter }
 const axisStroke = '#B8C5DB'
 const tickStyle = { fontSize: 10, fill: '#485670' }
 const legendStyle: React.CSSProperties = { fontSize: 10, color: '#485670', paddingTop: 4 }
@@ -77,29 +73,36 @@ const legendStyle: React.CSSProperties = { fontSize: 10, color: '#485670', paddi
 
 export const DATA_SOURCE_LABELS: Record<string, string> = {
   'entry-count': 'Entry count',
-  'feedback-sentiment': 'Feedback sentiment',
-  'feedback-by-dimension': 'Feedback by dimension',
-  'candidate-status': 'Candidate status',
+  'property-distribution': 'Property distribution',
   'page-count': 'Page count',
+  'feedback-by-type': 'Feedback by type',
+  'feedback-by-dimension': 'Feedback by dimension',
+  'feedback-over-time': 'Feedback over time',
+  'feedback-per-page': 'Feedback per page',
 }
 
 export const VALID_CHART_TYPES: Record<ChartDataSource, ChartType[]> = {
   'entry-count': ['bar', 'line', 'area', 'pie'],
-  'feedback-sentiment': ['bar', 'line', 'area', 'pie'],
-  'feedback-by-dimension': ['bar', 'pie'],
-  'candidate-status': ['bar'],
+  'property-distribution': ['bar', 'pie'],
   'page-count': ['bar', 'line', 'area'],
+  'feedback-by-type': ['bar', 'pie'],
+  'feedback-by-dimension': ['bar', 'pie'],
+  'feedback-over-time': ['bar', 'line', 'area'],
+  'feedback-per-page': ['bar', 'pie'],
 }
 
 // ---- Shared props interface ----
 
+import type { HubProperty, PagePropertyValue, Feedback } from '../../types'
+
 export interface ChartRendererProps {
   config: ChartConfig
-  monthCount?: 3 | 6 | 12
+  monthCount?: 0 | 3 | 6 | 12
   entries: TimelineEntry[]
-  feedbacks: Feedback[]
   pages: Page[]
-  dimensions: Dimension[]
+  hubProperties: HubProperty[]
+  feedbacks: Feedback[]
+  propertyValues: PagePropertyValue[]
   containerClass?: string
 }
 
@@ -108,20 +111,20 @@ export interface ChartRendererProps {
 export function ChartRenderer(props: ChartRendererProps) {
   switch (props.config.dataSource) {
     case 'entry-count': return <EntryCountChart {...props} />
-    case 'candidate-status': return <CandidateStatusChart {...props} />
-    case 'feedback-sentiment': return <FeedbackSentimentChart {...props} />
-    case 'feedback-by-dimension': return <FeedbackDimensionChart {...props} />
+    case 'property-distribution': return <PropertyDistributionChart {...props} />
     case 'page-count': return <PageCountChart {...props} />
+    case 'feedback-by-type': return <FeedbackByTypeChart {...props} />
+    case 'feedback-by-dimension': return <FeedbackByDimensionChart {...props} />
+    case 'feedback-over-time': return <FeedbackOverTimeChart {...props} />
+    case 'feedback-per-page': return <FeedbackPerPageChart {...props} />
     default: return null
   }
 }
 
 // ---- Helper: scope-filtered data ----
 
-function useScopedData(entries: TimelineEntry[], feedbacks: Feedback[], pages: Page[], scopes: ChartScope[]) {
-  const scopedEntries = useMemo(() => filterEntriesByScopes(entries, scopes, pages), [entries, scopes, pages])
-  const scopedFeedbacks = useMemo(() => filterFeedbacksByScopes(feedbacks, scopes, pages), [feedbacks, scopes, pages])
-  return { scopedEntries, scopedFeedbacks }
+function useScopedEntries(entries: TimelineEntry[], pages: Page[], scopes: ChartScope[]) {
+  return useMemo(() => filterEntriesByScopes(entries, scopes, pages), [entries, scopes, pages])
 }
 
 function useContainerClass(config: ChartConfig, containerClass?: string) {
@@ -162,18 +165,19 @@ function DonutWithLabels({ data, colorFn, containerClass, tooltipProps }: {
 // ---- Per-source chart components ----
 
 function EntryCountChart({ config, monthCount = 12, entries, pages, containerClass }: ChartRendererProps) {
-  const scopes = config.scopes ?? []
-  const { scopedEntries } = useScopedData(entries, [], pages, scopes)
+  const scopes = config.scopes ?? EMPTY_SCOPES
+  const scopedEntries = useScopedEntries(entries, pages, scopes)
   const data = useEntryCount(scopedEntries, pages, scopes, monthCount)
   const cls = useContainerClass(config, containerClass)
   const { chartType } = config
+  const { palette } = useChartPalette()
 
   return (
     <ChartContainer className={cls}>
       {chartType === 'pie' ? (
         <DonutWithLabels
           data={data.summary}
-          colorFn={(i) => getColor(i, data.summary.length)}
+          colorFn={(i) => getColor(i, palette)}
           containerClass={cls}
           tooltipProps={TP}
         />
@@ -188,9 +192,9 @@ function EntryCountChart({ config, monthCount = 12, entries, pages, containerCla
               <Tooltip {...TP} />
               {total > 1 && <Legend iconType="circle" iconSize={8} wrapperStyle={legendStyle} />}
               {data.keys.map((key, i) =>
-                chartType === 'line' ? <Line key={key} type="monotone" dataKey={key} stroke={getSeriesColor(i, total)} strokeWidth={2} dot={false} />
-                : chartType === 'area' ? <Area key={key} type="monotone" dataKey={key} stackId="s" fill={getSeriesColor(i, total)} stroke={getSeriesColor(i, total)} fillOpacity={0.6} />
-                : <Bar key={key} dataKey={key} stackId="s" fill={getSeriesColor(i, total)} />
+                chartType === 'line' ? <Line key={key} type="monotone" dataKey={key} stroke={getSeriesColor(i, total, palette)} strokeWidth={2} dot={false} />
+                : chartType === 'area' ? <Area key={key} type="monotone" dataKey={key} stackId="s" fill={getSeriesColor(i, total, palette)} stroke={getSeriesColor(i, total, palette)} fillOpacity={0.6} />
+                : <Bar key={key} dataKey={key} stackId="s" fill={getSeriesColor(i, total, palette)} />
               )}
             </ChartComp>
           )
@@ -201,10 +205,36 @@ function EntryCountChart({ config, monthCount = 12, entries, pages, containerCla
   )
 }
 
-function CandidateStatusChart({ config, pages, containerClass }: ChartRendererProps) {
-  const statuses = useCandidateStatuses()
-  const data = useCandidatesByStatus(pages, statuses)
+function PropertyDistributionChart({ config, pages, hubProperties, propertyValues, containerClass }: ChartRendererProps) {
+  const candidateHub = pages.find((p) => p.role === 'candidate-hub')
+  const { palette } = useChartPalette()
+
+  const statusProperty = config.propertyId
+    ? hubProperties.find((p) => p.id === config.propertyId)
+    : hubProperties.find((p) => p.hubId === candidateHub?.id && (!p.scope || p.scope === 'page'))
+
+  const data = usePagesByProperty(pages, statusProperty, propertyValues)
   const cls = useContainerClass(config, containerClass)
+  const { chartType } = config
+
+  if (!statusProperty) {
+    return (
+      <ChartContainer className={cls}>
+        <EmptyState compact message="No property selected" />
+    </ChartContainer>
+    )
+  }
+
+  if (chartType === 'pie') {
+    return (
+      <DonutWithLabels
+        data={data}
+        colorFn={(i) => data[i]?.color ?? getColor(i, palette)}
+        containerClass={cls}
+        tooltipProps={TP}
+      />
+    )
+  }
 
   return (
     <ChartContainer className={cls}>
@@ -212,9 +242,9 @@ function CandidateStatusChart({ config, pages, containerClass }: ChartRendererPr
         <BarChart data={data}>
           <XAxis dataKey="name" tick={tickStyle} stroke={axisStroke} interval={0} />
           <Tooltip {...TP} />
-          {data.length > 1 && <Legend content={cellLegend(data.map((s, i) => ({ name: s.name, color: getStatusColor(i) })))} />}
+          {data.length > 1 && <Legend content={cellLegend(data.map((s) => ({ name: s.name, color: s.color })))} />}
           <Bar dataKey="value">
-            {data.map((s, i) => <Cell key={s.name || i} fill={getStatusColor(i)} />)}
+            {data.map((s, i) => <Cell key={s.name || i} fill={s.color} />)}
           </Bar>
         </BarChart>
       </ResponsiveContainer>
@@ -222,126 +252,244 @@ function CandidateStatusChart({ config, pages, containerClass }: ChartRendererPr
   )
 }
 
-function FeedbackSentimentChart({ config, monthCount = 12, feedbacks, pages, containerClass }: ChartRendererProps) {
-  const scopes = config.scopes ?? []
-  const { scopedFeedbacks } = useScopedData([], feedbacks, pages, scopes)
-  const byMonth = useFeedbackByMonth(scopedFeedbacks, monthCount)
-  const summary = useFeedbackSummary(scopedFeedbacks, monthCount)
+// ---- Feedback chart helpers ----
+
+function useScopedFeedbacks(allFeedbacks: Feedback[], pages: Page[], scopes: ChartScope[]) {
+  return useMemo(() => {
+    if (scopes.length === 0) return allFeedbacks
+    const pageIds = new Set<number>()
+    for (const s of scopes) {
+      if (s.type === 'page') pageIds.add(s.pageId)
+      if (s.type === 'hub') {
+        for (const p of pages) { if (p.parentId === s.hubId) pageIds.add(p.id!) }
+      }
+    }
+    return pageIds.size > 0 ? allFeedbacks.filter((f) => pageIds.has(f.subjectId)) : allFeedbacks
+  }, [allFeedbacks, pages, scopes])
+}
+
+function useHubFromScopes(pages: Page[], scopes: ChartScope[]) {
+  return useMemo(() => {
+    for (const s of scopes) {
+      if (s.type === 'hub') return pages.find((p) => p.id === s.hubId)
+      if (s.type === 'page') {
+        const page = pages.find((p) => p.id === s.pageId)
+        if (page?.type === 'hub') return page
+        if (page?.parentId) return pages.find((p) => p.id === page.parentId)
+      }
+    }
+    return undefined
+  }, [pages, scopes])
+}
+
+// ---- Feedback by type (1st property) ----
+
+function FeedbackByTypeChart({ config, pages, hubProperties, feedbacks, containerClass }: ChartRendererProps) {
+  const scopes = config.scopes ?? EMPTY_SCOPES
+  const scopedFeedbacks = useScopedFeedbacks(feedbacks, pages, scopes)
+  const hub = useHubFromScopes(pages, scopes)
+  const typeProp = hubProperties.find((p) => p.hubId === hub?.id && p.scope === 'feedback')
   const cls = useContainerClass(config, containerClass)
+
+  const data = useMemo(() => {
+    if (!typeProp) return []
+    const counts = new Map<string, number>()
+    for (const f of scopedFeedbacks) counts.set(f.type, (counts.get(f.type) || 0) + 1)
+    return typeProp.options
+      .map((opt) => ({ name: opt.label, value: counts.get(opt.value) || 0, color: opt.color ?? '#7B8FA6' }))
+      .filter((d) => d.value > 0)
+  }, [scopedFeedbacks, typeProp])
+
+  if (data.length === 0) return <ChartContainer className={cls}><EmptyState compact message="No feedback data" /></ChartContainer>
+
+  if (config.chartType === 'pie') {
+    return <DonutWithLabels data={data} colorFn={(i) => data[i]?.color ?? '#7B8FA6'} containerClass={cls} tooltipProps={TP} />
+  }
+
+  return (
+    <ChartContainer className={cls}>
+      <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+        <BarChart data={data}>
+          <XAxis dataKey="name" tick={tickStyle} stroke={axisStroke} interval={0} />
+          <Tooltip {...TP} />
+          <Bar dataKey="value">
+            {data.map((d, i) => <Cell key={i} fill={d.color} />)}
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+    </ChartContainer>
+  )
+}
+
+// ---- Feedback by dimension (2nd property) ----
+
+function FeedbackByDimensionChart({ config, pages, hubProperties, feedbacks, containerClass }: ChartRendererProps) {
+  const scopes = config.scopes ?? EMPTY_SCOPES
+  const scopedFeedbacks = useScopedFeedbacks(feedbacks, pages, scopes)
+  const hub = useHubFromScopes(pages, scopes)
+  const fbProps = hubProperties.filter((p) => p.hubId === hub?.id && p.scope === 'feedback')
+  const dimProp = fbProps[1] // second feedback property
+  const cls = useContainerClass(config, containerClass)
+
+  const data = useMemo(() => {
+    if (!dimProp) return []
+    const counts = new Map<string, number>()
+    for (const f of scopedFeedbacks) {
+      if (f.dimensionId) counts.set(String(f.dimensionId), (counts.get(String(f.dimensionId)) || 0) + 1)
+    }
+    return dimProp.options
+      .map((opt) => ({ name: opt.label, value: counts.get(opt.value) || 0, color: opt.color ?? '#7B8FA6' }))
+      .filter((d) => d.value > 0)
+  }, [scopedFeedbacks, dimProp])
+
+  if (data.length === 0) return <ChartContainer className={cls}><EmptyState compact message="No feedback data" /></ChartContainer>
+
+  if (config.chartType === 'pie') {
+    return <DonutWithLabels data={data} colorFn={(i) => data[i]?.color ?? '#7B8FA6'} containerClass={cls} tooltipProps={TP} />
+  }
+
+  return (
+    <ChartContainer className={cls}>
+      <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+        <BarChart data={data}>
+          <XAxis dataKey="name" tick={tickStyle} stroke={axisStroke} interval={0} />
+          <Tooltip {...TP} />
+          <Bar dataKey="value">
+            {data.map((d, i) => <Cell key={i} fill={d.color} />)}
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+    </ChartContainer>
+  )
+}
+
+// ---- Feedback over time (trend, broken down by 1st property) ----
+
+function FeedbackOverTimeChart({ config, monthCount = 12, pages, hubProperties, feedbacks, containerClass }: ChartRendererProps) {
+  const scopes = config.scopes ?? EMPTY_SCOPES
+  const scopedFeedbacks = useScopedFeedbacks(feedbacks, pages, scopes)
+  const hub = useHubFromScopes(pages, scopes)
+  const typeProp = hubProperties.find((p) => p.hubId === hub?.id && p.scope === 'feedback')
+  const cls = useContainerClass(config, containerClass)
+  const { palette } = useChartPalette()
+
+  const { data, keys, colorMap } = useMemo(() => {
+    if (!typeProp) return { data: [], keys: [] as string[], colorMap: new Map<string, string>() }
+
+    const now = new Date()
+    let count: number = monthCount
+    if (count === 0) {
+      if (feedbacks.length > 0) {
+        const earliest = feedbacks.reduce((min, f) => {
+          const d = new Date(f.createdAt)
+          return d < min ? d : min
+        }, now)
+        count = Math.max((now.getFullYear() - earliest.getFullYear()) * 12 + (now.getMonth() - earliest.getMonth()) + 1, 1)
+      } else {
+        count = 24
+      }
+    }
+
+    const months: string[] = []
+    for (let i = count - 1; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+      months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`)
+    }
+
+    const keys = typeProp.options.map((o) => o.label)
+    const colorMap = new Map(typeProp.options.map((o, i) => [o.label, o.color ?? getColor(i, palette)]))
+    const valueToLabel = new Map(typeProp.options.map((o) => [o.value, o.label]))
+
+    const data = months.map((m) => {
+      const row: Record<string, string | number> = { month: `${m.slice(2, 4)}${m.slice(5)}` }
+      for (const k of keys) row[k] = 0
+      return row
+    })
+
+    for (const f of scopedFeedbacks) {
+      const d = new Date(f.createdAt)
+      const m = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+      const idx = months.indexOf(m)
+      if (idx === -1) continue
+      const label = valueToLabel.get(f.type)
+      if (label) data[idx][label] = (Number(data[idx][label]) || 0) + 1
+    }
+
+    return { data, keys, colorMap }
+  }, [scopedFeedbacks, typeProp, monthCount, palette])
+
+  if (keys.length === 0) return <ChartContainer className={cls}><EmptyState compact message="No feedback properties configured" /></ChartContainer>
+
   const { chartType } = config
 
   return (
     <ChartContainer className={cls}>
-      {chartType === 'pie' ? (
-        <DonutWithLabels
-          data={summary}
-          colorFn={(i) => FEEDBACK_COLORS[summary[i]?.name] ?? FALLBACK_COLOR}
-          containerClass={cls}
-          tooltipProps={TPfb}
-        />
-      ) : (
       <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
         {(() => {
           const ChartComp = chartType === 'line' ? LineChart : chartType === 'area' ? AreaChart : BarChart
           return (
-            <ChartComp data={byMonth}>
+            <ChartComp data={data}>
               <XAxis dataKey="month" tick={tickStyle} stroke={axisStroke} interval="preserveStartEnd" />
-              <Tooltip {...TPfb} />
+              <Tooltip {...TP} />
+              {keys.length > 1 && <Legend iconType="circle" iconSize={8} wrapperStyle={legendStyle} />}
               {chartType === 'line' ? (
-                <>
-                  <Line type="monotone" dataKey="Positive" stroke={FEEDBACK_COLORS.Positive} strokeWidth={2} dot={false} />
-                  <Line type="monotone" dataKey="Neutral" stroke={FEEDBACK_NEUTRAL_STROKE} strokeWidth={2} dot={false} />
-                  <Line type="monotone" dataKey="Negative" stroke={FEEDBACK_COLORS.Negative} strokeWidth={2} dot={false} />
-                </>
+                keys.map((key) => <Line key={key} type="monotone" dataKey={key} stroke={colorMap.get(key) ?? FALLBACK_COLOR} strokeWidth={2} dot={false} />)
               ) : chartType === 'area' ? (
-                <>
-                  <Area type="monotone" dataKey="Negative" stackId="fb" fill={FEEDBACK_COLORS.Negative} stroke={FEEDBACK_COLORS.Negative} fillOpacity={0.6} />
-                  <Area type="monotone" dataKey="Neutral" stackId="fb" fill={FEEDBACK_COLORS.Neutral} stroke={FEEDBACK_NEUTRAL_STROKE} fillOpacity={0.6} />
-                  <Area type="monotone" dataKey="Positive" stackId="fb" fill={FEEDBACK_COLORS.Positive} stroke={FEEDBACK_COLORS.Positive} fillOpacity={0.6} />
-                </>
+                keys.map((key) => <Area key={key} type="monotone" dataKey={key} stackId="fb" fill={colorMap.get(key) ?? FALLBACK_COLOR} stroke={colorMap.get(key) ?? FALLBACK_COLOR} fillOpacity={0.6} />)
               ) : (
-                <>
-                  <Bar dataKey="Negative" stackId="fb" fill={FEEDBACK_COLORS.Negative} />
-                  <Bar dataKey="Neutral" stackId="fb" fill={FEEDBACK_COLORS.Neutral} />
-                  <Bar dataKey="Positive" stackId="fb" fill={FEEDBACK_COLORS.Positive} />
-                </>
+                keys.map((key) => <Bar key={key} dataKey={key} stackId="fb" fill={colorMap.get(key) ?? FALLBACK_COLOR} />)
               )}
             </ChartComp>
           )
         })()}
       </ResponsiveContainer>
-      )}
     </ChartContainer>
   )
 }
 
-function FeedbackDimensionChart({ config, monthCount = 12, feedbacks, pages, dimensions, containerClass }: ChartRendererProps) {
-  const scopes = config.scopes ?? []
-  const { scopedFeedbacks } = useScopedData([], feedbacks, pages, scopes)
-  const dimMap = useMemo(() => new Map(dimensions.map((d) => [d.id!, d.name])), [dimensions])
-  const data = useDimensionDistribution(scopedFeedbacks, pages, dimMap, scopes, monthCount)
+// ---- Feedback per page ----
+
+function FeedbackPerPageChart({ config, pages, feedbacks, containerClass }: ChartRendererProps) {
+  const scopes = config.scopes ?? EMPTY_SCOPES
+  const scopedFeedbacks = useScopedFeedbacks(feedbacks, pages, scopes)
   const cls = useContainerClass(config, containerClass)
-  const { chartType } = config
+  const { palette } = useChartPalette()
+
+  const data = useMemo(() => {
+    const counts = new Map<number, number>()
+    for (const f of scopedFeedbacks) counts.set(f.subjectId, (counts.get(f.subjectId) || 0) + 1)
+    return [...counts.entries()]
+      .map(([pageId, count]) => {
+        const page = pages.find((p) => p.id === pageId)
+        return { name: page?.name ?? `Page ${pageId}`, value: count }
+      })
+      .filter((d) => d.value > 0)
+      .sort((a, b) => b.value - a.value)
+  }, [scopedFeedbacks, pages])
+
+  if (data.length === 0) return <ChartContainer className={cls}><EmptyState compact message="No feedback data" /></ChartContainer>
+
+  if (config.chartType === 'pie') {
+    return <DonutWithLabels data={data} colorFn={(i) => getColor(i, palette)} containerClass={cls} tooltipProps={TP} />
+  }
 
   return (
     <ChartContainer className={cls}>
-      {data.perChild ? (
-        chartType === 'pie' ? (() => {
-          const agg = new Map<string, number>()
-          for (const row of data.data) { for (const k of data.keys) { agg.set(k, (agg.get(k) || 0) + Number(row[k])) } }
-          const pieData = [...agg.entries()].map(([name, value]) => ({ name, value })).filter((s) => s.value > 0)
-          return (
-            <DonutWithLabels
-              data={pieData}
-              colorFn={(i) => getColor(i, pieData.length)}
-              containerClass={cls}
-            />
-          )
-        })() : (
-          <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-            <BarChart data={data.data}>
-              <XAxis dataKey="name" tick={tickStyle} stroke={axisStroke} interval={0} />
-              <Tooltip {...TP} />
-              {data.keys.length > 1 && <Legend iconType="circle" iconSize={8} wrapperStyle={legendStyle} />}
-              {data.keys.map((key, i) => <Bar key={key} dataKey={key} fill={getSeriesColor(i, data.keys.length)} />)}
-            </BarChart>
-          </ResponsiveContainer>
-        )
-      ) : (
-        chartType === 'pie' ? (
-          <DonutWithLabels
-            data={data.summary}
-            colorFn={(i) => getColor(i, data.summary.length)}
-            containerClass={cls}
-          />
-        ) : (
-          <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-            <BarChart data={data.summary}>
-              <XAxis dataKey="name" tick={tickStyle} stroke={axisStroke} interval={0} />
-              <Tooltip {...TP} />
-              {data.summary.length > 1 && <Legend content={() => (
-                <div style={{ display: 'flex', justifyContent: 'center', gap: 12, flexWrap: 'wrap', paddingTop: 4 }}>
-                  {data.summary.map((item, i) => (
-                    <span key={item.name} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, color: '#485670' }}>
-                      <span style={{ width: 8, height: 8, borderRadius: '50%', background: getSeriesColor(i, data.summary.length), flexShrink: 0 }} />
-                      {item.name}
-                    </span>
-                  ))}
-                </div>
-              )} />}
-              <Bar dataKey="value">
-                {data.summary.map((_: unknown, i: number) => <Cell key={i} fill={getSeriesColor(i, data.summary.length)} />)}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        )
-      )}
+      <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+        <BarChart data={data}>
+          <XAxis dataKey="name" tick={tickStyle} stroke={axisStroke} interval={0} />
+          <Tooltip {...TP} />
+          <Bar dataKey="value">
+            {data.map((_, i) => <Cell key={i} fill={getColor(i, palette)} />)}
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
     </ChartContainer>
   )
 }
 
 function PageCountChart({ config, monthCount = 12, pages, containerClass }: ChartRendererProps) {
-  const scopes = config.scopes ?? []
+  const scopes = config.scopes ?? EMPTY_SCOPES
   const data = usePageCount(pages, scopes, monthCount)
   const cls = useContainerClass(config, containerClass)
   const { chartType } = config

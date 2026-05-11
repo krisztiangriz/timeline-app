@@ -45,7 +45,7 @@ export function RootPage() {
     return buildFlatPageList(sorted)
   }, [allPages, sortPages, showArchived])
 
-  const { addMenuItems, moreMenuItems } = usePageMenus({ showToast })
+  const { moreMenuItems } = usePageMenus({ showToast })
 
   function handleDragStart(e: React.DragEvent, pageId: number) {
     setDraggedId(pageId)
@@ -101,7 +101,7 @@ export function RootPage() {
       <div className={layout.content}>
         <div ref={sentinelRef} />
         <div className={isScrolled ? layout.stickyHeaderScrolled : layout.stickyHeader}>
-          <BreadcrumbNav items={[{ label: 'Home', path: '/' }]} addMenuItems={addMenuItems} moreMenuItems={moreMenuItems} />
+          <BreadcrumbNav items={[{ label: 'Home', path: '/' }]} moreMenuItems={moreMenuItems} />
           <PageHeader name="Home" onUpdateName={() => {}} readOnly />
         </div>
 

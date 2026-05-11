@@ -29,6 +29,7 @@ interface RichTextEditorProps {
   onChange: (html: string) => void
   placeholder?: string
   onBlur?: () => void
+  onFocus?: () => void
   autoFocus?: boolean
   /** Place cursor at this screen coordinate on initial focus (click-to-edit) */
   initialClickPosition?: { x: number; y: number }
@@ -53,6 +54,7 @@ export function RichTextEditor({
   onChange,
   placeholder = '',
   onBlur,
+  onFocus,
   autoFocus,
   initialClickPosition,
   collapseMentions,
@@ -290,6 +292,7 @@ export function RichTextEditor({
     if (!el) return
     isFocusedRef.current = true
     el.removeAttribute('data-empty')
+    onFocus?.()
 
     // Position cursor at the beginning
     const sel = window.getSelection()

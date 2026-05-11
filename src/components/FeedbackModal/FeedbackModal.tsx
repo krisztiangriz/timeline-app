@@ -1,48 +1,62 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { Modal } from '../Modal/Modal'
 import { useAutocomplete } from '../../hooks/useAutocomplete'
-import { useDimensions } from '../../hooks/useDimensions'
+import { useHubFeedbackProperties } from '../../hooks/useHubProperties'
 import { addFeedback } from '../../hooks/useFeedback'
+import { useLiveQuery } from 'dexie-react-hooks'
+import { db } from '../../db/database'
 import { CloseIcon, SearchIcon, PlusIcon } from '../Icons/Icons'
-import type { FeedbackType, Page } from '../../types'
-import styles from './FeedbackForm.module.css'
+import type { Page } from '../../types'
+import styles from './FeedbackModal.module.css'
 import radio from '../../styles/radio.module.css'
 
-interface FeedbackFormProps {
+interface FeedbackModalProps {
   open: boolean
   onClose: () => void
   onSuccess: (msg: string) => void
 }
 
-export function FeedbackForm({ open, onClose, onSuccess }: FeedbackFormProps) {
+export function FeedbackModal({ open, onClose, onSuccess }: FeedbackModalProps) {
   const { allPages } = useAutocomplete()
-  const dimensions = useDimensions()
+  const allHubProperties = useLiveQuery(() => db.hubProperties.toArray(), []) ?? []
+
+  // Hub IDs that have at least one feedback-scoped property
+  const hubsWithFeedback = useMemo(() => {
+    return new Set(allHubProperties.filter((p) => p.scope === 'feedback').map((p) => p.hubId))
+  }, [allHubProperties])
+
+  // Pages searchable for feedback (under hubs with feedback config)
+  const searchablePages = useMemo(() => {
+    return allPages.filter((p) => p.parentId && hubsWithFeedback.has(p.parentId))
+  }, [allPages, hubsWithFeedback])
 
   const [subjectQuery, setSubjectQuery] = useState('')
   const [selectedSubjects, setSelectedSubjects] = useState<Page[]>([])
   const [activeIndex, setActiveIndex] = useState(-1)
   const resultsRef = useRef<HTMLDivElement>(null)
-  const [type, setType] = useState<FeedbackType>('positive')
   const [description, setDescription] = useState('')
-  const [dimensionId, setDimensionId] = useState<number | undefined>(undefined)
+  const [propertyValues, setPropertyValues] = useState<Record<number, string>>({})
 
-  // Filter pages under any hub for the subject search — exclude already selected
+  // Determine the hub context from selected subjects
+  const primaryHub = useMemo(() => {
+    if (selectedSubjects.length === 0) return undefined
+    const first = selectedSubjects[0]
+    return first.parentId ? allPages.find((p) => p.id === first.parentId) : undefined
+  }, [selectedSubjects, allPages])
+
+  const feedbackProperties = useHubFeedbackProperties(primaryHub?.id)
+
+  // Filter search results
   const subjectResults = useMemo(() => {
     if (!subjectQuery.trim()) return []
     const q = subjectQuery.toLowerCase()
     const selectedIds = new Set(selectedSubjects.map((s) => s.id))
-    return allPages.filter(
-      (p) =>
-        p.parentId && p.type !== 'hub' &&
-        !selectedIds.has(p.id) &&
-        p.name.toLowerCase().includes(q)
+    return searchablePages.filter(
+      (p) => !selectedIds.has(p.id) && p.name.toLowerCase().includes(q)
     )
-  }, [subjectQuery, allPages, selectedSubjects])
+  }, [subjectQuery, searchablePages, selectedSubjects])
 
-  // Reset active index when results change
   useEffect(() => { setActiveIndex(-1) }, [subjectResults.length])
-
-  // Scroll active item into view
   useEffect(() => {
     if (activeIndex < 0 || !resultsRef.current) return
     const el = resultsRef.current.children[activeIndex] as HTMLElement | undefined
@@ -72,18 +86,15 @@ export function FeedbackForm({ open, onClose, onSuccess }: FeedbackFormProps) {
     setSelectedSubjects((prev) => prev.filter((p) => p.id !== pageId))
   }
 
-  // Show dimension field if ANY selected subject is a colleague
-  const isColleague = selectedSubjects.some((s) => {
-    const hub = s.parentId ? allPages.find((p) => p.id === s.parentId) : undefined
-    return s.type === 'colleague' || hub?.role === 'colleague-hub'
-  })
+  function setPropertyValue(propertyId: number, value: string) {
+    setPropertyValues((prev) => ({ ...prev, [propertyId]: value }))
+  }
 
   function reset() {
     setSubjectQuery('')
     setSelectedSubjects([])
-    setType('positive')
     setDescription('')
-    setDimensionId(undefined)
+    setPropertyValues({})
   }
 
   function handleClose() {
@@ -94,24 +105,30 @@ export function FeedbackForm({ open, onClose, onSuccess }: FeedbackFormProps) {
   async function handleSubmit() {
     if (selectedSubjects.length === 0 || !description.trim()) return
 
-    for (const subject of selectedSubjects) {
-      await addFeedback({
-        subjectId: subject.id!,
-        type,
-        description: description.trim(),
-        dimensionId: isColleague ? dimensionId : undefined,
-      })
-    }
+    try {
+      const firstProp = feedbackProperties[0]
+      const secondProp = feedbackProperties[1]
+      const type = firstProp ? (propertyValues[firstProp.id!] || firstProp.options[0]?.value || '') : ''
+      const dimValue = secondProp ? propertyValues[secondProp.id!] : undefined
 
-    reset()
-    onClose()
-    onSuccess('Feedback added')
+      for (const subject of selectedSubjects) {
+        await addFeedback({
+          subjectId: subject.id!,
+          type,
+          description: description.trim(),
+          dimensionId: dimValue || undefined,
+        })
+      }
+
+      reset()
+      onClose()
+      onSuccess('Feedback added')
+    } catch {
+      onSuccess('Failed to add feedback')
+    }
   }
 
-  const canSubmit =
-    selectedSubjects.length > 0 &&
-    description.trim().length > 0 &&
-    (!isColleague || dimensionId !== undefined)
+  const canSubmit = selectedSubjects.length > 0 && description.trim().length > 0
 
   return (
     <Modal
@@ -121,29 +138,9 @@ export function FeedbackForm({ open, onClose, onSuccess }: FeedbackFormProps) {
       onConfirm={handleSubmit}
       confirmDisabled={!canSubmit}
     >
-      {/* Subject */}
+      {/* Subject lookup */}
       <div className={styles.section}>
         <span className={styles.label}>Subject</span>
-        {/* Selected subjects as chips */}
-        {selectedSubjects.length > 0 && (
-          <div className={styles.subjectChips}>
-            {selectedSubjects.map((s) => {
-              const hub = s.parentId ? allPages.find((p) => p.id === s.parentId) : undefined
-              return (
-                <div key={s.id} className={styles.subjectChip}>
-                  <span>
-                    {hub?.mentionTrigger && <span style={{ fontFamily: "ui-monospace, 'SF Mono', Monaco, 'Cascadia Mono', monospace" }}>{hub.mentionTrigger}</span>}
-                    {s.name}
-                  </span>
-                  <button className={styles.chipRemove} onClick={() => handleRemoveSubject(s.id!)}>
-                    <CloseIcon size={10} />
-                  </button>
-                </div>
-              )
-            })}
-          </div>
-        )}
-        {/* Search input — always visible for adding more */}
         <div className={styles.searchWrapper}>
           <SearchIcon />
           <input
@@ -152,7 +149,7 @@ export function FeedbackForm({ open, onClose, onSuccess }: FeedbackFormProps) {
             value={subjectQuery}
             onChange={(e) => setSubjectQuery(e.target.value)}
             onKeyDown={handleSubjectKeyDown}
-            placeholder={selectedSubjects.length > 0 ? 'Add another...' : 'Look up colleagues or projects'}
+            placeholder={selectedSubjects.length > 0 ? 'Add another...' : 'Look up pages...'}
             autoFocus={selectedSubjects.length === 0}
           />
           {subjectQuery && (
@@ -175,23 +172,24 @@ export function FeedbackForm({ open, onClose, onSuccess }: FeedbackFormProps) {
             </div>
           )}
         </div>
-      </div>
-
-      {/* Type */}
-      <div className={styles.section}>
-        <span className={styles.label}>Type</span>
-        <div className={styles.radioRow}>
-          {(['positive', 'neutral', 'negative'] as FeedbackType[]).map((t) => (
-            <button
-              key={t}
-              className={radio.radioOption}
-              onClick={() => setType(t)}
-            >
-              <div className={radio.radioCircle} data-checked={type === t} />
-              {t.charAt(0).toUpperCase() + t.slice(1)}
-            </button>
-          ))}
-        </div>
+        {selectedSubjects.length > 0 && (
+          <div className={styles.subjectChips}>
+            {selectedSubjects.map((s) => {
+              const hub = s.parentId ? allPages.find((p) => p.id === s.parentId) : undefined
+              return (
+                <div key={s.id} className={styles.subjectChip}>
+                  <span>
+                    {hub?.mentionTrigger && <span className={styles.triggerChar}>{hub.mentionTrigger}</span>}
+                    {s.name}
+                  </span>
+                  <button className={styles.chipRemove} onClick={() => handleRemoveSubject(s.id!)}>
+                    <CloseIcon size={10} />
+                  </button>
+                </div>
+              )
+            })}
+          </div>
+        )}
       </div>
 
       {/* Description */}
@@ -201,31 +199,31 @@ export function FeedbackForm({ open, onClose, onSuccess }: FeedbackFormProps) {
           className={styles.textarea}
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          placeholder="Enter description..."
+          placeholder="Enter feedback..."
         />
       </div>
 
-      {/* Dimension (if any selected subject is a colleague) */}
-      {isColleague && (
-        <div className={styles.section}>
-          <span className={styles.label}>Feedback dimension</span>
-          <div className={styles.dimensionList}>
-            {dimensions.map((dim) => (
+      {/* Feedback properties — rendered generically from hub config */}
+      {feedbackProperties.map((prop, index) => (
+        <div key={prop.id} className={styles.section}>
+          <span className={styles.label}>{prop.name}</span>
+          <div className={prop.options.length > 3 ? styles.optionsVertical : styles.optionsRow}>
+            {prop.options.map((opt) => (
               <button
-                key={dim.id}
+                key={opt.value}
                 className={radio.radioOption}
-                onClick={() => setDimensionId(dim.id)}
+                onClick={() => setPropertyValue(prop.id!, opt.value)}
               >
                 <div
                   className={radio.radioCircle}
-                  data-checked={dimensionId === dim.id}
+                  data-checked={(propertyValues[prop.id!] || (index === 0 ? prop.options[0]?.value : '')) === opt.value}
                 />
-                {dim.name}
+                {opt.label}
               </button>
             ))}
           </div>
         </div>
-      )}
+      ))}
     </Modal>
   )
 }

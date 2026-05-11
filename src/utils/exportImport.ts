@@ -3,7 +3,7 @@ import DOMPurify from 'dompurify'
 import type { Page } from '../types'
 
 interface ExportData {
-  version: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11
+  version: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12
   exportedAt: string
   tags: unknown[]
   pages: unknown[]
@@ -18,6 +18,8 @@ interface ExportData {
   chartConfigs: unknown[]
   abbreviationGroups?: unknown[]
   candidateStatuses?: unknown[]
+  hubProperties?: unknown[]
+  pagePropertyValues?: unknown[]
 }
 
 /**
@@ -94,7 +96,7 @@ async function ensurePageRoles(): Promise<void> {
  * Export all data from IndexedDB as a JSON string.
  */
 async function exportAllData(): Promise<string> {
-  const [tags, pages, layouts, blocks, timelineEntries, feedbacks, dimensions, pageSettings, chartConfigs, candidateStatuses] =
+  const [tags, pages, layouts, blocks, timelineEntries, feedbacks, pageSettings, chartConfigs, hubProperties, pagePropertyValues] =
     await Promise.all([
       db.tags.toArray(),
       db.pages.toArray(),
@@ -102,14 +104,14 @@ async function exportAllData(): Promise<string> {
       db.blocks.toArray(),
       db.timelineEntries.toArray(),
       db.feedbacks.toArray(),
-      db.dimensions.toArray(),
       db.pageSettings.toArray(),
       db.chartConfigs.toArray(),
-      db.candidateStatuses.toArray(),
+      db.hubProperties.toArray(),
+      db.pagePropertyValues.toArray(),
     ])
 
   const data: ExportData = {
-    version: 11,
+    version: 12,
     exportedAt: new Date().toISOString(),
     tags,
     pages,
@@ -117,11 +119,12 @@ async function exportAllData(): Promise<string> {
     timelineEntries,
     feedbacks,
     categories: [],
-    dimensions,
+    dimensions: [],
     pageSettings,
     blocks,
     chartConfigs,
-    candidateStatuses,
+    hubProperties,
+    pagePropertyValues,
   }
 
   return JSON.stringify(data, null, 2)
@@ -159,14 +162,14 @@ export async function downloadBackup() {
 async function importData(jsonString: string): Promise<void> {
   const data: ExportData = JSON.parse(jsonString)
 
-  if (data.version < 1 || data.version > 11) {
+  if (data.version < 1 || data.version > 12) {
     throw new Error(`Unsupported export version: ${data.version}`)
   }
 
   // Validate required arrays exist before touching the DB
   if (!Array.isArray(data.tags) || !Array.isArray(data.pages) ||
       !Array.isArray(data.layouts) || !Array.isArray(data.timelineEntries) ||
-      !Array.isArray(data.feedbacks) || !Array.isArray(data.dimensions)) {
+      !Array.isArray(data.feedbacks)) {
     throw new Error('Invalid export file: missing required data tables')
   }
 
@@ -198,13 +201,13 @@ async function importData(jsonString: string): Promise<void> {
 
   // Run everything in a transaction so failure rolls back
   await db.transaction('rw',
-    [db.tags, db.pages, db.layouts, db.blocks, db.timelineEntries, db.feedbacks, db.dimensions, db.pageSettings, db.chartConfigs, db.candidateStatuses],
+    [db.tags, db.pages, db.layouts, db.blocks, db.timelineEntries, db.feedbacks, db.pageSettings, db.chartConfigs, db.hubProperties, db.pagePropertyValues],
     async () => {
       await Promise.all([
         db.tags.clear(), db.pages.clear(), db.layouts.clear(), db.blocks.clear(),
         db.timelineEntries.clear(), db.feedbacks.clear(),
-        db.dimensions.clear(), db.pageSettings.clear(), db.chartConfigs.clear(),
-        db.candidateStatuses.clear(),
+        db.pageSettings.clear(), db.chartConfigs.clear(),
+        db.hubProperties.clear(), db.pagePropertyValues.clear(),
       ])
       await Promise.all([
         db.tags.bulkAdd(data.tags as never[]),
@@ -213,10 +216,10 @@ async function importData(jsonString: string): Promise<void> {
         blocks?.length ? db.blocks.bulkAdd(blocks as never[]) : Promise.resolve(),
         db.timelineEntries.bulkAdd(entries as never[]),
         db.feedbacks.bulkAdd(feedbacks as never[]),
-        db.dimensions.bulkAdd(data.dimensions as never[]),
         data.pageSettings?.length ? db.pageSettings.bulkAdd(data.pageSettings as never[]) : Promise.resolve(),
         data.chartConfigs?.length ? db.chartConfigs.bulkAdd(data.chartConfigs as never[]) : Promise.resolve(),
-        data.candidateStatuses?.length ? db.candidateStatuses.bulkAdd(data.candidateStatuses as never[]) : Promise.resolve(),
+        data.hubProperties?.length ? db.hubProperties.bulkAdd(data.hubProperties as never[]) : Promise.resolve(),
+        data.pagePropertyValues?.length ? db.pagePropertyValues.bulkAdd(data.pagePropertyValues as never[]) : Promise.resolve(),
       ])
     }
   )
@@ -263,9 +266,9 @@ interface MergeImportEntry {
 }
 
 interface MergeImportFeedback {
-  type: 'positive' | 'neutral' | 'negative'
+  type: string
   description: string
-  dimensionId?: number
+  dimensionId?: string
   createdAt?: string | Date
 }
 

@@ -108,7 +108,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    // Ctrl+Shift+F → open feedback form
+    // Ctrl+Shift+F → open feedback modal
     if (e.ctrlKey && e.shiftKey && (e.key === 'f' || e.key === 'F')) {
       e.preventDefault()
       setFeedbackOpen(true)

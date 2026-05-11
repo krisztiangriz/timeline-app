@@ -40,7 +40,7 @@ export function HubPage({ role }: HubPageProps) {
     }
   }, [hub, archivePage, unarchivePage, showToast])
 
-  const { addMenuItems, moreMenuItems } = usePageMenus({
+  const { moreMenuItems } = usePageMenus({
     pageId: hub?.id,
     onEditPage: () => setEditPageOpen(true),
     canDelete: true, canArchive: true, isArchived: !!hub?.archived,
@@ -73,12 +73,12 @@ export function HubPage({ role }: HubPageProps) {
       <div className={layout.content}>
         <div ref={sentinelRef} />
         <div className={isScrolled ? layout.stickyHeaderScrolled : layout.stickyHeader}>
-          <BreadcrumbNav items={[{ label: 'Home', path: '/' }, { label: hub.name, path: hubPath }]} addMenuItems={addMenuItems} moreMenuItems={moreMenuItems} />
+          <BreadcrumbNav items={[{ label: 'Home', path: '/' }, { label: hub.name, path: hubPath }]} moreMenuItems={moreMenuItems} />
           <PageHeader name={hub.name} onUpdateName={(name) => updatePage(hub.id!, { name })} />
         </div>
         <BlockRenderer page={hub} />
       </div>
-      <PageForm open={editPageOpen} onClose={() => setEditPageOpen(false)} onSubmit={handleEditSubmit} initial={editInitial} isEdit isHub protectedTabCount={0} />
+      <PageForm open={editPageOpen} onClose={() => setEditPageOpen(false)} onSubmit={handleEditSubmit} initial={editInitial} isEdit isHub hubId={hub.id!} protectedTabCount={0} />
     </div>
   )
 }

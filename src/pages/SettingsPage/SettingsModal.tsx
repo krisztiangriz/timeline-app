@@ -1,14 +1,13 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { Modal } from '../../components/Modal/Modal'
-import { useDimensions, addDimension, deleteDimension } from '../../hooks/useDimensions'
-import { useCandidateStatuses, addCandidateStatus, deleteCandidateStatus, renameCandidateStatus } from '../../hooks/useCandidateStatuses'
 import { useAutocomplete } from '../../hooks/useAutocomplete'
-import { usePageActions } from '../../hooks/usePages'
 import { useModalContext, usePreferences } from '../../hooks/useAppContext'
 import { useBackupSettings, type BackupFrequency } from '../../hooks/useAutoBackup'
 import { useOnboardingGuides } from '../../hooks/useOnboardingGuides'
 import { TrashIcon, CheckIcon, PlusIcon, CloseIcon, SearchIcon } from '../../components/Icons/Icons'
 import { downloadExport, triggerImport, triggerMergeImport } from '../../utils/exportImport'
+import { useChartPalette, PALETTE_OPTIONS } from '../../hooks/useChartPalette'
+import { ColorPicker } from '../../components/ColorPicker/ColorPicker'
 import type { Page } from '../../types'
 import styles from './SettingsModal.module.css'
 
@@ -19,32 +18,14 @@ interface SettingsModalProps {
 }
 
 export function SettingsModal({ open, onClose, onToast }: SettingsModalProps) {
-  const dimensions = useDimensions()
-  const candidateStatuses = useCandidateStatuses()
   const { allPages } = useAutocomplete()
-  const { updatePage } = usePageActions()
   const { showArchived, setShowArchived } = usePreferences()
   const { setOnboardingOpen } = useModalContext()
   const { frequency, setFrequency, lastBackup } = useBackupSettings()
   const { guidesDisabled, toggleGuides, resetAllGuides } = useOnboardingGuides()
-
-  // Dimension add state
-  const [addingDim, setAddingDim] = useState(false)
-  const [newDimName, setNewDimName] = useState('')
-
-  // Candidate status state
-  const [addingStatus, setAddingStatus] = useState(false)
-  const [newStatusName, setNewStatusName] = useState('')
-  const [editingStatusId, setEditingStatusId] = useState<number | null>(null)
-  const [editingStatusName, setEditingStatusName] = useState('')
-
-  // Trigger add state
-  const [addingTrigger, setAddingTrigger] = useState(false)
-  const [triggerSearchQuery, setTriggerSearchQuery] = useState('')
-  const [selectedTriggerPage, setSelectedTriggerPage] = useState<Page | null>(null)
-  const [triggerSearchIndex, setTriggerSearchIndex] = useState(-1)
-  const [newTriggerChar, setNewTriggerChar] = useState('')
-  const triggerResultsRef = useRef<HTMLDivElement>(null)
+  const { palette, updateColor, resetPalette } = useChartPalette()
+  const [palettePickerIndex, setPalettePickerIndex] = useState<number | null>(null)
+  const paletteAnchorRef = useRef<HTMLButtonElement>(null)
 
   // Merge import state
   const [merging, setMerging] = useState(false)
@@ -72,82 +53,6 @@ export function SettingsModal({ open, onClose, onToast }: SettingsModalProps) {
     const el = mergeResultsRef.current.children[mergeActiveIndex] as HTMLElement | undefined
     el?.scrollIntoView({ block: 'nearest' })
   }, [mergeActiveIndex])
-
-  // Pages with triggers (hubs + any page with a mentionTrigger)
-  const triggerPages = allPages.filter((p) => p.type === 'hub' || p.mentionTrigger)
-  // Pages available to add a trigger to (no trigger yet, not main-timeline)
-  const availableForTrigger = allPages.filter((p) => !p.mentionTrigger && p.role !== 'main-timeline')
-
-  // Trigger search results
-  const triggerSearchResults = useMemo(() => {
-    if (!triggerSearchQuery.trim()) return []
-    const q = triggerSearchQuery.toLowerCase()
-    return availableForTrigger.filter((p) => p.name.toLowerCase().includes(q))
-  }, [triggerSearchQuery, availableForTrigger])
-
-  useEffect(() => { setTriggerSearchIndex(-1) }, [triggerSearchResults.length])
-  useEffect(() => {
-    if (triggerSearchIndex < 0 || !triggerResultsRef.current) return
-    const el = triggerResultsRef.current.children[triggerSearchIndex] as HTMLElement | undefined
-    el?.scrollIntoView({ block: 'nearest' })
-  }, [triggerSearchIndex])
-
-  async function handleTriggerChange(pageId: number, value: string) {
-    const ch = value.slice(0, 1)
-    if (ch === '~' || /\s/.test(ch)) return
-    const mentionTrigger = ch === '' ? undefined : ch
-    await updatePage(pageId, { mentionTrigger })
-  }
-
-  async function handleRemoveTrigger(pageId: number) {
-    await updatePage(pageId, { mentionTrigger: undefined })
-  }
-
-  async function handleAddTrigger() {
-    if (!selectedTriggerPage || !newTriggerChar.trim()) return
-    const ch = newTriggerChar.trim().slice(0, 1)
-    if (ch === '~' || /\s/.test(ch)) return
-    await updatePage(selectedTriggerPage.id!, { mentionTrigger: ch })
-    cancelAddTrigger()
-  }
-
-  function cancelAddTrigger() {
-    setTriggerSearchQuery('')
-    setSelectedTriggerPage(null)
-    setTriggerSearchIndex(-1)
-    setNewTriggerChar('')
-    setAddingTrigger(false)
-  }
-
-  async function handleAddDimension() {
-    if (!newDimName.trim()) return
-    await addDimension(newDimName.trim())
-    cancelAddDim()
-  }
-
-  function cancelAddDim() {
-    setNewDimName('')
-    setAddingDim(false)
-  }
-
-  async function handleAddStatus() {
-    if (!newStatusName.trim()) return
-    await addCandidateStatus(newStatusName.trim())
-    setNewStatusName('')
-    setAddingStatus(false)
-  }
-
-  function cancelAddStatus() {
-    setNewStatusName('')
-    setAddingStatus(false)
-  }
-
-  async function handleRenameStatus(id: number) {
-    if (!editingStatusName.trim()) { setEditingStatusId(null); return }
-    await renameCandidateStatus(id, editingStatusName.trim())
-    setEditingStatusId(null)
-    setEditingStatusName('')
-  }
 
   async function handleExport() {
     await downloadExport()
@@ -306,6 +211,43 @@ export function SettingsModal({ open, onClose, onToast }: SettingsModalProps) {
         </span>
       </div>
 
+      {/* Chart colors */}
+      <div className={styles.section}>
+        <div className={styles.listHeader}>
+          <span className={styles.sectionTitle}>Chart colors</span>
+          <button className={styles.iconButton} onClick={resetPalette} style={{ fontSize: 11 }}>Reset</button>
+        </div>
+        <div className={styles.paletteRow}>
+          {palette.map((color, i) => (
+            <div key={i} className={styles.colorSwatchWrapper}>
+              <button
+                className={styles.colorSwatch}
+                style={{ background: color }}
+                ref={palettePickerIndex === i ? paletteAnchorRef : undefined}
+                onClick={(e) => {
+                  if (palettePickerIndex === i) {
+                    setPalettePickerIndex(null)
+                  } else {
+                    paletteAnchorRef.current = e.currentTarget as HTMLButtonElement
+                    setPalettePickerIndex(i)
+                  }
+                }}
+                aria-label={`Color ${i + 1}`}
+              />
+              {palettePickerIndex === i && (
+                <ColorPicker
+                  colors={PALETTE_OPTIONS}
+                  value={color}
+                  onChange={(c) => updateColor(i, c)}
+                  onClose={() => setPalettePickerIndex(null)}
+                  anchorRef={paletteAnchorRef}
+                />
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
       {/* Onboarding */}
       <div className={styles.section}>
         <span className={styles.sectionTitle}>Onboarding</span>
@@ -337,174 +279,6 @@ export function SettingsModal({ open, onClose, onToast }: SettingsModalProps) {
             <span className={styles.checkboxLabel}>Show archived</span>
           </button>
         </div>
-      </div>
-
-      {/* Triggers */}
-      <div className={styles.section}>
-        <div className={styles.listHeader}>
-          <span className={styles.sectionTitle}>Triggers</span>
-          {!addingTrigger && availableForTrigger.length > 0 && (
-            <button className={styles.addButton} onClick={() => setAddingTrigger(true)} aria-label="Add trigger">{<PlusIcon />}</button>
-          )}
-        </div>
-        {triggerPages.length === 0 && !addingTrigger && (
-          <span className={styles.emptyHint}>Add a trigger to mention pages quickly</span>
-        )}
-        {triggerPages.map((page) => (
-          <div key={page.id} className={styles.listItem}>
-            <span className={styles.itemName}>{page.name}</span>
-            <input
-              className={styles.colorInput}
-              type="text"
-              value={page.mentionTrigger ?? ''}
-              onChange={(e) => handleTriggerChange(page.id!, e.target.value)}
-              placeholder="trigger"
-              style={{ width: 52 }}
-            />
-            <button
-              className={styles.checkboxRow}
-              onClick={() => updatePage(page.id!, { mentionCollapsed: !page.mentionCollapsed })}
-              title={page.mentionCollapsed ? 'Showing trigger only — click to show full name' : 'Showing full name — click to show trigger only'}
-            >
-              <div className={styles.checkbox} data-checked={!page.mentionCollapsed} />
-              <span className={styles.checkboxLabel}>Label</span>
-            </button>
-            <button className={styles.deleteButton} onClick={() => handleRemoveTrigger(page.id!)} aria-label={`Remove trigger from ${page.name}`}>{<TrashIcon />}</button>
-          </div>
-        ))}
-        {addingTrigger && (
-          <div className={styles.listItem}>
-            <div className={styles.triggerInputGroup}>
-              {selectedTriggerPage ? (
-                <span className={styles.itemName}>
-                  {selectedTriggerPage.name}
-                  <button className={styles.clearTriggerSearch} onClick={() => { setSelectedTriggerPage(null); setTriggerSearchQuery('') }} aria-label="Clear">
-                    <CloseIcon size={10} />
-                  </button>
-                </span>
-              ) : (
-                <div className={styles.triggerSearchWrapper}>
-                  <input
-                    className={styles.inlineInput}
-                    type="text"
-                    value={triggerSearchQuery}
-                    onChange={(e) => setTriggerSearchQuery(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (!triggerSearchResults.length) return
-                      if (e.key === 'ArrowDown') { e.preventDefault(); setTriggerSearchIndex((i) => (i < triggerSearchResults.length - 1 ? i + 1 : 0)) }
-                      else if (e.key === 'ArrowUp') { e.preventDefault(); setTriggerSearchIndex((i) => (i > 0 ? i - 1 : triggerSearchResults.length - 1)) }
-                      else if (e.key === 'Enter' && triggerSearchIndex >= 0) { e.preventDefault(); setSelectedTriggerPage(triggerSearchResults[triggerSearchIndex]); setTriggerSearchQuery('') }
-                    }}
-                    placeholder="Search pages..."
-                    autoFocus
-                  />
-                  {triggerSearchResults.length > 0 && (
-                    <div className={styles.triggerSearchResults} ref={triggerResultsRef}>
-                      {triggerSearchResults.map((p, i) => (
-                        <button
-                          key={p.id}
-                          className={i === triggerSearchIndex ? styles.triggerSearchResultActive : styles.triggerSearchResult}
-                          onClick={() => { setSelectedTriggerPage(p); setTriggerSearchQuery('') }}
-                          onMouseEnter={() => setTriggerSearchIndex(i)}
-                        >
-                          {p.name}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-              <input
-                className={styles.colorInput}
-                type="text"
-                value={newTriggerChar}
-                onChange={(e) => {
-                  const ch = e.target.value.slice(0, 1)
-                  if (ch === '~' || /\s/.test(ch)) return
-                  setNewTriggerChar(ch)
-                }}
-                placeholder="trigger"
-                style={{ width: 52 }}
-              />
-            </div>
-            <div className={styles.triggerButtonGroup}>
-              <button className={styles.confirmButton} onClick={handleAddTrigger} aria-label="Confirm"
-                style={{ opacity: selectedTriggerPage && newTriggerChar.trim() ? 1 : 0.4, pointerEvents: selectedTriggerPage && newTriggerChar.trim() ? 'auto' : 'none' }}>{<CheckIcon />}</button>
-              <button className={styles.deleteButton} onClick={cancelAddTrigger} aria-label="Cancel">{<TrashIcon />}</button>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Candidate statuses */}
-      <div className={styles.section}>
-        <div className={styles.listHeader}>
-          <span className={styles.sectionTitle}>Candidate statuses</span>
-          <button className={styles.addButton} onClick={() => setAddingStatus(true)} aria-label="Add status">{<PlusIcon />}</button>
-        </div>
-        <span className={styles.emptyHint}>First status is the default for new candidates</span>
-        {candidateStatuses.map((status) => (
-          <div key={status.id} className={styles.listItem}>
-            {editingStatusId === status.id ? (
-              <>
-                <input className={styles.inlineInput} type="text" value={editingStatusName}
-                  onChange={(e) => setEditingStatusName(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') handleRenameStatus(status.id!); if (e.key === 'Escape') setEditingStatusId(null) }}
-                  autoFocus />
-                <button className={styles.confirmButton} onClick={() => handleRenameStatus(status.id!)} aria-label="Confirm"
-                  style={{ opacity: editingStatusName.trim() ? 1 : 0.4, pointerEvents: editingStatusName.trim() ? 'auto' : 'none' }}>{<CheckIcon />}</button>
-                <button className={styles.deleteButton} onClick={() => setEditingStatusId(null)} aria-label="Cancel">{<CloseIcon size={12} />}</button>
-              </>
-            ) : (
-              <>
-                <span className={styles.itemName} onClick={() => { setEditingStatusId(status.id!); setEditingStatusName(status.name) }}
-                  style={{ cursor: 'pointer' }}>{status.name}</span>
-                <button className={styles.deleteButton}
-                  onClick={() => status.id && deleteCandidateStatus(status.id)}
-                  aria-label={`Delete ${status.name}`}
-                  style={{ opacity: candidateStatuses.length <= 1 ? 0.3 : 1, pointerEvents: candidateStatuses.length <= 1 ? 'none' : 'auto' }}
-                >{<TrashIcon />}</button>
-              </>
-            )}
-          </div>
-        ))}
-        {addingStatus && (
-          <div className={styles.listItem}>
-            <input className={styles.inlineInput} type="text" value={newStatusName} onChange={(e) => setNewStatusName(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') handleAddStatus(); if (e.key === 'Escape') cancelAddStatus() }}
-              placeholder="Status name" autoFocus />
-            <button className={styles.confirmButton} onClick={handleAddStatus} aria-label="Confirm"
-              style={{ opacity: newStatusName.trim() ? 1 : 0.4, pointerEvents: newStatusName.trim() ? 'auto' : 'none' }}>{<CheckIcon />}</button>
-            <button className={styles.deleteButton} onClick={cancelAddStatus} aria-label="Cancel">{<TrashIcon />}</button>
-          </div>
-        )}
-      </div>
-
-      {/* Dimensions */}
-      <div className={styles.section}>
-        <div className={styles.listHeader}>
-          <span className={styles.sectionTitle}>Feedback dimensions</span>
-          <button className={styles.addButton} onClick={() => setAddingDim(true)} aria-label="Add dimension">{<PlusIcon />}</button>
-        </div>
-        {dimensions.length === 0 && !addingDim && (
-          <span className={styles.emptyHint}>Add dimensions to categorize feedback</span>
-        )}
-        {dimensions.map((dim) => (
-          <div key={dim.id} className={styles.listItem}>
-            <span className={styles.itemName}>{dim.name}</span>
-            <button className={styles.deleteButton} onClick={() => dim.id && deleteDimension(dim.id)} aria-label={`Delete ${dim.name}`}>{<TrashIcon />}</button>
-          </div>
-        ))}
-        {addingDim && (
-          <div className={styles.listItem}>
-            <input className={styles.inlineInput} type="text" value={newDimName} onChange={(e) => setNewDimName(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') handleAddDimension(); if (e.key === 'Escape') cancelAddDim() }}
-              placeholder="Dimension name" autoFocus />
-            <button className={styles.confirmButton} onClick={handleAddDimension} aria-label="Confirm"
-              style={{ opacity: newDimName.trim() ? 1 : 0.4, pointerEvents: newDimName.trim() ? 'auto' : 'none' }}>{<CheckIcon />}</button>
-            <button className={styles.deleteButton} onClick={cancelAddDim} aria-label="Cancel">{<TrashIcon />}</button>
-          </div>
-        )}
       </div>
 
       <span className={styles.version}>v{__APP_VERSION__}</span>

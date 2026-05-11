@@ -1,7 +1,7 @@
 .header {
   display: flex;
   align-items: center;
-  gap: var(--space-sm);
+  gap: var(--space-md);
   padding: var(--header-padding-top) 0 var(--space-xs);
   align-self: stretch;
 }

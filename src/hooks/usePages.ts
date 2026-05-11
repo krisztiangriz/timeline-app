@@ -114,7 +114,7 @@ export function usePageActions() {
     const target = await db.pages.get(id)
     if (target?.role) return
 
-    await db.transaction('rw', [db.pages, db.layouts, db.blocks, db.timelineEntries, db.feedbacks, db.chartConfigs], async () => {
+    await db.transaction('rw', [db.pages, db.layouts, db.blocks, db.timelineEntries, db.feedbacks, db.chartConfigs, db.pagePropertyValues], async () => {
       async function deleteRecursive(pageId: number) {
         const children = await db.pages.where('parentId').equals(pageId).toArray()
         for (const child of children) {
@@ -130,6 +130,7 @@ export function usePageActions() {
         await db.layouts.where('pageId').equals(pageId).delete()
         await db.timelineEntries.where('pageId').equals(pageId).delete()
         await db.feedbacks.where('subjectId').equals(pageId).delete()
+        await db.pagePropertyValues.where('pageId').equals(pageId).delete()
         await db.pages.delete(pageId)
       }
       await deleteRecursive(id)

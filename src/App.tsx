@@ -7,6 +7,7 @@ import { ToastContainer } from './components/Toast/Toast'
 import { ToastProvider, useToast } from './hooks/useToast'
 import { useAutoBackup } from './hooks/useAutoBackup'
 import { usePageActions, usePageByRole, getPagePath } from './hooks/usePages'
+import { seedDefaultPropertyValues } from './hooks/useHubProperties'
 import { db } from './db/database'
 import type { PageType, PageRole } from './types'
 import type { PageFormData, HubInfo } from './components/PageForm/PageForm'
@@ -18,8 +19,8 @@ const HubPage = lazy(() => import('./pages/HubPage/HubPage').then((m) => ({ defa
 const DetailPage = lazy(() => import('./pages/DetailPage/DetailPage').then((m) => ({ default: m.DetailPage })))
 
 // Lazy-loaded modal components
-const FeedbackForm = lazy(() => import('./components/FeedbackForm/FeedbackForm').then((m) => ({ default: m.FeedbackForm })))
 const PageForm = lazy(() => import('./components/PageForm/PageForm').then((m) => ({ default: m.PageForm })))
+const FeedbackModal = lazy(() => import('./components/FeedbackModal/FeedbackModal').then((m) => ({ default: m.FeedbackModal })))
 const SettingsModal = lazy(() => import('./pages/SettingsPage/SettingsModal').then((m) => ({ default: m.SettingsModal })))
 const HelpModal = lazy(() => import('./components/HelpModal/HelpModal').then((m) => ({ default: m.HelpModal })))
 const OnboardingModal = lazy(() => import('./components/OnboardingModal/OnboardingModal').then((m) => ({ default: m.OnboardingModal })))
@@ -60,88 +61,93 @@ function GlobalOverlays() {
     return match?.id
   }, [hubs, allPages, location.pathname])
 
-  async function handleAddPage(data: PageFormData) {
+  async function handleAddPage(data: PageFormData): Promise<number | undefined> {
     const parentId = data.parentHubId
     const hub = parentId ? allPages.find((p) => p.id === parentId) : undefined
 
-    // Hub creation
+    // Hub creation — hub already exists (created by PageForm), just navigate
     if (data.isHub) {
-      const pageId = await addPage({ name: data.name, type: 'hub', description: '', mentionTrigger: data.mentionTrigger, mentionCollapsed: data.mentionCollapsed })
-      if (data.template !== 'hub-table') {
-        await db.blocks.add({ pageId, type: 'visualization', order: 0 })
-      }
-      await db.blocks.add({ pageId, type: 'table', order: data.template === 'hub-table' ? 0 : 1 })
+      const pageId = data.existingPageId!
       setAddPageOpen(false)
       showToast('Hub created')
       navigate(`/page/${pageId}`)
-      return
+      return pageId
     }
 
-    // Page creation — determine page type from parent hub
-    let pageType: PageType = 'general'
-    if (hub?.role && ROLE_TO_PAGE_TYPE[hub.role]) {
-      pageType = ROLE_TO_PAGE_TYPE[hub.role]
-    }
-
-    const pageId = await addPage({ name: data.name, type: pageType, parentId, description: '', mentionTrigger: data.mentionTrigger, mentionCollapsed: data.mentionCollapsed })
-
-    // Create blocks/tabs based on selected template
-    switch (data.template) {
-      case 'tabbed': {
-        const tabDefs = [
-          { name: 'Timeline', blockType: 'timeline' as const },
-          { name: 'Feedback', blockType: 'feedback' as const },
-          { name: 'Visualization', blockType: 'visualization' as const },
-        ]
-        for (let i = 0; i < tabDefs.length; i++) {
-          const tabId = await db.layouts.add({ pageId, type: 'tab' as const, name: tabDefs[i].name, order: i })
-          await db.blocks.add({ pageId, tabId: tabId as number, type: tabDefs[i].blockType, order: 0 })
-        }
-        // Append user-added extra tabs
-        for (let i = 0; i < data.tabs.length; i++) {
-          const tabId = await db.layouts.add({ pageId, type: 'tab' as const, name: data.tabs[i], order: tabDefs.length + i })
-          await db.blocks.add({ pageId, tabId: tabId as number, type: 'text', content: '', order: 0 })
-        }
-        break
+    try {
+      // Page creation — determine page type from parent hub
+      let pageType: PageType = 'general'
+      if (hub?.role && ROLE_TO_PAGE_TYPE[hub.role]) {
+        pageType = ROLE_TO_PAGE_TYPE[hub.role]
       }
-      case 'simple':
-        await db.blocks.add({ pageId, type: 'visualization', order: 0 })
-        await db.blocks.add({ pageId, type: 'timeline', order: 1 })
-        break
-      case 'text':
-        await db.blocks.add({ pageId, type: 'text', content: '', order: 0 })
-        break
-      case 'custom':
-        // Empty — user configures after creation
-        break
-    }
 
-    setAddPageOpen(false)
-    showToast('Page created')
+      const pageId = await addPage({ name: data.name, type: pageType, parentId, description: '', mentionTrigger: data.mentionTrigger, mentionCollapsed: data.mentionCollapsed })
 
-    // If page was created from trigger dropdown, insert mention instead of navigating
-    if (addPageInitial?.triggerText) {
-      setPendingMentionInsert({
-        pageId,
-        name: data.name,
-        prefix: addPageInitial.triggerPrefix || '',
-        triggerText: addPageInitial.triggerText,
-      })
-      setAddPageInitial(undefined)
-    } else {
-      setAddPageInitial(undefined)
-      const newPage = await db.pages.get(pageId)
-      if (newPage) {
-        navigate(getPagePath(newPage, allPages))
+      // Seed default property values if the parent hub has properties defined
+      if (parentId) {
+        await seedDefaultPropertyValues(pageId, parentId)
+      }
+
+      // Create blocks/tabs based on selected template
+      switch (data.template) {
+        case 'tabbed': {
+          const tabDefs = [
+            { name: 'Timeline', blockType: 'timeline' as const },
+            { name: 'Feedback', blockType: 'feedback' as const },
+            { name: 'Visualization', blockType: 'visualization' as const },
+          ]
+          for (let i = 0; i < tabDefs.length; i++) {
+            const tabId = await db.layouts.add({ pageId, type: 'tab' as const, name: tabDefs[i].name, order: i })
+            await db.blocks.add({ pageId, tabId: tabId as number, type: tabDefs[i].blockType, order: 0 })
+          }
+          // Append user-added extra tabs
+          for (let i = 0; i < data.tabs.length; i++) {
+            const tabId = await db.layouts.add({ pageId, type: 'tab' as const, name: data.tabs[i], order: tabDefs.length + i })
+            await db.blocks.add({ pageId, tabId: tabId as number, type: 'text', content: '', order: 0 })
+          }
+          break
+        }
+        case 'simple':
+          await db.blocks.add({ pageId, type: 'visualization', order: 0 })
+          await db.blocks.add({ pageId, type: 'timeline', order: 1 })
+          break
+        case 'text':
+          await db.blocks.add({ pageId, type: 'text', content: '', order: 0 })
+          break
+        case 'custom':
+          // Empty — user configures after creation
+          break
+      }
+
+      setAddPageOpen(false)
+      showToast('Page created')
+
+      // If page was created from trigger dropdown, insert mention instead of navigating
+      if (addPageInitial?.triggerText) {
+        setPendingMentionInsert({
+          pageId,
+          name: data.name,
+          prefix: addPageInitial.triggerPrefix || '',
+          triggerText: addPageInitial.triggerText,
+        })
+        setAddPageInitial(undefined)
       } else {
-        navigate(`/page/${pageId}`)
+        setAddPageInitial(undefined)
+        const newPage = await db.pages.get(pageId)
+        if (newPage) {
+          navigate(getPagePath(newPage, allPages))
+        } else {
+          navigate(`/page/${pageId}`)
+        }
       }
+    } catch {
+      showToast('Failed to create page')
     }
+    return undefined
   }
 
   return (
     <>
-      {feedbackOpen && <Suspense fallback={null}><FeedbackForm open={feedbackOpen} onClose={() => setFeedbackOpen(false)} onSuccess={showToast} /></Suspense>}
       {addPageOpen && (
         <Suspense fallback={null}>
           <PageForm
@@ -153,6 +159,7 @@ function GlobalOverlays() {
           />
         </Suspense>
       )}
+      {feedbackOpen && <Suspense fallback={null}><FeedbackModal open={feedbackOpen} onClose={() => setFeedbackOpen(false)} onSuccess={showToast} /></Suspense>}
       {settingsOpen && <Suspense fallback={null}><SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} onToast={showToast} /></Suspense>}
       {helpOpen && <Suspense fallback={null}><HelpModal open={helpOpen} onClose={() => setHelpOpen(false)} /></Suspense>}
       {onboardingOpen && <Suspense fallback={null}><OnboardingModal open={onboardingOpen} onClose={() => setOnboardingOpen(false)} /></Suspense>}
@@ -207,16 +214,6 @@ function useEnsureDefaults() {
 
       // Projects hub
       await createHub('Projects', 'project-hub', '#')
-
-      // Default candidate statuses
-      const defaultStatuses = [
-        { name: 'Active', value: 'active', order: 0 },
-        { name: 'Recommended', value: 'recommended', order: 1 },
-        { name: 'Hired', value: 'hired', order: 2 },
-        { name: 'Rejected', value: 'rejected', order: 3 },
-        { name: 'Withdrawn', value: 'withdrawn', order: 4 },
-      ]
-      for (const s of defaultStatuses) await db.candidateStatuses.add(s)
     })()
   }, [])
 }

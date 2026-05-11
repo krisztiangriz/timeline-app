@@ -3,13 +3,29 @@
 export type PageType = 'general' | 'candidate' | 'colleague' | 'project' | 'hub'
 export type PageRole = 'colleague-hub' | 'candidate-hub' | 'project-hub' | 'main-timeline'
 
-export type FeedbackType = 'positive' | 'neutral' | 'negative'
+// ---- Hub Properties (configurable per hub) ----
 
-export interface CandidateStatusDef {
+export interface PropertyOption {
+  value: string       // slug/key: "active", "engineer"
+  label: string       // display label: "Active", "Engineer"
+  color?: string      // hex color from palette
+}
+
+export interface HubProperty {
   id?: number
-  name: string    // display label (e.g. "Active")
-  value: string   // slug/key (e.g. "active") — stored in Page.candidateStatus
+  hubId: number       // which hub owns this property
+  name: string        // "Status", "Role", "Level"
+  type: 'select'      // only select for now
+  options: PropertyOption[]
   order: number
+  scope?: 'page' | 'feedback'  // default 'page' for backward compat
+}
+
+export interface PagePropertyValue {
+  id?: number
+  pageId: number      // child page
+  propertyId: number  // which HubProperty
+  value: string       // matches a PropertyOption.value
 }
 
 // ---- Database Entities ----
@@ -22,7 +38,6 @@ export interface Page {
   mentionTrigger?: string  // autocomplete trigger prefix — any single character for hubs
   mentionCollapsed?: boolean // when true, mentions show only the trigger char (not the full name)
   parentId?: number        // hub grouping
-  candidateStatus?: string        // only for candidate pages (references CandidateStatusDef.value)
   archived?: boolean       // hidden from views unless "Show archived" is on
   description: string
   createdAt: Date
@@ -70,26 +85,22 @@ export interface TimelineEntry {
 export interface Feedback {
   id?: number
   subjectId: number // pageId of colleague/project
-  type: FeedbackType
+  type: string      // first feedback property value (e.g. 'positive', 'neutral', 'negative')
   description: string
-  dimensionId?: number
+  dimensionId?: string  // second feedback property value (option slug from hub feedback property)
   createdAt: Date
-}
-
-export interface Dimension {
-  id?: number
-  name: string
-  order: number
 }
 
 // ---- Chart Configuration ----
 
 export type ChartDataSource =
   | 'entry-count'
-  | 'feedback-sentiment'
-  | 'feedback-by-dimension'
-  | 'candidate-status'
+  | 'property-distribution'
   | 'page-count'
+  | 'feedback-by-type'
+  | 'feedback-by-dimension'
+  | 'feedback-over-time'
+  | 'feedback-per-page'
 
 export type ChartType = 'bar' | 'line' | 'area' | 'pie'
 
@@ -105,6 +116,7 @@ export interface ChartConfig {
   dataSource: ChartDataSource
   chartType: ChartType
   scopes?: ChartScope[]       // multi-select scopes (empty = all data)
+  propertyId?: number         // for 'property-distribution' source
   order: number
 }
 

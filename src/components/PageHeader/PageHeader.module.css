@@ -1,9 +1,20 @@
+.header {
+  padding-top: var(--space-sm);
+  padding-bottom: var(--space-sm);
+}
+
+.titleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 32px;
+}
+
 .title {
   font-size: var(--font-size-h1);
   line-height: 24px;
   font-weight: var(--font-weight-bold);
   color: var(--color-text-primary);
-  padding: var(--space-md) 0 var(--space-xs);
   cursor: text;
 }
 
@@ -16,16 +27,22 @@
   border: none;
   outline: none;
   background: none;
-  padding: var(--space-md) 0 var(--space-xs);
+  padding: 0;
   width: 100%;
   caret-color: var(--color-text-primary);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
 }
 
 .tabGroup {
   display: flex;
   align-items: center;
   gap: var(--space-md);
-  padding-bottom: var(--space-sm);
+  padding-top: var(--space-sm);
 }
 
 .tab {

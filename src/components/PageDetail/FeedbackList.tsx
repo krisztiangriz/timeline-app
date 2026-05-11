@@ -1,50 +1,128 @@
-import { useState, useMemo } from 'react'
-import { useFeedbackForSubject, updateFeedback, deleteFeedback } from '../../hooks/useFeedback'
-import { useDimensions } from '../../hooks/useDimensions'
+import { useState, useMemo, memo } from 'react'
+import { Modal } from '../Modal/Modal'
+import { useFeedbackForSubject, addFeedback, updateFeedback, deleteFeedback } from '../../hooks/useFeedback'
+import { useHubFeedbackProperties } from '../../hooks/useHubProperties'
+import { useAutocomplete } from '../../hooks/useAutocomplete'
 import { formatTableDate } from '../../utils/dateUtils'
 import { EmptyState } from '../EmptyState/EmptyState'
-import { TrashIcon } from '../Icons/Icons'
+import { RichTextEditor } from '../RichTextEditor/RichTextEditor'
+import { RichTextDisplay } from '../RichTextEditor/RichTextDisplay'
+import { PlusIcon } from '../Icons/Icons'
+import { RangeToggle, type RangeMonths } from '../RangeToggle/RangeToggle'
 import styles from './PageDetail.module.css'
+import radio from '../../styles/radio.module.css'
 
 interface FeedbackListProps {
   subjectId: number
 }
 
-export function FeedbackList({ subjectId }: FeedbackListProps) {
+export const FeedbackList = memo(function FeedbackList({ subjectId }: FeedbackListProps) {
   const feedbacks = useFeedbackForSubject(subjectId)
-  const dimensions = useDimensions()
-  const dimMap = useMemo(() => new Map(dimensions.map((d) => [d.id!, d])), [dimensions])
+  const { allPages } = useAutocomplete()
 
+  // Range filter state
+  const [range, setRange] = useState<RangeMonths>(0)
+
+  const filteredFeedbacks = useMemo(() => {
+    if (range === 0) return feedbacks
+    const now = new Date()
+    const cutoff = new Date(now.getFullYear(), now.getMonth() - range, now.getDate())
+    return feedbacks.filter((fb) => new Date(fb.createdAt) >= cutoff)
+  }, [feedbacks, range])
+
+  // Find the hub for this subject to get feedback properties
+  const subjectPage = allPages.find((p) => p.id === subjectId)
+  const hub = subjectPage?.parentId ? allPages.find((p) => p.id === subjectPage.parentId) : undefined
+  const feedbackProperties = useHubFeedbackProperties(hub?.id)
+
+  // First property → maps to Feedback.type, Second → maps to Feedback.dimensionId
+  const firstProperty = feedbackProperties[0]
+  const secondProperty = feedbackProperties[1]
+
+  // Build second property lookup from property options (value is stored as string ID)
+  const dimMap = useMemo(() => {
+    if (!secondProperty) return new Map<string, { name: string; color?: string }>()
+    return new Map(secondProperty.options.map((o) => [o.value, { name: o.label, color: o.color }]))
+  }, [secondProperty])
+
+  // Modal state
+  const [modalOpen, setModalOpen] = useState(false)
+  const [modalDescription, setModalDescription] = useState('')
+  const [modalPropertyValues, setModalPropertyValues] = useState<Record<number, string>>({})
+
+  // Edit state
   const [editingId, setEditingId] = useState<number | null>(null)
-  const [editText, setEditText] = useState('')
+  const [editHtml, setEditHtml] = useState('')
 
   function startEdit(id: number, description: string) {
     setEditingId(id)
-    setEditText(description)
+    setEditHtml(description)
   }
 
   async function handleSave() {
     if (editingId === null) return
-    const trimmed = editText.trim()
-    if (!trimmed) {
+    const trimmed = editHtml.trim()
+    if (!trimmed || trimmed === '<br>') {
       await deleteFeedback(editingId)
     } else {
       await updateFeedback(editingId, { description: trimmed })
     }
     setEditingId(null)
-    setEditText('')
+    setEditHtml('')
   }
 
-  if (feedbacks.length === 0) {
-    return <EmptyState message="Add feedback with Ctrl+Shift+F" />
+  function openModal() {
+    setModalDescription('')
+    setModalPropertyValues({})
+    setModalOpen(true)
+  }
+
+  async function handleModalSubmit() {
+    const trimmed = modalDescription.trim()
+    if (!trimmed) return
+
+    try {
+      const type = firstProperty
+        ? (modalPropertyValues[firstProperty.id!] || firstProperty.options[0]?.value || '')
+        : ''
+      const dimValue = secondProperty ? modalPropertyValues[secondProperty.id!] : undefined
+
+      await addFeedback({
+        subjectId,
+        type,
+        description: trimmed,
+        dimensionId: dimValue || undefined,
+      })
+
+      setModalOpen(false)
+      setModalDescription('')
+      setModalPropertyValues({})
+    } catch {
+      // Silent failure — DB error unlikely in normal operation
+    }
+  }
+
+  function setPropertyValue(propertyId: number, value: string) {
+    setModalPropertyValues((prev) => ({ ...prev, [propertyId]: value }))
   }
 
   return (
     <div className={styles.feedbackList}>
-      {feedbacks.map((fb) => {
-        const dim = fb.dimensionId
-          ? dimMap.get(fb.dimensionId)
-          : undefined
+      {/* Header with range toggle and add button */}
+      <div className={styles.feedbackListHeader}>
+        <RangeToggle value={range} onChange={setRange} />
+        <button className={styles.feedbackAddButton} onClick={openModal} aria-label="Add feedback">
+          <PlusIcon />
+        </button>
+      </div>
+
+      {/* Feedback items */}
+      {filteredFeedbacks.length === 0 && (
+        <EmptyState message="Click + to add feedback" />
+      )}
+      {filteredFeedbacks.map((fb) => {
+        const dim = fb.dimensionId ? dimMap.get(String(fb.dimensionId)) : undefined
+        const typeOption = firstProperty?.options.find((o) => o.value === fb.type)
 
         return (
           <div key={fb.id} className={styles.feedbackItem}>
@@ -52,53 +130,88 @@ export function FeedbackList({ subjectId }: FeedbackListProps) {
               <span className={styles.feedbackDate}>
                 {formatTableDate(new Date(fb.createdAt))}
               </span>
+              {typeOption && (
+                <>
+                  <div className={styles.feedbackSeparator} />
+                  <span className={styles.feedbackDimension}>{typeOption.label}</span>
+                </>
+              )}
               {dim && (
                 <>
                   <div className={styles.feedbackSeparator} />
                   <span className={styles.feedbackDimension}>{dim.name}</span>
                 </>
               )}
-              {fb.type === 'positive' && (
-                <div className={styles.feedbackIndicatorPositive} />
-              )}
-              {fb.type === 'neutral' && (
-                <div className={styles.feedbackIndicatorNeutral} />
-              )}
-              {fb.type === 'negative' && (
-                <div className={styles.feedbackIndicatorNegative} />
-              )}
               <button
                 className={styles.feedbackDeleteButton}
                 onClick={() => deleteFeedback(fb.id!)}
                 aria-label="Delete feedback"
               >
-                <TrashIcon />
+                Delete
               </button>
             </div>
             {editingId === fb.id ? (
-              <textarea
-                className={styles.feedbackEditTextarea}
-                value={editText}
-                onChange={(e) => setEditText(e.target.value)}
+              <RichTextEditor
+                value={editHtml}
+                onChange={setEditHtml}
                 onBlur={handleSave}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSave() }
-                  if (e.key === 'Escape') { setEditingId(null); setEditText('') }
-                }}
+                onEnter={handleSave}
                 autoFocus
+                className={styles.feedbackRichInput}
               />
             ) : (
-              <span
-                className={styles.feedbackDescription}
+              <RichTextDisplay
+                html={fb.description}
                 onClick={() => startEdit(fb.id!, fb.description)}
-                style={{ cursor: 'text' }}
-              >
-                {fb.description}
-              </span>
+                className={styles.feedbackDescription}
+              />
             )}
           </div>
         )
       })}
+
+      {/* Add feedback modal */}
+      <Modal
+        title="Add feedback"
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onConfirm={handleModalSubmit}
+        confirmDisabled={!modalDescription.trim()}
+      >
+        {/* Description */}
+        <div className={styles.feedbackModalSection}>
+          <span className={styles.feedbackModalLabel}>Description</span>
+          <textarea
+            className={styles.feedbackModalTextarea}
+            value={modalDescription}
+            onChange={(e) => setModalDescription(e.target.value)}
+            placeholder="Enter feedback..."
+            autoFocus
+          />
+        </div>
+
+        {/* Feedback properties — rendered generically */}
+        {feedbackProperties.map((prop, index) => (
+          <div key={prop.id} className={styles.feedbackModalSection}>
+            <span className={styles.feedbackModalLabel}>{prop.name}</span>
+            <div className={prop.options.length > 3 ? styles.feedbackModalOptionsVertical : styles.feedbackModalOptions}>
+              {prop.options.map((opt) => (
+                <button
+                  key={opt.value}
+                  className={radio.radioOption}
+                  onClick={() => setPropertyValue(prop.id!, opt.value)}
+                >
+                  <div
+                    className={radio.radioCircle}
+                    data-checked={(modalPropertyValues[prop.id!] || (index === 0 ? prop.options[0]?.value : '')) === opt.value}
+                  />
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
+      </Modal>
     </div>
   )
-}
+})

@@ -1,11 +1,13 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { Modal } from '../Modal/Modal'
+import { PropertyEditorContent } from '../PropertyEditor/PropertyEditor'
 import { DragHandleIcon, TrashIcon, CheckIcon, PlusIcon, CloseIcon } from '../Icons/Icons'
+import { db } from '../../db/database'
 import type { BlockType } from '../../types'
 import styles from './PageForm.module.css'
 import radio from '../../styles/radio.module.css'
 
-export type PageTemplate = 'tabbed' | 'simple' | 'text' | 'custom' | 'hub-standard' | 'hub-table'
+export type PageTemplate = 'tabbed' | 'simple' | 'text' | 'custom' | 'hub-standard'
 
 export interface BlockItem {
   id: number
@@ -20,6 +22,7 @@ export interface PageFormData {
   parentHubId?: number
   template: PageTemplate
   isHub: boolean
+  existingPageId?: number  // for hub creation: hub already exists in DB
   mentionTrigger?: string
   mentionCollapsed?: boolean
   inheritedTrigger?: string
@@ -40,12 +43,13 @@ export interface HubInfo {
 interface PageFormProps {
   open: boolean
   onClose: () => void
-  onSubmit: (data: PageFormData) => void
+  onSubmit: (data: PageFormData) => unknown
   initial?: Partial<PageFormData>
   isEdit?: boolean
   isHub?: boolean
   hubs?: HubInfo[]
   protectedTabCount?: number
+  hubId?: number  // when editing a hub, enables step 2 (property config)
 }
 
 function RadioOption({ selected, onChange, label, description, disabled }: {
@@ -205,7 +209,7 @@ function BlockListEditor({ blocks, tabInfo, onReorder, onDelete, onDeleteTab, pr
   )
 }
 
-export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHubProp, hubs = EMPTY_HUBS, protectedTabCount = 0 }: PageFormProps) {
+export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHubProp, hubs = EMPTY_HUBS, protectedTabCount = 0, hubId }: PageFormProps) {
   const [name, setName] = useState('')
   const [tabs, setTabs] = useState<string[]>([])
   const [addingTab, setAddingTab] = useState(false)
@@ -221,6 +225,51 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
   const [blockDragIdx, setBlockDragIdx] = useState<{ group: string; idx: number } | null>(null)
   const [blockDropIdx, setBlockDropIdx] = useState<{ group: string; idx: number } | null>(null)
   const prevOpen = useRef(false)
+  const [createdHubId, setCreatedHubId] = useState<number | null>(null)
+  const hubConfirmed = useRef(false)
+
+  // Creating a new hub — properties appear immediately when Hub type is selected
+  const isCreatingHub = !isEdit && isHubType
+
+  // Create placeholder hub immediately when user selects Hub type
+  useEffect(() => {
+    if (!open || isEdit) return
+    if (isHubType && !createdHubId) {
+      ;(async () => {
+        const id = await db.pages.add({
+          name: name.trim() || 'Untitled',
+          type: 'hub' as const,
+          description: '',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          editCount: 0,
+        })
+        setCreatedHubId(id as number)
+      })()
+    }
+  }, [isHubType, open, isEdit]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Cleanup: delete placeholder hub if user switches back to Page type
+  useEffect(() => {
+    if (!open || isEdit) return
+    if (!isHubType && createdHubId && !hubConfirmed.current) {
+      db.pages.delete(createdHubId)
+      setCreatedHubId(null)
+    }
+  }, [isHubType, open, isEdit, createdHubId])
+
+  // Cleanup function for cancel/close
+  const cleanupPlaceholderHub = useCallback(async () => {
+    if (createdHubId && !hubConfirmed.current) {
+      // Delete the placeholder hub and any properties/blocks created on it
+      await db.transaction('rw', [db.pages, db.blocks, db.hubProperties, db.pagePropertyValues], async () => {
+        await db.hubProperties.where('hubId').equals(createdHubId).delete()
+        await db.blocks.where('pageId').equals(createdHubId).delete()
+        await db.pages.delete(createdHubId)
+      })
+      setCreatedHubId(null)
+    }
+  }, [createdHubId])
 
   useEffect(() => {
     if (open && !prevOpen.current) {
@@ -238,6 +287,8 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
       blocksModified.current = false
       setBlockDragIdx(null)
       setBlockDropIdx(null)
+      setCreatedHubId(null)
+      hubConfirmed.current = false
     }
     prevOpen.current = open
   }, [open, initial, hubs])
@@ -258,7 +309,37 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
     }
   }
 
-  function handleSubmit() {
+  async function handleConfirm() {
+    // Hub creation: hub already exists as placeholder, finalize it
+    if (isCreatingHub && createdHubId) {
+      try {
+        hubConfirmed.current = true
+        // Update the hub with final name/trigger
+        await db.pages.update(createdHubId, {
+          name: name.trim() || 'Untitled',
+          mentionTrigger: trigger || undefined,
+          mentionCollapsed: collapsed || undefined,
+          updatedAt: new Date(),
+        })
+        // Add default blocks (visualization + table)
+        const existingBlocks = await db.blocks.where('pageId').equals(createdHubId).count()
+        if (existingBlocks === 0) {
+          await db.blocks.add({ pageId: createdHubId, type: 'visualization', order: 0 })
+          await db.blocks.add({ pageId: createdHubId, type: 'table', order: 1 })
+        }
+        // Notify parent (for navigation/toast)
+        onSubmit({
+          name, tabs, parentHubId: undefined, template, isHub: true,
+          existingPageId: createdHubId,
+          mentionTrigger: trigger || undefined, mentionCollapsed: collapsed || undefined,
+        })
+      } catch {
+        hubConfirmed.current = false
+      }
+      return
+    }
+
+    // Normal submit (edit mode or non-hub creation)
     onSubmit({
       name, tabs, parentHubId: isHubType ? undefined : parentHubId, template, isHub: isHubType,
       mentionTrigger: trigger || undefined, mentionCollapsed: collapsed || undefined,
@@ -267,12 +348,15 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
     })
   }
 
+  // Effective hubId for property editor (either from prop or from just-created hub)
+  const effectiveHubId = hubId ?? createdHubId ?? undefined
+
   return (
     <Modal
       title={isEdit ? 'Edit page' : 'Add page'}
       open={open}
-      onClose={onClose}
-      onConfirm={handleSubmit}
+      onClose={() => { cleanupPlaceholderHub(); onClose() }}
+      onConfirm={handleConfirm}
       confirmDisabled={!name.trim()}
     >
       {/* Page name */}
@@ -280,48 +364,6 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
         <span className={styles.label}>Page name</span>
         <input className={styles.textInput} type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Enter page name" />
       </div>
-
-      {/* Type — Page or Hub (creation only) */}
-      {!isEdit && !isHubProp && (
-        <div className={styles.section}>
-          <span className={styles.label}>Type</span>
-          <div className={styles.radioCol}>
-            <RadioOption selected={!isHubType} onChange={() => setIsHubType(false)} label="Page" />
-            <RadioOption selected={isHubType} onChange={() => setIsHubType(true)} label="Hub" />
-          </div>
-        </div>
-      )}
-
-      {/* Hub template (creation only, hub type only) */}
-      {!isEdit && !isHubProp && isHubType && (
-        <div className={styles.section}>
-          <span className={styles.label}>Hub template</span>
-          <div className={styles.radioCol}>
-            <RadioOption selected={template === 'hub-standard'} onChange={() => setTemplate('hub-standard')} label="Standard" description="Visualization + Table" />
-            <RadioOption selected={template === 'hub-table'} onChange={() => setTemplate('hub-table')} label="Table" description="Table only" />
-          </div>
-        </div>
-      )}
-
-      {/* Add to hub (creation only, page type only) */}
-      {!isEdit && !isHubProp && !isHubType && hubs.length > 0 && (
-        <div className={styles.section}>
-          <span className={styles.label}>Add to</span>
-          <div className={styles.radioCol}>
-            {hubs.map((hub) => (
-              <div key={hub.id} className={styles.radioRowItem}>
-                <RadioOption
-                  selected={parentHubId === hub.id}
-                  onChange={() => setParentHubId(hub.id)}
-                  label={hub.name}
-                />
-                {hub.mentionTrigger && <kbd className={styles.triggerBadge}>{hub.mentionTrigger}</kbd>}
-              </div>
-            ))}
-            <RadioOption selected={!parentHubId} onChange={() => setParentHubId(undefined)} label="Do not add to hub" />
-          </div>
-        </div>
-      )}
 
       {/* Trigger character (optional — for hubs and standalone root pages; read-only for child pages) */}
       {(isHubType || isHubProp || (!isEdit && !parentHubId) || (isEdit && (trigger || initial?.inheritedTrigger))) && (
@@ -368,15 +410,46 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
         </div>
       )}
 
-      {/* Page template (creation only, page type only) */}
+      {/* Type — Page or Hub (creation only) */}
+      {!isEdit && !isHubProp && (
+        <div className={styles.section}>
+          <span className={styles.label}>Type</span>
+          <div className={styles.radioCol}>
+            <RadioOption selected={!isHubType} onChange={() => setIsHubType(false)} label="Page" />
+            <RadioOption selected={isHubType} onChange={() => setIsHubType(true)} label="Hub" />
+          </div>
+        </div>
+      )}
+
+      {/* Template (creation only — page type) */}
       {!isEdit && !isHubProp && !isHubType && (
         <div className={styles.section}>
-          <span className={styles.label}>Page template</span>
+          <span className={styles.label}>Template</span>
           <div className={styles.radioCol}>
             <RadioOption selected={template === 'tabbed'} onChange={() => setTemplate('tabbed')} label="Tabbed" description="Timeline, Feedback, Visualization" />
             <RadioOption selected={template === 'simple'} onChange={() => setTemplate('simple')} label="Simple" description="Visualization + Timeline" />
             <RadioOption selected={template === 'text'} onChange={() => setTemplate('text')} label="Text only" description="Notes / Discussion" />
             <RadioOption selected={template === 'custom'} onChange={() => setTemplate('custom')} label="Custom" description="Empty, configure later" />
+          </div>
+        </div>
+      )}
+
+      {/* Add to hub (creation only, page type only) */}
+      {!isEdit && !isHubProp && !isHubType && hubs.length > 0 && (
+        <div className={styles.section}>
+          <span className={styles.label}>Add to</span>
+          <div className={styles.radioCol}>
+            {hubs.map((hub) => (
+              <div key={hub.id} className={styles.radioRowItem}>
+                <RadioOption
+                  selected={parentHubId === hub.id}
+                  onChange={() => setParentHubId(hub.id)}
+                  label={hub.name}
+                />
+                {hub.mentionTrigger && <kbd className={styles.triggerBadge}>{hub.mentionTrigger}</kbd>}
+              </div>
+            ))}
+            <RadioOption selected={!parentHubId} onChange={() => setParentHubId(undefined)} label="Do not add to hub" />
           </div>
         </div>
       )}
@@ -451,6 +524,11 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
           </div>
         )}
       </div>}
+
+      {/* Properties section (hub edit mode, or after hub creation) */}
+      {effectiveHubId && (
+        <PropertyEditorContent hubId={effectiveHubId} />
+      )}
     </Modal>
   )
 }

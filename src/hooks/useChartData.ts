@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db/database'
-import type { TimelineEntry, Feedback, Page, ChartScope, CandidateStatusDef } from '../types'
+import type { TimelineEntry, Page, ChartScope, HubProperty, PagePropertyValue } from '../types'
 import { countHtmlBlocks, countMentionBlocks } from '../utils/countHtmlBlocks'
 
 // Native date helpers
@@ -13,12 +13,28 @@ function formatMonthLabel(key: string): string {
   return `${String(d.getFullYear()).slice(2)}${String(d.getMonth() + 1).padStart(2, '0')}`
 }
 
-function buildMonthKeys(monthCount: number): string[] {
+function buildMonthKeys(monthCount: number, entries?: { date: Date | string }[]): string[] {
   const now = new Date()
   const year = now.getFullYear()
   const month = now.getMonth()
+
+  // monthCount === 0 means "all time" — derive range from data or default to 24 months
+  let count = monthCount
+  if (count === 0) {
+    if (entries && entries.length > 0) {
+      const earliest = entries.reduce((min, e) => {
+        const d = new Date(e.date)
+        return d < min ? d : min
+      }, now)
+      const diffMonths = (year - earliest.getFullYear()) * 12 + (month - earliest.getMonth()) + 1
+      count = Math.max(diffMonths, 1)
+    } else {
+      count = 24
+    }
+  }
+
   const months: string[] = []
-  for (let i = monthCount - 1; i >= 0; i--) {
+  for (let i = count - 1; i >= 0; i--) {
     const d = new Date(year, month - i, 1)
     months.push(formatMonthKey(d))
   }
@@ -26,43 +42,14 @@ function buildMonthKeys(monthCount: number): string[] {
 }
 
 function getCutoff(monthCount: number): Date {
+  if (monthCount === 0) return new Date(0) // no cutoff — include everything
   const now = new Date()
   return new Date(now.getFullYear(), now.getMonth() - (monthCount - 1), 1)
 }
 
-// ---- Color palette for charts ----
-const CHART_COLORS = [
-  '#5B8DEF', // blue (primary)
-  '#2EAF7D', // green
-  '#9B6FE0', // purple
-  '#E8923B', // warm orange
-  '#3FAFB5', // teal
-  '#8494A7', // grey
-
-  '#4A7AD4', // deeper blue
-  '#278F68', // deeper green
-  '#8055CC', // deeper purple
-  '#D17A28', // deeper orange
-  '#2E969C', // deeper teal
-  '#6B7B8F', // deeper grey
-
-  '#7AAAF5', // lighter blue
-  '#4DC9A0', // lighter green
-  '#B48EF0', // lighter purple
-]
-
-const CHART_COLORS_EXTENDED = [
-  ...CHART_COLORS,
-  '#3A62B3', // dark blue
-  '#1F7A55', // dark green
-  '#6840A8', // dark purple
-  '#B86520', // dark orange
-]
-
-export function getColor(index: number, total?: number) {
-  const palette = total && total > CHART_COLORS.length ? CHART_COLORS_EXTENDED : CHART_COLORS
-  return palette[index % palette.length]
-}
+// Re-export from constants for backward compatibility
+export { CHART_COLORS, getColor } from '../constants/colors'
+import { CHART_COLORS } from '../constants/colors'
 
 // ---- Scope filtering ----
 
@@ -85,24 +72,6 @@ function filterEntriesByScope(entries: TimelineEntry[], scope: ChartScope, allPa
   return entries
 }
 
-function filterFeedbacksByScope(feedbacks: Feedback[], scope: ChartScope, allPages: Page[]): Feedback[] {
-  if (scope.type === 'global') return feedbacks
-  if (scope.type === 'page') {
-    const page = allPages.find((p) => p.id === scope.pageId)
-    if (page?.type === 'hub') {
-      const childIds = new Set(allPages.filter((p) => p.parentId === scope.pageId).map((p) => p.id!))
-      childIds.add(scope.pageId)
-      return feedbacks.filter((f) => childIds.has(f.subjectId))
-    }
-    return feedbacks.filter((f) => f.subjectId === scope.pageId)
-  }
-  if (scope.type === 'hub') {
-    const childIds = new Set(allPages.filter((p) => p.parentId === scope.hubId).map((p) => p.id!))
-    return feedbacks.filter((f) => childIds.has(f.subjectId))
-  }
-  return feedbacks
-}
-
 // ---- Multi-scope filtering (union + dedup) ----
 
 export function filterEntriesByScopes(entries: TimelineEntry[], scopes: ChartScope[], allPages: Page[]): TimelineEntry[] {
@@ -119,28 +88,10 @@ export function filterEntriesByScopes(entries: TimelineEntry[], scopes: ChartSco
   return result
 }
 
-export function filterFeedbacksByScopes(feedbacks: Feedback[], scopes: ChartScope[], allPages: Page[]): Feedback[] {
-  if (scopes.length === 0) return feedbacks
-  if (scopes.length === 1) return filterFeedbacksByScope(feedbacks, scopes[0], allPages)
-  const seen = new Set<number>()
-  const result: Feedback[] = []
-  for (const scope of scopes) {
-    for (const f of filterFeedbacksByScope(feedbacks, scope, allPages)) {
-      const id = f.id!
-      if (!seen.has(id)) { seen.add(id); result.push(f) }
-    }
-  }
-  return result
-}
-
-// ---- All entries / feedbacks ----
+// ---- All entries ----
 
 export function useAllEntries() {
   return useLiveQuery(() => db.timelineEntries.toArray()) ?? []
-}
-
-export function useAllFeedbacks() {
-  return useLiveQuery(() => db.feedbacks.toArray()) ?? []
 }
 
 // ---- Aggregation: entry count (scope-aware) ----
@@ -154,7 +105,7 @@ export function useEntryCount(
   monthCount = 12,
 ) {
   return useMemo(() => {
-    const months = buildMonthKeys(monthCount)
+    const months = buildMonthKeys(monthCount, entries)
     const cutoff = getCutoff(monthCount)
 
     // Collect hub scopes — if any scope is hub-type, do per-child breakdown
@@ -261,132 +212,39 @@ export function useEntryCount(
   }, [entries, pages, scopes, monthCount])
 }
 
-// ---- Aggregation: candidates by status ----
+// ---- Aggregation: pages by hub property ----
 
-const STATUS_PALETTE = ['#6699FF', '#45C9A1', '#34D399', '#FF6363', '#B8C5DB', '#FFB84D', '#A78BFA', '#F472B6', '#38BDF8', '#FB923C']
-
-export function getStatusColor(index: number) {
-  return STATUS_PALETTE[index % STATUS_PALETTE.length]
-}
-
-export function useCandidatesByStatus(pages: Page[], statuses: CandidateStatusDef[]) {
-  return useMemo(() => {
-    const candidates = pages.filter((p) => p.type === 'candidate')
-    const counts = new Map<string, number>()
-    for (const c of candidates) {
-      const statusValue = c.candidateStatus ?? statuses[0]?.value ?? 'active'
-      counts.set(statusValue, (counts.get(statusValue) || 0) + 1)
-    }
-    return statuses
-      .map((s) => ({ name: s.name, value: s.value, count: counts.get(s.value) || 0 }))
-      .filter((s) => s.count > 0)
-      .map((s) => ({ name: s.name, value: s.count }))
-  }, [pages, statuses])
-}
-
-// ---- Aggregation: feedback sentiment by month ----
-
-export function useFeedbackByMonth(feedbacks: Feedback[], monthCount = 12) {
-  return useMemo(() => {
-    const months = buildMonthKeys(monthCount)
-    const monthToIdx = new Map(months.map((m, i) => [m, i]))
-
-    const data = months.map((m) => ({
-      month: formatMonthLabel(m),
-      Positive: 0, Neutral: 0, Negative: 0,
-    }))
-
-    for (const f of feedbacks) {
-      const m = formatMonthKey(new Date(f.createdAt))
-      const idx = monthToIdx.get(m)
-      if (idx === undefined) continue
-      if (f.type === 'positive') data[idx].Positive++
-      else if (f.type === 'neutral') data[idx].Neutral++
-      else data[idx].Negative++
-    }
-
-    return data
-  }, [feedbacks, monthCount])
-}
-
-// ---- Aggregation: feedback summary pie ----
-
-export function useFeedbackSummary(feedbacks: Feedback[], monthCount = 12) {
-  return useMemo(() => {
-    const cutoff = getCutoff(monthCount)
-    const counts = { Positive: 0, Neutral: 0, Negative: 0 }
-    for (const f of feedbacks) {
-      if (new Date(f.createdAt) < cutoff) continue
-      if (f.type === 'positive') counts.Positive++
-      else if (f.type === 'neutral') counts.Neutral++
-      else counts.Negative++
-    }
-    return Object.entries(counts).map(([name, value]) => ({ name, value })).filter((s) => s.value > 0)
-  }, [feedbacks, monthCount])
-}
-
-// ---- Aggregation: dimension distribution (scope-aware) ----
-// Hub scopes → per-child dimension breakdown
-// Other scopes / empty → aggregate distribution
-
-export function useDimensionDistribution(
-  feedbacks: Feedback[],
+export function usePagesByProperty(
   pages: Page[],
-  dimensionNames: Map<number, string>,
-  scopes: ChartScope[],
-  monthCount = 12,
+  property: HubProperty | undefined,
+  propertyValues: PagePropertyValue[],
 ) {
   return useMemo(() => {
-    const cutoff = getCutoff(monthCount)
+    if (!property) return []
 
-    // Collect hub scopes — if any scope is hub-type, do per-child breakdown
-    const hubIds: number[] = []
-    for (const s of scopes) {
-      if (s.type === 'hub') hubIds.push(s.hubId)
-      else if (s.type === 'page') {
-        const page = pages.find((p) => p.id === s.pageId)
-        if (page?.type === 'hub') hubIds.push(page.id!)
-      }
-    }
-
-    if (hubIds.length > 0) {
-      const hubIdSet = new Set(hubIds)
-      const children = pages.filter((p) => p.parentId && hubIdSet.has(p.parentId))
-      const dims = [...dimensionNames.values()]
-
-      const data = children.map((c) => {
-        const row: Record<string, string | number> = { name: c.name }
-        for (const d of dims) row[d] = 0
-        return row
-      })
-
-      for (const f of feedbacks) {
-        if (!f.dimensionId) continue
-        if (new Date(f.createdAt) < cutoff) continue
-        const ci = children.findIndex((c) => c.id === f.subjectId)
-        if (ci === -1) continue
-        const dimName = dimensionNames.get(f.dimensionId)
-        if (dimName) data[ci][dimName] = (Number(data[ci][dimName]) || 0) + 1
-      }
-
-      const filteredData = data.filter((d) => dims.some((dim) => Number(d[dim]) > 0))
-      const keys = dims.filter((d) => filteredData.some((row) => Number(row[d]) > 0))
-
-      return { perChild: true as const, data: filteredData, keys }
-    }
-
-    // No hub scopes: aggregate counts by dimension
+    // Count pages per option value
     const counts = new Map<string, number>()
-    for (const f of feedbacks) {
-      if (!f.dimensionId) continue
-      if (new Date(f.createdAt) < cutoff) continue
-      const name = dimensionNames.get(f.dimensionId) ?? `Dim ${f.dimensionId}`
-      counts.set(name, (counts.get(name) || 0) + 1)
+    const childPages = pages.filter((p) => p.parentId === property.hubId)
+    const valuesByPage = new Map<number, string>()
+    for (const pv of propertyValues) {
+      if (pv.propertyId === property.id) {
+        valuesByPage.set(pv.pageId, pv.value)
+      }
     }
-    const summary = [...counts.entries()].map(([name, value]) => ({ name, value }))
 
-    return { perChild: false as const, summary }
-  }, [feedbacks, pages, dimensionNames, scopes, monthCount])
+    for (const page of childPages) {
+      const val = valuesByPage.get(page.id!) ?? property.options[0]?.value
+      if (val) counts.set(val, (counts.get(val) || 0) + 1)
+    }
+
+    return property.options
+      .map((opt, i) => ({
+        name: opt.label,
+        value: counts.get(opt.value) || 0,
+        color: opt.color ?? CHART_COLORS[i % CHART_COLORS.length],
+      }))
+      .filter((s) => s.value > 0)
+  }, [pages, property, propertyValues])
 }
 
 // ---- Page count (child page creation over time) ----
@@ -397,7 +255,7 @@ export function usePageCount(
   monthCount = 12,
 ) {
   return useMemo(() => {
-    const months = buildMonthKeys(monthCount)
+    const months = buildMonthKeys(monthCount, pages.map((p) => ({ date: p.createdAt })))
     const cutoff = getCutoff(monthCount)
 
     // Determine which child pages to count
