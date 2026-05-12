@@ -20,7 +20,7 @@ export function OnboardingModal({ open, onClose }: OnboardingModalProps) {
   }
 
   return (
-    <Modal title="Welcome to Timeline" open={open} onClose={handleGetStarted} hideFooter>
+    <Modal title="Welcome to Timeline" open={open} onClose={handleGetStarted} hideFooter hideClose compact>
       <div className={styles.content}>
         {/* Video */}
         <video

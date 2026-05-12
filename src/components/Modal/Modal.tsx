@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback, type ReactNode } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { CloseIcon, CheckIcon } from '../Icons/Icons'
 import styles from './Modal.module.css'
 
@@ -7,9 +7,11 @@ interface ModalProps {
   open: boolean
   onClose: () => void
   onConfirm?: () => void
-  children: ReactNode
+  children: React.ReactNode
   confirmDisabled?: boolean
   hideFooter?: boolean
+  hideClose?: boolean
+  compact?: boolean
 }
 
 export function Modal({
@@ -20,6 +22,8 @@ export function Modal({
   children,
   confirmDisabled,
   hideFooter,
+  hideClose,
+  compact,
 }: ModalProps) {
   const bodyRef = useRef<HTMLDivElement>(null)
   const [scrolledTop, setScrolledTop] = useState(false)
@@ -81,12 +85,14 @@ export function Modal({
 
   return (
     <div className={styles.overlay} onClick={onClose}>
-      <div className={styles.modal} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <div className={compact ? `${styles.modal} ${styles.modalCompact}` : styles.modal} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="modal-title">
         <div className={scrolledTop ? styles.headerBorder : styles.header}>
           <h1 className={styles.title} id="modal-title">{title}</h1>
-          <button className={styles.closeButton} onClick={onClose} aria-label="Close">
-            <CloseIcon />
-          </button>
+          {!hideClose && (
+            <button className={styles.closeButton} onClick={onClose} aria-label="Close">
+              <CloseIcon />
+            </button>
+          )}
         </div>
 
         <div className={styles.body} ref={bodyRef} onScroll={checkOverflow}>{children}</div>

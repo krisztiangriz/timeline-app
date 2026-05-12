@@ -22,6 +22,14 @@
   animation: scaleIn 0.15s ease-out;
 }
 
+.modalCompact {
+  height: fit-content;
+}
+
+.modalCompact .body {
+  flex: none;
+}
+
 .header {
   display: flex;
   align-items: center;
