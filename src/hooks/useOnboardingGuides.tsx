@@ -5,7 +5,6 @@ import { createContext, useContext, useState, useCallback, useMemo, type ReactNo
 /* ------------------------------------------------------------------ */
 
 export interface GuideStep {
-  title: string
   description: string
   image?: string
   video?: string

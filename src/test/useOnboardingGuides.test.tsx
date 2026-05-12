@@ -18,21 +18,21 @@ function renderGuideHook() {
 
 const singleStepGuide: GuideDefinition = {
   id: 'test-guide',
-  steps: [{ title: 'Test', description: 'A test guide' }],
+  steps: [{ description: 'A test guide' }],
 }
 
 const multiStepGuide: GuideDefinition = {
   id: 'multi-step',
   steps: [
-    { title: 'Step 1', description: 'First step', video: '/onboarding/step1.mp4' },
-    { title: 'Step 2', description: 'Second step', image: '/onboarding/step2.png' },
-    { title: 'Step 3', description: 'Third step' },
+    { description: 'First step', video: '/onboarding/step1.mp4' },
+    { description: 'Second step', image: '/onboarding/step2.png' },
+    { description: 'Third step' },
   ],
 }
 
 const videoGuide: GuideDefinition = {
   id: 'video-guide',
-  steps: [{ title: 'Video', description: 'Has a video', video: '/onboarding/test.mp4' }],
+  steps: [{ description: 'Has a video', video: '/onboarding/test.mp4' }],
 }
 
 /* ------------------------------------------------------------------ */

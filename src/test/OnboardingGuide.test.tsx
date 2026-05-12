@@ -11,24 +11,24 @@ import type { GuideDefinition } from '../hooks/useOnboardingGuides'
 
 const singleStepGuide: GuideDefinition = {
   id: 'single',
-  steps: [{ title: 'Hello', description: 'A simple guide' }],
+  steps: [{ description: 'A simple guide' }],
 }
 
 const videoGuide: GuideDefinition = {
   id: 'video-test',
-  steps: [{ title: 'Video Guide', description: 'Has video', video: '/onboarding/test.mp4' }],
+  steps: [{ description: 'Has video', video: '/onboarding/test.mp4' }],
 }
 
 const imageGuide: GuideDefinition = {
   id: 'image-test',
-  steps: [{ title: 'Image Guide', description: 'Has image', image: '/onboarding/test.png' }],
+  steps: [{ description: 'Has image', image: '/onboarding/test.png' }],
 }
 
 const multiStepGuide: GuideDefinition = {
   id: 'multi',
   steps: [
-    { title: 'Step 1', description: 'First' },
-    { title: 'Step 2', description: 'Second' },
+    { description: 'First' },
+    { description: 'Second' },
   ],
 }
 
@@ -131,7 +131,7 @@ describe('OnboardingGuide component', () => {
     it('video takes priority over image when both are set', () => {
       const bothGuide: GuideDefinition = {
         id: 'both',
-        steps: [{ title: 'Both', description: 'Both set', video: '/v.mp4', image: '/i.png' }],
+        steps: [{ description: 'Both set', video: '/v.mp4', image: '/i.png' }],
       }
 
       renderWithProvider(<TestHarness guide={bothGuide} />)
