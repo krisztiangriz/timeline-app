@@ -304,10 +304,10 @@
   padding: var(--space-sm);
   max-height: 200px;
   overflow-y: auto;
-  background: #FFFFFF;
+  background: var(--color-surface);
   border: 1px solid var(--color-border-light);
   border-radius: var(--radius-sm);
-  box-shadow: 0px 2px 8px #5E6E8C33;
+  box-shadow: 0px 2px 8px var(--color-shadow);
 }
 
 .scopeOption {

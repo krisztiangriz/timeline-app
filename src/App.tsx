@@ -8,10 +8,14 @@ import { ToastProvider, useToast } from './hooks/useToast'
 import { useAutoBackup } from './hooks/useAutoBackup'
 import { usePageActions, usePageByRole, getPagePath } from './hooks/usePages'
 import { seedDefaultPropertyValues } from './hooks/useHubProperties'
+import { initializeTheme } from './hooks/useTheme'
 import { db } from './db/database'
 import type { PageType, PageRole } from './types'
 import type { PageFormData, HubInfo } from './components/PageForm/PageForm'
 import { ROLE_TO_PAGE_TYPE } from './types'
+
+// Apply theme immediately (before first render) to avoid flash
+initializeTheme()
 
 // Lazy-loaded route components
 const RootPage = lazy(() => import('./pages/RootPage/RootPage').then((m) => ({ default: m.RootPage })))

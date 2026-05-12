@@ -72,3 +72,35 @@
   --header-padding-top: 40px;
   --max-content-width: 640px;
 }
+
+/* ---- Dark theme ---- */
+[data-theme="dark"] {
+  /* Colors — Neutral scale */
+  --color-bg: #1A1D23;
+  --color-surface: #22262E;
+  --color-text-primary: #E8ECF2;
+  --color-text-secondary: #A3B1C6;
+  --color-text-body: #C5D0E0;
+  --color-text-tertiary: #8B9BB5;
+  --color-text-placeholder: #5A6A80;
+  --color-border: #3A4250;
+  --color-border-light: #2C3240;
+  --color-surface-hover: #2C3240;
+  --color-input-bg: #2A2F38;
+  --color-input-border: #3A4250;
+
+  /* Semantic */
+  --color-accent-blue: #7AABFF;
+  --color-accent-green: #5ED4B0;
+  --color-positive: #4DE8AD;
+  --color-negative: #FF7A7A;
+  --color-neutral: #8B9BB5;
+  --color-primary-soft: #1E2A3E;
+  --color-success-soft: #1A2E2A;
+  --color-error-soft: #3A2020;
+
+  /* Overlays & shadows */
+  --color-shadow: rgba(0, 0, 0, 0.4);
+  --color-overlay: rgba(0, 0, 0, 0.5);
+  --color-overlay-light: rgba(26, 29, 35, 0.85);
+}

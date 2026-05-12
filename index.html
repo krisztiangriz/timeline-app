@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Timeline</title>
-    <meta name="theme-color" content="#FFFFFF" />
+    <meta name="theme-color" content="#FFFFFF" id="theme-color" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -19,6 +19,11 @@
         if (r && r !== location.href) {
           history.replaceState(null, null, r);
         }
+      })();
+      // Apply saved theme immediately to prevent flash
+      (function() {
+        var t = localStorage.getItem('theme');
+        if (t === 'dark') document.documentElement.dataset.theme = 'dark';
       })();
     </script>
     <div id="root"></div>

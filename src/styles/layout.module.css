@@ -24,7 +24,7 @@
   position: sticky;
   top: 0;
   z-index: 10;
-  background: var(--color-surface);
+  background: var(--color-bg);
   padding: 0 var(--page-padding-inline);
   margin: 0 calc(-1 * var(--page-padding-inline));
 }

@@ -7,6 +7,7 @@ import { useOnboardingGuides } from '../../hooks/useOnboardingGuides'
 import { TrashIcon, CheckIcon, PlusIcon, CloseIcon, SearchIcon } from '../../components/Icons/Icons'
 import { downloadExport, triggerImport, triggerMergeImport } from '../../utils/exportImport'
 import { useChartPalette, PALETTE_OPTIONS } from '../../hooks/useChartPalette'
+import { useTheme, type Theme } from '../../hooks/useTheme'
 import { ColorPicker } from '../../components/ColorPicker/ColorPicker'
 import type { Page } from '../../types'
 import styles from './SettingsModal.module.css'
@@ -24,6 +25,7 @@ export function SettingsModal({ open, onClose, onToast }: SettingsModalProps) {
   const { frequency, setFrequency, lastBackup } = useBackupSettings()
   const { guidesDisabled, toggleGuides, resetAllGuides } = useOnboardingGuides()
   const { palette, updateColor, resetPalette } = useChartPalette()
+  const { theme, setTheme } = useTheme()
   const [palettePickerIndex, setPalettePickerIndex] = useState<number | null>(null)
   const paletteAnchorRef = useRef<HTMLButtonElement>(null)
 
@@ -114,6 +116,19 @@ export function SettingsModal({ open, onClose, onToast }: SettingsModalProps) {
 
   return (
     <Modal title="Settings" open={open} onClose={onClose} onConfirm={onClose}>
+      {/* Theme */}
+      <div className={styles.section}>
+        <span className={styles.sectionTitle}>Theme</span>
+        <div className={styles.backupRow}>
+          {(['light', 'dark'] as Theme[]).map((opt) => (
+            <button key={opt} className={styles.checkboxRow} onClick={() => setTheme(opt)}>
+              <div className={styles.radio} data-checked={theme === opt} />
+              <span className={styles.checkboxLabel}>{opt.charAt(0).toUpperCase() + opt.slice(1)}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Data */}
       <div className={styles.section}>
         <span className={styles.sectionTitle}>Data</span>

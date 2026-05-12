@@ -23,7 +23,7 @@ function cellLegend(items: { name: string; color: string }[]) {
   return () => (
     <div style={{ display: 'flex', justifyContent: 'center', gap: 12, flexWrap: 'wrap', paddingTop: 4 }}>
       {items.map((item) => (
-        <span key={item.name} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, color: '#485670' }}>
+        <span key={item.name} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, color: 'var(--color-text-body)' }}>
           <span style={{ width: 8, height: 8, borderRadius: '50%', background: item.color, flexShrink: 0 }} />
           {item.name}
         </span>
@@ -52,22 +52,22 @@ function ChartContainer({ className, children }: { className: string; children: 
 }
 
 const tooltipStyle: React.CSSProperties = {
-  background: '#FFFFFF', borderRadius: 12, boxShadow: '0px 2px 8px #5E6E8C33',
-  border: 'none', padding: '8px 12px', fontSize: 12, lineHeight: '20px', color: '#5E6E8C',
+  background: 'var(--color-surface)', borderRadius: 12, boxShadow: '0px 2px 8px var(--color-shadow)',
+  border: 'none', padding: '8px 12px', fontSize: 12, lineHeight: '20px', color: 'var(--color-text-secondary)',
 }
-const tooltipLabelStyle: React.CSSProperties = { color: '#334055', fontWeight: 600, fontSize: 12 }
-const FALLBACK_COLOR = '#B8C5DB'
+const tooltipLabelStyle: React.CSSProperties = { color: 'var(--color-text-primary)', fontWeight: 600, fontSize: 12 }
+const FALLBACK_COLOR = 'var(--color-text-placeholder)'
 
 /** Use grey for single-series charts, color palette for 2+ series */
 function getSeriesColor(index: number, total: number, palette: string[]) {
   return total < 2 ? FALLBACK_COLOR : getColor(index, palette)
 }
 
-const cursorStyle = { fill: '#ECF1F9', stroke: '#ECF1F9' }
+const cursorStyle = { fill: 'var(--color-border-light)', stroke: 'var(--color-border-light)' }
 const TP = { contentStyle: tooltipStyle, labelStyle: tooltipLabelStyle, cursor: cursorStyle, wrapperStyle: { zIndex: 1000 } }
-const axisStroke = '#B8C5DB'
-const tickStyle = { fontSize: 10, fill: '#485670' }
-const legendStyle: React.CSSProperties = { fontSize: 10, color: '#485670', paddingTop: 4 }
+const axisStroke = 'var(--color-border)'
+const tickStyle = { fontSize: 10, fill: 'var(--color-text-body)' }
+const legendStyle: React.CSSProperties = { fontSize: 10, color: 'var(--color-text-body)', paddingTop: 4 }
 
 // ---- Exports for AddChartModal ----
 

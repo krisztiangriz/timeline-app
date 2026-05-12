@@ -16,5 +16,5 @@
   justify-content: center;
   height: 100%;
   font-size: 12px;
-  color: #7B8FA6;
+  color: var(--color-text-tertiary);
 }
