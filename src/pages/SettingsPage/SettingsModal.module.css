@@ -45,7 +45,7 @@
 }
 
 .sectionDescription {
-  font-size: var(--font-size-xs);
+  font-size: 12px;
   line-height: var(--line-height-sm);
   color: var(--color-text-body);
   font-style: italic;
@@ -293,9 +293,10 @@
 }
 
 .backupStatus {
-  font-size: var(--font-size-xs);
+  font-size: 12px;
   line-height: var(--line-height-sm);
   color: var(--color-text-tertiary);
+  font-style: italic;
 }
 
 /* ---- Merge lookup ---- */
