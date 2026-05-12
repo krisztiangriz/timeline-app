@@ -61,14 +61,14 @@
 .iconButton {
   display: flex;
   align-items: center;
-  gap: var(--space-sm);
+  gap: var(--space-xs);
   font-size: var(--font-size-sm);
   line-height: var(--line-height-sm);
   font-weight: var(--font-weight-medium);
   color: var(--color-text-primary);
   padding: var(--space-xs) var(--space-sm);
   border-radius: var(--radius-sm);
-  height: 32px;
+  width: fit-content;
 }
 
 .iconButton:hover {
