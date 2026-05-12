@@ -677,11 +677,11 @@ export function RichTextEditor({
     const meta = e.metaKey || e.ctrlKey
     const ctrl = e.ctrlKey
 
-    // Ctrl+number: text styles (conflict-free)
+    // Ctrl+letter: text styles (conflict-free on macOS)
     if (ctrl && !e.metaKey) {
-      if (e.key === '1') { e.preventDefault(); toggleBlock('h1'); return }
-      if (e.key === '2') { e.preventDefault(); toggleBlock('h2'); return }
-      if (e.key === '3') { e.preventDefault(); toggleBlock('h3'); return }
+      if (e.key === 't' || e.key === 'T') { e.preventDefault(); toggleBlock('h1'); return }
+      if (e.key === 'h' || e.key === 'H') { e.preventDefault(); toggleBlock('h2'); return }
+      if (e.key === 's' || e.key === 'S') { e.preventDefault(); toggleBlock('h3'); return }
       if (e.key === '0') { e.preventDefault(); toggleBlock('div'); return }
       if (e.key === 'm' || e.key === 'M') { e.preventDefault(); toggleBlock('pre'); return }
       if (e.key === '7') { e.preventDefault(); insertBulletList(); return }

@@ -18,9 +18,9 @@ const SHORTCUTS = [
   {
     title: 'Text Styles',
     items: [
-      { label: 'Title', keys: '⌃ 1' },
-      { label: 'Heading', keys: '⌃ 2' },
-      { label: 'Sub heading', keys: '⌃ 3' },
+      { label: 'Title', keys: '⌃ T' },
+      { label: 'Heading', keys: '⌃ H' },
+      { label: 'Sub heading', keys: '⌃ S' },
       { label: 'Body (reset)', keys: '⌃ 0' },
       { label: 'Monospaced', keys: '⌃ M' },
     ],
