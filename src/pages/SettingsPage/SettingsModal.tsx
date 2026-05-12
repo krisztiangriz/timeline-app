@@ -23,7 +23,7 @@ export function SettingsModal({ open, onClose, onToast }: SettingsModalProps) {
   const { showArchived, setShowArchived } = usePreferences()
   const { setOnboardingOpen } = useModalContext()
   const { frequency, setFrequency, lastBackup } = useBackupSettings()
-  const { guidesDisabled, toggleGuides, resetAllGuides } = useOnboardingGuides()
+  const { resetAllGuides } = useOnboardingGuides()
   const { palette, updateColor, resetPalette } = useChartPalette()
   const { theme, setTheme } = useTheme()
   const [palettePickerIndex, setPalettePickerIndex] = useState<number | null>(null)
@@ -267,12 +267,9 @@ export function SettingsModal({ open, onClose, onToast }: SettingsModalProps) {
       <div className={styles.section}>
         <span className={styles.sectionTitle}>Onboarding</span>
         <div className={styles.showHideRow}>
-          <button className={styles.checkboxRow} onClick={toggleGuides}>
-            <div className={styles.checkbox} data-checked={!guidesDisabled} />
-            <span className={styles.checkboxLabel}>Show hints</span>
-          </button>
           <button className={styles.iconButton} onClick={() => {
             localStorage.removeItem('onboarding-completed')
+            localStorage.removeItem('user-created-page')
             resetAllGuides()
             setOnboardingOpen(true)
             onClose()

@@ -25,10 +25,16 @@ export function FeedbackModal({ open, onClose, onSuccess }: FeedbackModalProps) 
     return new Set(allHubProperties.filter((p) => p.scope === 'feedback').map((p) => p.hubId))
   }, [allHubProperties])
 
-  // Pages searchable for feedback (under hubs with feedback config)
+  // Page IDs that have a feedback block
+  const feedbackPageIds = useLiveQuery(async () => {
+    const blocks = await db.blocks.filter((b) => b.type === 'feedback').toArray()
+    return new Set(blocks.map((b) => b.pageId))
+  }, []) ?? new Set<number>()
+
+  // Pages searchable for feedback (under hubs with feedback config AND have a feedback block)
   const searchablePages = useMemo(() => {
-    return allPages.filter((p) => p.parentId && hubsWithFeedback.has(p.parentId))
-  }, [allPages, hubsWithFeedback])
+    return allPages.filter((p) => p.parentId && hubsWithFeedback.has(p.parentId) && feedbackPageIds.has(p.id!))
+  }, [allPages, hubsWithFeedback, feedbackPageIds])
 
   const [subjectQuery, setSubjectQuery] = useState('')
   const [selectedSubjects, setSelectedSubjects] = useState<Page[]>([])

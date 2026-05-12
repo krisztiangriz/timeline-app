@@ -2,7 +2,7 @@ import { useMemo, useEffect, lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom'
 import { AppProvider, useModalContext } from './hooks/useAppContext'
 import { AutocompleteProvider, useAutocomplete } from './hooks/useAutocomplete'
-import { OnboardingGuidesProvider } from './hooks/useOnboardingGuides'
+import { OnboardingGuidesProvider, useOnboardingGuides } from './hooks/useOnboardingGuides'
 import { ToastContainer } from './components/Toast/Toast'
 import { ToastProvider, useToast } from './hooks/useToast'
 import { useAutoBackup } from './hooks/useAutoBackup'
@@ -13,6 +13,7 @@ import { db } from './db/database'
 import type { PageType, PageRole } from './types'
 import type { PageFormData, HubInfo } from './components/PageForm/PageForm'
 import { ROLE_TO_PAGE_TYPE } from './types'
+import { onboardingGuides } from './config/onboardingGuides'
 
 // Apply theme immediately (before first render) to avoid flash
 initializeTheme()
@@ -45,6 +46,10 @@ function GlobalOverlays() {
   const navigate = useNavigate()
   const location = useLocation()
 
+  // Register all onboarding guide definitions centrally
+  const { registerGuide } = useOnboardingGuides()
+  useEffect(() => { onboardingGuides.forEach(registerGuide) }, [registerGuide])
+
   // Build hubs list for PageForm
   const hubs = useMemo<HubInfo[]>(() =>
     allPages
@@ -74,6 +79,7 @@ function GlobalOverlays() {
       const pageId = data.existingPageId!
       setAddPageOpen(false)
       showToast('Hub created')
+      localStorage.setItem('user-created-page', 'true')
       navigate(`/page/${pageId}`)
       return pageId
     }
@@ -125,6 +131,7 @@ function GlobalOverlays() {
 
       setAddPageOpen(false)
       showToast('Page created')
+      localStorage.setItem('user-created-page', 'true')
 
       // If page was created from trigger dropdown, insert mention instead of navigating
       if (addPageInitial?.triggerText) {

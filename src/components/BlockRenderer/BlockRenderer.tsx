@@ -12,6 +12,8 @@ import { useTableSort } from '../../hooks/useTableSort'
 import { formatTableDate } from '../../utils/dateUtils'
 import { db } from '../../db/database'
 import type { Page, Block } from '../../types'
+import { useOnboardingGuides } from '../../hooks/useOnboardingGuides'
+import { OnboardingGuide } from '../OnboardingGuide/OnboardingGuide'
 import styles from './BlockRenderer.module.css'
 import tableStyles from '../../styles/table.module.css'
 
@@ -45,6 +47,11 @@ function BlockList({ pageId, page, blocks, tabId }: {
   const allPagesRef = useRef(allPages)
   allPagesRef.current = allPages
 
+  // Onboarding: editor-walkthrough trigger
+  const { triggerGuide } = useOnboardingGuides()
+  const editorAnchorRef = useRef<HTMLDivElement>(null)
+  const handleEditorFocus = useCallback(() => { triggerGuide('editor-walkthrough') }, [triggerGuide])
+
   const handleMentionClick = useCallback((mentionPageId: number) => {
     const p = allPagesRef.current.find((pg) => pg.id === mentionPageId)
     if (p) {
@@ -63,17 +70,19 @@ function BlockList({ pageId, page, blocks, tabId }: {
   // Determine if page has any real content (for placeholder suppression)
   const hasContent = blocks.some((b) => b.type !== 'text' || (b.content?.trim() ?? '').length > 0)
   const defaultPlaceholder = 'Type here... (use ~ to insert components)'
+  const firstTextIdx = blocks.findIndex((b) => b.type === 'text')
 
   return (
     <div className={styles.blockList}>
-      {blocks.map((block) => {
+      {blocks.map((block, idx) => {
         const blockClass = block.type !== 'text' ? styles.componentBlock : undefined
+        const isFirstText = idx === firstTextIdx
 
         if (block.type === 'text') {
           return (
-            <div key={block.id} className={blockClass}>
+            <div key={block.id} className={blockClass} ref={isFirstText ? editorAnchorRef : undefined}>
               <TextBlock block={block} onUpdate={(content) => updateBlock(block.id!, { content })} onInsertComponent={(type) => handleInsertComponent(block.id!, type)}
-                onMentionClick={handleMentionClick} placeholder={hasContent ? '' : defaultPlaceholder} />
+                onMentionClick={handleMentionClick} placeholder={hasContent ? '' : defaultPlaceholder} onEditorFocus={isFirstText ? handleEditorFocus : undefined} />
     </div>
   )
 }
@@ -86,29 +95,34 @@ function BlockList({ pageId, page, blocks, tabId }: {
       })}
 
       {blocks.length === 0 && (
-        <TextBlock
-          block={{ pageId, tabId, type: 'text', content: '', order: 0 }}
-          onUpdate={async (content) => { await db.blocks.add({ pageId, tabId, type: 'text', content, order: 0 }) }}
-          onInsertComponent={async (type) => {
-            const textId = await db.blocks.add({ pageId, tabId, type: 'text', content: '', order: 0 })
-            await insertBlockAfter(textId as number, pageId, type, tabId)
-          }}
-          onMentionClick={handleMentionClick}
-          placeholder={defaultPlaceholder}
-        />
+        <div ref={editorAnchorRef}>
+          <TextBlock
+            block={{ pageId, tabId, type: 'text', content: '', order: 0 }}
+            onUpdate={async (content) => { await db.blocks.add({ pageId, tabId, type: 'text', content, order: 0 }) }}
+            onInsertComponent={async (type) => {
+              const textId = await db.blocks.add({ pageId, tabId, type: 'text', content: '', order: 0 })
+              await insertBlockAfter(textId as number, pageId, type, tabId)
+            }}
+            onMentionClick={handleMentionClick}
+            placeholder={defaultPlaceholder}
+            onEditorFocus={handleEditorFocus}
+          />
+        </div>
       )}
+      <OnboardingGuide guideId="editor-walkthrough" anchorRef={editorAnchorRef} position="bottom-left" />
     </div>
   )
 }
 
 // ---- Text block ----
 
-function TextBlock({ block, onUpdate, onInsertComponent, onMentionClick, placeholder }: {
+function TextBlock({ block, onUpdate, onInsertComponent, onMentionClick, placeholder, onEditorFocus }: {
   block: Block | { pageId: number; tabId?: number; type: 'text'; content: string; order: number }
   onUpdate: (content: string) => void
   onInsertComponent: (type: 'timeline' | 'feedback' | 'table' | 'visualization') => void
   onMentionClick?: (pageId: number) => void
   placeholder?: string
+  onEditorFocus?: () => void
 }) {
   const [html, setHtml] = useState(block.content ?? '')
   useEffect(() => { setHtml(block.content ?? '') }, [block.content])
@@ -116,7 +130,9 @@ function TextBlock({ block, onUpdate, onInsertComponent, onMentionClick, placeho
   const autoSave = useCallback((h: string) => { if (h !== (block.content ?? '')) onUpdate(h) }, [block.content, onUpdate])
 
   return (
-    <RichTextEditor value={html} onChange={setHtml} onBlur={save} onAutoSave={autoSave} placeholder={placeholder ?? ''} onInsertComponent={onInsertComponent} onMentionClick={onMentionClick} />
+    <div onFocus={onEditorFocus}>
+      <RichTextEditor value={html} onChange={setHtml} onBlur={save} onAutoSave={autoSave} placeholder={placeholder ?? ''} onInsertComponent={onInsertComponent} onMentionClick={onMentionClick} />
+    </div>
   )
 }
 

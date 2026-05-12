@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback, type CSSProperties } from 'react'
 import { useOnboardingGuides } from '../../hooks/useOnboardingGuides'
-import { CloseIcon } from '../Icons/Icons'
+import { CheckIcon } from '../Icons/Icons'
 import styles from './OnboardingGuide.module.css'
 
 /* ------------------------------------------------------------------ */
@@ -16,6 +16,7 @@ export type GuidePosition =
   | 'bottom-right'
   | 'left-center'
   | 'right-center'
+  | 'right-top'
 
 interface OnboardingGuideProps {
   /** The guide ID to render (must be registered in the context) */
@@ -96,6 +97,10 @@ export function OnboardingGuide({
         top = anchorRect.top + anchorRect.height / 2 - cardRect.height / 2
         left = anchorRect.right + gap
         break
+      case 'right-top':
+        top = anchorRect.top
+        left = anchorRect.right - cardRect.width
+        break
     }
 
     // Clamp to viewport
@@ -143,18 +148,6 @@ export function OnboardingGuide({
       style={anchorRef ? posStyle : undefined}
       data-floating={anchorRef ? '' : undefined}
     >
-      {/* Header with close button */}
-      <div className={styles.header}>
-        <span className={styles.title}>{step.title}</span>
-        <button
-          className={styles.closeButton}
-          onClick={() => dismissGuide(guideId)}
-          aria-label="Dismiss guide"
-        >
-          <CloseIcon />
-        </button>
-      </div>
-
       {/* Optional video (takes priority over image) */}
       {step.video && (
         <div className={styles.imageWrap}>
@@ -185,29 +178,47 @@ export function OnboardingGuide({
               <button
                 className={styles.footerButton}
                 onClick={() => prevStep(guideId)}
+                aria-label="Back"
               >
-                Back
+                <svg width="18" height="18" viewBox="0 0 88 24" fill="none">
+                  <path d="M10 4.927L2.92709 11.9999L10 19.0676L11.5 17.5676L6.92709 12.9999H21V10.9999H6.92709L11.5 6.427L10 4.927Z" fill="currentColor" fillOpacity="0.7"/>
+                </svg>
               </button>
             )}
-            <button
-              className={styles.footerButtonPrimary}
-              onClick={() => nextStep(guideId)}
-            >
-              {isLastStep ? 'Done' : 'Next'}
-            </button>
+            {!isLastStep && (
+              <button
+                className={styles.footerButton}
+                onClick={() => nextStep(guideId)}
+                aria-label="Next"
+              >
+                <svg width="18" height="18" viewBox="0 0 88 24" fill="none">
+                  <path d="M78 4.927L76.5 6.427L81.0677 10.9999H67V12.9999H81.0677L76.5 17.5676L78 19.0676L85.0677 11.9999L78 4.927Z" fill="currentColor" fillOpacity="0.7"/>
+                </svg>
+              </button>
+            )}
+            {isLastStep && (
+              <button
+                className={styles.confirmButton}
+                onClick={() => nextStep(guideId)}
+                aria-label="Confirm"
+              >
+                <CheckIcon />
+              </button>
+            )}
           </div>
         </div>
       )}
 
-      {/* Single-step: just a "Got it" button */}
+      {/* Single-step: confirm button */}
       {!isMultiStep && (
         <div className={styles.footer}>
           <span />
           <button
-            className={styles.footerButtonPrimary}
+            className={styles.confirmButton}
             onClick={() => dismissGuide(guideId)}
+            aria-label="Confirm"
           >
-            Got it
+            <CheckIcon />
           </button>
         </div>
       )}

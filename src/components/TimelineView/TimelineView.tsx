@@ -12,6 +12,8 @@ import { TimelineEntryRow } from './TimelineEntryRow'
 import { RichTextEditor } from '../RichTextEditor/RichTextEditor'
 import { RichTextDisplay } from '../RichTextEditor/RichTextDisplay'
 import type { TimelineEntry, Page } from '../../types'
+import { useOnboardingGuides } from '../../hooks/useOnboardingGuides'
+import { OnboardingGuide } from '../OnboardingGuide/OnboardingGuide'
 import styles from './TimelineView.module.css'
 
 const NOOP = () => {}
@@ -19,26 +21,6 @@ const NOOP = () => {}
 /** Strip data-checkbox spans from HTML, keeping inner text and all other formatting */
 function stripCheckboxHtml(html: string): string {
   return html.replace(/<span data-checkbox="[^"]*">([\s\S]*?)<\/span>/g, '$1').trim()
-}
-
-/** Convert HTML text to sentence case, preserving mention span content */
-function toSentenceCase(html: string): string {
-  let first = true
-  let mentionDepth = 0
-  return html.replace(/(<[^>]+>)|([^<]+)/g, (_, tag, text) => {
-    if (tag) {
-      if (/data-page-id/.test(tag)) mentionDepth++
-      else if (tag === '</span>' && mentionDepth > 0) mentionDepth--
-      return tag
-    }
-    if (mentionDepth > 0) return text
-    let result = text.toLowerCase()
-    if (first) {
-      result = result.replace(/[a-z]/, (c: string) => c.toUpperCase())
-      first = false
-    }
-    return result
-  })
 }
 
 /** Ensure each line in pending HTML has a checkbox. Used when migrating old entries. */
@@ -145,6 +127,10 @@ export function TimelineView({ pageId, title, readOnly = false, page }: Timeline
   const [pendingHtml, setPendingHtml] = useState('')
   const pendingEntryId = useRef<number | undefined>(undefined)
   const pendingFocusedRef = useRef(false)
+  const pendingSectionRef = useRef<HTMLDivElement>(null)
+
+  // Onboarding: trigger pending-tasks guide on first focus
+  const { triggerGuide } = useOnboardingGuides()
 
   // Sync pending entry from DB → local state (only when editor is not focused)
   useEffect(() => {
@@ -205,7 +191,7 @@ export function TimelineView({ pageId, title, readOnly = false, page }: Timeline
 
   async function handleCheckboxComplete(lineHtml: string, remainingHtml: string) {
     try {
-      const cleanText = toSentenceCase(stripCheckboxHtml(lineHtml).replace(/\u00A0/g, ' ').replace(/&nbsp;/g, ' ').trim())
+      const cleanText = stripCheckboxHtml(lineHtml).replace(/\u00A0/g, ' ').replace(/&nbsp;/g, ' ').trim()
       if (cleanText) {
         if (todayEntryId.current) {
           const currentText = todayHtml
@@ -368,9 +354,7 @@ export function TimelineView({ pageId, title, readOnly = false, page }: Timeline
     if (!mainPendingEntry?.id || !mainTimelinePage?.id) return
     try {
       const targetLine = filteredLines[lineIndex]
-      const cleanText = toSentenceCase(
-        stripCheckboxHtml(targetLine).replace(/\u00A0/g, ' ').replace(/&nbsp;/g, ' ').trim()
-      )
+      const cleanText = stripCheckboxHtml(targetLine).replace(/\u00A0/g, ' ').replace(/&nbsp;/g, ' ').trim()
 
       // Remove the line from the full pending HTML using tracked index
       const originalIndex = filteredOriginalIndices[lineIndex]
@@ -411,9 +395,9 @@ export function TimelineView({ pageId, title, readOnly = false, page }: Timeline
 
       {/* Pending section */}
       {!readOnly && isMainTimeline && (
-        <div className={styles.section}>
+        <div className={styles.section} ref={pendingSectionRef}>
           <div className={styles.sectionContent}>
-            <div onFocus={() => { pendingFocusedRef.current = true }}>
+            <div onFocus={() => { pendingFocusedRef.current = true; triggerGuide('pending-tasks') }}>
               <RichTextEditor
                 value={pendingHtml}
                 onChange={setPendingHtml}
@@ -433,6 +417,7 @@ export function TimelineView({ pageId, title, readOnly = false, page }: Timeline
           </div>
         </div>
       )}
+      {!readOnly && isMainTimeline && <OnboardingGuide guideId="pending-tasks" anchorRef={pendingSectionRef} position="bottom-left" />}
 
       {/* Filtered pending section (non-main-timeline pages) */}
       {!readOnly && !isMainTimeline && filteredLines.length > 0 && (

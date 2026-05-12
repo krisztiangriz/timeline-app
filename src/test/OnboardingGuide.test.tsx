@@ -76,7 +76,6 @@ describe('OnboardingGuide component', () => {
     it('renders the guide card when active', () => {
       renderWithProvider(<TestHarness guide={singleStepGuide} />)
 
-      expect(screen.getByText('Hello')).toBeInTheDocument()
       expect(screen.getByText('A simple guide')).toBeInTheDocument()
     })
 
@@ -89,19 +88,19 @@ describe('OnboardingGuide component', () => {
 
       renderWithProvider(<InactiveTest />)
 
-      expect(screen.queryByText('Hello')).not.toBeInTheDocument()
+      expect(screen.queryByText('A simple guide')).not.toBeInTheDocument()
     })
 
-    it('renders "Got it" button for single-step guides', () => {
+    it('renders confirm button for single-step guides', () => {
       renderWithProvider(<TestHarness guide={singleStepGuide} />)
 
-      expect(screen.getByText('Got it')).toBeInTheDocument()
+      expect(screen.getByLabelText('Confirm')).toBeInTheDocument()
     })
 
     it('renders "Next" button for multi-step guides', () => {
       renderWithProvider(<TestHarness guide={multiStepGuide} />)
 
-      expect(screen.getByText('Next')).toBeInTheDocument()
+      expect(screen.getByLabelText('Next')).toBeInTheDocument()
       expect(screen.getByText('1 of 2')).toBeInTheDocument()
     })
   })
@@ -143,46 +142,38 @@ describe('OnboardingGuide component', () => {
   })
 
   describe('Interaction', () => {
-    it('"Got it" button dismisses the guide', () => {
+    it('confirm button dismisses the guide', () => {
       renderWithProvider(<TestHarness guide={singleStepGuide} />)
 
-      fireEvent.click(screen.getByText('Got it'))
+      fireEvent.click(screen.getByLabelText('Confirm'))
 
-      expect(screen.queryByText('Hello')).not.toBeInTheDocument()
-    })
-
-    it('close button dismisses the guide', () => {
-      renderWithProvider(<TestHarness guide={singleStepGuide} />)
-
-      fireEvent.click(screen.getByLabelText('Dismiss guide'))
-
-      expect(screen.queryByText('Hello')).not.toBeInTheDocument()
+      expect(screen.queryByText('A simple guide')).not.toBeInTheDocument()
     })
 
     it('multi-step: Next advances, Back goes back', () => {
       renderWithProvider(<TestHarness guide={multiStepGuide} />)
 
-      expect(screen.getByText('Step 1')).toBeInTheDocument()
+      expect(screen.getByText('First')).toBeInTheDocument()
       expect(screen.getByText('1 of 2')).toBeInTheDocument()
 
-      fireEvent.click(screen.getByText('Next'))
+      fireEvent.click(screen.getByLabelText('Next'))
 
-      expect(screen.getByText('Step 2')).toBeInTheDocument()
+      expect(screen.getByText('Second')).toBeInTheDocument()
       expect(screen.getByText('2 of 2')).toBeInTheDocument()
-      expect(screen.getByText('Done')).toBeInTheDocument()
+      expect(screen.getByLabelText('Confirm')).toBeInTheDocument()
 
-      fireEvent.click(screen.getByText('Back'))
+      fireEvent.click(screen.getByLabelText('Back'))
 
-      expect(screen.getByText('Step 1')).toBeInTheDocument()
+      expect(screen.getByText('First')).toBeInTheDocument()
     })
 
-    it('multi-step: Done on last step dismisses the guide', () => {
+    it('multi-step: Confirm on last step dismisses the guide', () => {
       renderWithProvider(<TestHarness guide={multiStepGuide} />)
 
-      fireEvent.click(screen.getByText('Next'))
-      fireEvent.click(screen.getByText('Done'))
+      fireEvent.click(screen.getByLabelText('Next'))
+      fireEvent.click(screen.getByLabelText('Confirm'))
 
-      expect(screen.queryByText('Step 2')).not.toBeInTheDocument()
+      expect(screen.queryByText('Second')).not.toBeInTheDocument()
     })
   })
 
@@ -190,14 +181,14 @@ describe('OnboardingGuide component', () => {
     it('renders without data-floating attribute when no anchorRef', () => {
       renderWithProvider(<TestHarness guide={singleStepGuide} anchored={false} />)
 
-      const card = screen.getByText('Hello').closest('[class]')
+      const card = screen.getByText('A simple guide').closest('[class]')
       expect(card).not.toHaveAttribute('data-floating')
     })
 
     it('renders with data-floating attribute when anchorRef is provided', () => {
       renderWithProvider(<TestHarness guide={singleStepGuide} anchored={true} />)
 
-      const card = screen.getByText('Hello').closest('[data-floating]')
+      const card = screen.getByText('A simple guide').closest('[data-floating]')
       expect(card).toBeInTheDocument()
     })
   })

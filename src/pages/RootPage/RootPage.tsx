@@ -1,5 +1,5 @@
 import { useStickyScroll } from '../../hooks/useStickyScroll'
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { BreadcrumbNav } from '../../components/Breadcrumb/Breadcrumb'
 import { PageHeader } from '../../components/PageHeader/PageHeader'
@@ -18,6 +18,8 @@ import { formatTableDate } from '../../utils/dateUtils'
 import { ROLE_TO_PAGE_TYPE } from '../../types'
 import type { PageType } from '../../types'
 import { DragHandleIcon } from '../../components/Icons/Icons'
+import { useOnboardingGuides } from '../../hooks/useOnboardingGuides'
+import { OnboardingGuide } from '../../components/OnboardingGuide/OnboardingGuide'
 import layout from '../../styles/layout.module.css'
 import table from '../../styles/table.module.css'
 
@@ -44,6 +46,16 @@ export function RootPage() {
     const sorted = sortPages(filtered)
     return buildFlatPageList(sorted)
   }, [allPages, sortPages, showArchived])
+
+  // Onboarding: trigger home-intro guide when user has created pages
+  const { triggerGuide } = useOnboardingGuides()
+  const tableRef = useRef<HTMLDivElement>(null)
+  const hasPages = flatRows.length > 0
+  const onboardingDone = localStorage.getItem('onboarding-completed') === 'true'
+  const userCreatedPage = localStorage.getItem('user-created-page') === 'true'
+  useEffect(() => {
+    if (hasPages && onboardingDone && userCreatedPage) triggerGuide('home-intro')
+  }, [hasPages, onboardingDone, userCreatedPage, triggerGuide])
 
   const { moreMenuItems } = usePageMenus({ showToast })
 
@@ -105,7 +117,7 @@ export function RootPage() {
           <PageHeader name="Home" onUpdateName={() => {}} readOnly />
         </div>
 
-        <div className={table.table} onDragOver={handleRootDragOver} onDrop={handleRootDrop}>
+        <div ref={tableRef} className={table.table} onDragOver={handleRootDragOver} onDrop={handleRootDrop}>
           <div className={table.tableHeader}>
             <span className={table.thName} onClick={() => toggleSort('name')}>Name <span className={table.sortArrow}>{arrow('name')}</span></span>
             <span className={table.thType}>Type</span>
@@ -146,6 +158,7 @@ export function RootPage() {
           {flatRows.length === 0 && <EmptyState message="Create a page to start tracking" />}
         </div>
       </div>
+      <OnboardingGuide guideId="home-intro" anchorRef={tableRef} position="right-top" />
     </div>
   )
 }

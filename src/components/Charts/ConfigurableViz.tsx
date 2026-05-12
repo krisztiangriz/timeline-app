@@ -1,4 +1,4 @@
-import { useState, memo } from 'react'
+import { useState, useEffect, useRef, memo } from 'react'
 import { EmptyState } from '../EmptyState/EmptyState'
 import { CloseIcon } from '../Icons/Icons'
 import { RangeToggle, type RangeMonths } from '../RangeToggle/RangeToggle'
@@ -10,6 +10,8 @@ import { useAllEntries } from '../../hooks/useChartData'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../../db/database'
 import type { ChartConfig, ChartDataSource, ChartType, ChartScope, TimelineEntry, Page, HubProperty, PagePropertyValue, Feedback } from '../../types'
+import { useOnboardingGuides } from '../../hooks/useOnboardingGuides'
+import { OnboardingGuide } from '../OnboardingGuide/OnboardingGuide'
 import styles from './Charts.module.css'
 
 interface ConfigurableVizProps {
@@ -30,6 +32,12 @@ export const ConfigurableViz = memo(function ConfigurableViz({ blockId, pageId }
   })
   const [addOpen, setAddOpen] = useState(false)
   const [editing, setEditing] = useState<ChartConfig | undefined>()
+
+  // Onboarding: trigger visualization-charts guide when no charts configured
+  const { triggerGuide } = useOnboardingGuides()
+  const addBtnRef = useRef<HTMLButtonElement>(null)
+  const isEmpty = configs.length === 0
+  useEffect(() => { if (isEmpty) triggerGuide('visualization-charts') }, [isEmpty, triggerGuide])
 
   function setRange(r: RangeMonths) {
     setRangeState(r)
@@ -55,7 +63,7 @@ export const ConfigurableViz = memo(function ConfigurableViz({ blockId, pageId }
       {/* ---- Controls ---- */}
       <div className={styles.vizControls}>
         <RangeToggle value={range} onChange={setRange} />
-        <button className={styles.chartEditBtn} onClick={() => setAddOpen(true)} aria-label="Add chart">
+        <button ref={addBtnRef} className={styles.chartEditBtn} onClick={() => setAddOpen(true)} aria-label="Add chart">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
             <path d="M7.25 8.75V14H8.75V8.75H14V7.25H8.75V2H7.25V7.25H2V8.75H7.25Z" fill="currentColor" />
           </svg>
@@ -87,6 +95,7 @@ export const ConfigurableViz = memo(function ConfigurableViz({ blockId, pageId }
         })
       )}
 
+      <OnboardingGuide guideId="visualization-charts" anchorRef={addBtnRef} position="bottom-right" />
       <AddChartModal
         open={addOpen || !!editing}
         onClose={() => { setAddOpen(false); setEditing(undefined) }}
