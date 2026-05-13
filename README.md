@@ -4,7 +4,7 @@ Timeline is a clever, privacy focused progressive web todo app, that collects 
 
 ## How it works
 
-Timeline is hosted on Github, save the URL either in a browser or as a browser app and capture todos, notes, ideas, and have them automatically visualized. 
+Timeline is hosted on Github, save the URL either in a browser or as a browser app and capture, organize and visualize your work. 
 
 All data is stored in IndexedDB, locally, so nothing ever leaves your computer.
 
