@@ -79,5 +79,4 @@ Paired Layout — Time-series + pie chart combos shown side-by-side automaticall
 - Contextual Guides — Multi-step dismissable hints; infrastructure built, ready for wiring to features
 - Help Modal — Keyboard shortcut reference (Ctrl+Shift+H)
 
-Hope you enjoy the app!
-Try it today at https://krisztiangriz.github.io/timeline-app/
+[Try the app today](https://krisztiangriz.github.io/timeline-app/). I hope you enjoy it!
