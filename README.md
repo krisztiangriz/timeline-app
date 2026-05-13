@@ -55,8 +55,8 @@ Explore the app today!
 - Chart Types — Bar, Line, Area, Pie (donut with labels and percentages)
 - Multi-Scope Selection — Charts can scope to specific pages, hubs (per-child breakdown), or all data
 - Time Range Toggle — 3M / 6M / 12M / All (persisted per block in localStorage)
-Customizable Chart Palette — 6-color palette editable in Settings with color picker and reset to defaults
-Paired Layout — Time-series + pie chart combos shown side-by-side automatically
+- Customizable Chart Palette — 6-color palette editable in Settings with color picker and reset to defaults
+- Paired Layout — Time-series + pie chart combos shown side-by-side automatically
 
 ### Navigation & discovery
 
@@ -77,6 +77,5 @@ Paired Layout — Time-series + pie chart combos shown side-by-side automaticall
 
 - Welcome Modal — Auto-shows on first visit with promotional video and app description
 - Contextual Guides — Multi-step dismissable hints; infrastructure built, ready for wiring to features
-- Help Modal — Keyboard shortcut reference (Ctrl+Shift+H)
-
+- Help Modal — Keyboard shortcut reference
 [Try the app today](https://krisztiangriz.github.io/timeline-app/). I hope you enjoy it!
