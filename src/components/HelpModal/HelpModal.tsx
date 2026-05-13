@@ -8,6 +8,15 @@ interface HelpModalProps {
 
 const SHORTCUTS = [
   {
+    title: 'Global',
+    items: [
+      { label: 'Search', keys: '⌃ ⇧ K' },
+      { label: 'Add feedback', keys: '⌃ ⇧ F' },
+      { label: 'Close / deselect', keys: 'Esc' },
+      { label: 'Confirm modal', keys: 'Enter' },
+    ],
+  },
+  {
     title: 'Text Formatting',
     items: [
       { label: 'Bold', keys: '⌘ B' },
@@ -51,12 +60,9 @@ const SHORTCUTS = [
     ],
   },
   {
-    title: 'Global',
+    title: 'Components',
     items: [
-      { label: 'Search', keys: '⌃ ⇧ K' },
-      { label: 'Add feedback', keys: '⌃ ⇧ F' },
-      { label: 'Close / deselect', keys: 'Esc' },
-      { label: 'Confirm modal', keys: 'Enter' },
+      { label: 'Block', keys: '~' },
     ],
   },
 ]
