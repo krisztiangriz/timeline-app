@@ -85,4 +85,6 @@ Explore the app today!
 - Welcome Modal — Auto-shows on first visit with promotional video and app description
 - Contextual Guides — Multi-step dismissable hints; infrastructure built, ready for wiring to features
 - Help Modal — Keyboard shortcut reference
+
+
 [Try the app today](https://krisztiangriz.github.io/timeline-app/). I hope you enjoy it!
