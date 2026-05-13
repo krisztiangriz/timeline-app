@@ -1,73 +1,82 @@
-# React + TypeScript + Vite
+# Welcome to Timeline
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Timeline is a clever, privacy focused progressive web todo app, that collects tagged input and visualizes data.
 
-Currently, two official plugins are available:
+# How it works
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Timeline is hosted on Github, save the URL either in a browser or as a browser app and capture todos, notes, ideas, and have them automatically visualized. 
 
-## React Compiler
+All data is stored in IndexedDB, locally, so nothing ever leaves your computer.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Explore the app today!
 
-## Expanding the ESLint configuration
+# Feature list
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## Content structure & organization
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+- Pages & Hubs — Pages typed as general, colleague, candidate, or project; hubs group related child pages with configurable properties
+- Block-Based Document Model — Pages support text, timeline, feedback, table, and visualization blocks arranged in configurable tabs with drag-and-drop reordering (including cross-tab)
+- Page Templates — Choose from tabbed, simple, text-only, or custom layouts on creation; hubs get standard (visualization + table) or table-only
+- Drag & Drop Page Organization — Re-parent pages into hubs or move to root level from the Home table
+- Archiving — Archive pages or entire hubs (cascades to children); toggle visibility in Settings
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+## Hub-level configurable properties
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+- Page-Scoped Properties — Dropdown properties shown on child page headers (e.g., Status, Role, Level) with named, colored options
+- Feedback-Scoped Properties — Properties used in the feedback form (e.g., Sentiment, Dimension) with radio-button selection
+- Property Editor — Full CRUD for properties and their options, including color picker per option
+- Auto-Seeding — New child pages automatically get the first option of each page-scoped property
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Daily workflow & task management
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+- Daily Timeline / Work Log — Main timeline for daily entries with rich-text auto-save and chronological history
+- Pending Tasks (Checkbox List) — Auto-checkbox section; checking items moves text to Today's entry; [] to insert checkboxes
+- Filtered Pending — Non-main-timeline pages show only pending items that mention relevant pages, with cross-completion back to the main timeline
+- Cross-References — Entries mentioning a page appear inline on that page's timeline, filtered to relevant lines
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+## Rich Text Editing & input
+
+- Rich Text Editor — ContentEditable with formatting (bold/italic/underline), headings (H1-H3), lists (bullet/dash/numbered), links, date insertion, monospace, indent/outdent
+- @-Mention Autocomplete — Configurable trigger characters per hub; dropdown inserts linked mention spans; collapsed mode shows trigger only
+- Component Insertion — ~ trigger to insert timeline, feedback, table, or visualization blocks inline
+- "Add Page" from Mentions — If no matches found, option to create a new page and auto-insert the mention
+- Keyboard Shortcuts — Extensive shortcut support (Ctrl+Shift+H to view all)
+
+## Feedback system
+
+- Global Feedback Modal — Multi-subject feedback form accessible via Ctrl+Shift+F; searchable page lookup with chip selection
+- Inline Feedback List — Per-page view with add/edit/delete and click-to-edit descriptions
+- Hub-Aware Properties — Feedback type and dimension driven by hub-level feedback-scoped properties (with colored radio options)
+- Time Range Filter — 3M / 6M / 12M / All toggle on the feedback list to filter by date
+
+## Visualization & Analytics
+
+- Configurable Chart Block — Per-page visualization with multiple charts; data sources include entry count, page count, property distribution, feedback by type/dimension/time/per-page
+- Chart Types — Bar, Line, Area, Pie (donut with labels and percentages)
+- Multi-Scope Selection — Charts can scope to specific pages, hubs (per-child breakdown), or all data
+- Time Range Toggle — 3M / 6M / 12M / All (persisted per block in localStorage)
+Customizable Chart Palette — 6-color palette editable in Settings with color picker and reset to defaults
+Paired Layout — Time-series + pie chart combos shown side-by-side automatically
+
+## Navigation & discovery
+
+- Global Search — Command-palette-style (Ctrl+Shift+K) with fuzzy name matching, keyboard navigation, and "Add new page" action
+- Breadcrumb Navigation — Contextual path (Home > Hub > Page) with clickable links
+- Sortable Tables — Root page and hub tables with sortable columns (name, created, updated); sort preferences persisted per page
+
+## Configuration & settings
+
+- Chart Colors — Customizable 6-color palette with color picker and defaults reset
+- Triggers — View/add/edit/remove mention trigger characters; toggle collapsed mode per hub
+- Archived Pages — Toggle visibility
+- Auto-Backup Frequency — Daily / weekly / monthly / off
+- Onboarding Controls — Toggle contextual hints on/off; reset to replay welcome flow
+- App Version — Displayed in Settings
+
+## Onboarding & help
+
+- Welcome Modal — Auto-shows on first visit with promotional video and app description
+- Contextual Guides — Multi-step dismissable hints; infrastructure built, ready for wiring to features
+- Help Modal — Keyboard shortcut reference (Ctrl+Shift+H)
+
+Hope you enjoy the app!
