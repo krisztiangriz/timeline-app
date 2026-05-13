@@ -1,5 +1,6 @@
 # Welcome to Timeline
 
+<video width="640" height="480" src="https://github.com/user-attachments/assets/9056a1ef-9cc8-4565-adae-efc776ccc4f1" controls></video>
 [Timeline](https://krisztiangriz.github.io/timeline-app/) is a clever, privacy focused progressive web todo app, that collects tagged input and visualizes data.
 
 ## How it works
@@ -13,6 +14,8 @@ Explore the app today!
 ## Feature list
 
 ### Content structure & organization
+
+<video width="640" height="480" src="https://github.com/user-attachments/assets/8ca714b9-1637-4252-93ab-f70452a2d08d" controls></video>
 
 - Pages & Hubs — Pages typed as general, colleague, candidate, or project; hubs group related child pages with configurable properties
 - Block-Based Document Model — Pages support text, timeline, feedback, table, and visualization blocks arranged in configurable tabs with drag-and-drop reordering (including cross-tab)
@@ -36,6 +39,8 @@ Explore the app today!
 
 ### Rich Text Editing & input
 
+<video width="640" height="480" src="https://github.com/user-attachments/assets/6e81fc02-b86e-4575-be7a-aeb7ec144d1f" controls></video>
+
 - Rich Text Editor — ContentEditable with formatting (bold/italic/underline), headings (H1-H3), lists (bullet/dash/numbered), links, date insertion, monospace, indent/outdent
 - @-Mention Autocomplete — Configurable trigger characters per hub; dropdown inserts linked mention spans; collapsed mode shows trigger only
 - Component Insertion — ~ trigger to insert timeline, feedback, table, or visualization blocks inline
@@ -50,6 +55,8 @@ Explore the app today!
 - Time Range Filter — 3M / 6M / 12M / All toggle on the feedback list to filter by date
 
 ### Visualization & Analytics
+
+<video width="640" height="480" src="https://github.com/user-attachments/assets/dd5f8185-3739-4238-a46b-dea8cd7da85b" controls></video>
 
 - Configurable Chart Block — Per-page visualization with multiple charts; data sources include entry count, page count, property distribution, feedback by type/dimension/time/per-page
 - Chart Types — Bar, Line, Area, Pie (donut with labels and percentages)
