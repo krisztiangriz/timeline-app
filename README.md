@@ -40,7 +40,7 @@ Explore the app today!
 - @-Mention Autocomplete — Configurable trigger characters per hub; dropdown inserts linked mention spans; collapsed mode shows trigger only
 - Component Insertion — ~ trigger to insert timeline, feedback, table, or visualization blocks inline
 - "Add Page" from Mentions — If no matches found, option to create a new page and auto-insert the mention
-- Keyboard Shortcuts — Extensive shortcut support (Ctrl+Shift+H to view all)
+- Keyboard Shortcuts — Extensive shortcut support
 
 ### Feedback system
 
