@@ -4,6 +4,7 @@ import { useAutocomplete } from '../../hooks/useAutocomplete'
 import { useModalContext, usePreferences } from '../../hooks/useAppContext'
 import { useBackupSettings, type BackupFrequency } from '../../hooks/useAutoBackup'
 import { useOnboardingGuides } from '../../hooks/useOnboardingGuides'
+import { onboardingGuides } from '../../config/onboardingGuides'
 import { TrashIcon, CheckIcon, PlusIcon, CloseIcon, SearchIcon } from '../../components/Icons/Icons'
 import { downloadExport, triggerImport, triggerMergeImport } from '../../utils/exportImport'
 import { useChartPalette, PALETTE_OPTIONS } from '../../hooks/useChartPalette'
@@ -23,7 +24,7 @@ export function SettingsModal({ open, onClose, onToast }: SettingsModalProps) {
   const { showArchived, setShowArchived } = usePreferences()
   const { setOnboardingOpen } = useModalContext()
   const { frequency, setFrequency, lastBackup } = useBackupSettings()
-  const { resetAllGuides } = useOnboardingGuides()
+  const { resetAllGuides, isGuideDismissed } = useOnboardingGuides()
   const { palette, updateColor, resetPalette } = useChartPalette()
   const { theme, setTheme } = useTheme()
   const [palettePickerIndex, setPalettePickerIndex] = useState<number | null>(null)
@@ -269,6 +270,7 @@ export function SettingsModal({ open, onClose, onToast }: SettingsModalProps) {
       {/* Onboarding */}
       <div className={styles.section}>
         <span className={styles.sectionTitle}>Onboarding</span>
+        <span className={styles.backupStatus}>Status: {onboardingGuides.filter((g) => isGuideDismissed(g.id)).length}/{onboardingGuides.length}</span>
         <div className={styles.showHideRow}>
           <button className={styles.iconButton} onClick={() => {
             localStorage.removeItem('onboarding-completed')
