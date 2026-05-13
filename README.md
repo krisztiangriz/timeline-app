@@ -1,6 +1,6 @@
 # Welcome to Timeline
 
-Timeline is a clever, privacy focused progressive web todo app, that collects tagged input and visualizes data.
+[Timeline](https://krisztiangriz.github.io/timeline-app/) is a clever, privacy focused progressive web todo app, that collects tagged input and visualizes data.
 
 ## How it works
 
@@ -80,3 +80,4 @@ Paired Layout — Time-series + pie chart combos shown side-by-side automaticall
 - Help Modal — Keyboard shortcut reference (Ctrl+Shift+H)
 
 Hope you enjoy the app!
+Try it today at https://krisztiangriz.github.io/timeline-app/
