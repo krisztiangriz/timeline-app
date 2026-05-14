@@ -35,7 +35,7 @@ export function OnboardingModal({ open, onClose }: OnboardingModalProps) {
 
         {/* Description text — replace with your copy */}
         <p className={styles.description}>
-          Timeline is a clever, privacy focused todo app, that collects tagged input and visualizes data.
+          Timeline is a privacy focused, minimal progressive web app where you can capture, organize and visualize your work.
         </p>
 
         {/* Get Started button */}
