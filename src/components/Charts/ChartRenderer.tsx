@@ -64,7 +64,17 @@ function getSeriesColor(index: number, total: number, palette: string[]) {
 }
 
 const cursorStyle = { fill: 'var(--color-border-light)', stroke: 'var(--color-border-light)' }
-const TP = { contentStyle: tooltipStyle, labelStyle: tooltipLabelStyle, itemStyle: { color: 'var(--color-text-secondary)' }, cursor: cursorStyle, wrapperStyle: { zIndex: 1000 } }
+const TP = {
+  contentStyle: tooltipStyle,
+  labelStyle: tooltipLabelStyle,
+  cursor: cursorStyle,
+  wrapperStyle: { zIndex: 1000 },
+  separator: '',
+  formatter: (value: unknown, name: unknown, item: { color?: string; payload?: { color?: string } }) => {
+    const color = item.payload?.color || item.color || 'var(--color-text-secondary)'
+    return [<span key="v" style={{ color }}>{String(name)}: {String(value)}</span>, '']
+  },
+}
 const axisStroke = 'var(--color-border)'
 const tickStyle = { fontSize: 10, fill: 'var(--color-text-body)' }
 const legendStyle: React.CSSProperties = { fontSize: 10, color: 'var(--color-text-body)', paddingTop: 4 }
