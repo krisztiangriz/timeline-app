@@ -7,16 +7,13 @@
 
 Timeline is hosted on Github, save the URL either in a browser or as a browser app and capture, organize and visualize your work. 
 
-All data is stored in IndexedDB, locally, so nothing ever leaves your computer.
+All data is stored in Dexie 4.4 (IndexedDB), locally, so nothing ever leaves your computer.
 
 Explore the app today!
 
 ## Feature list
 
 ### Content structure & organization
-
-<video width="640" height="480" src="https://github.com/user-attachments/assets/8ca714b9-1637-4252-93ab-f70452a2d08d" controls></video>
-
 - Pages & Hubs — Pages typed as general, colleague, candidate, or project; hubs group related child pages with configurable properties
 - Block-Based Document Model — Pages support text, timeline, feedback, table, and visualization blocks arranged in configurable tabs with drag-and-drop reordering (including cross-tab)
 - Page Templates — Choose from tabbed, simple, text-only, or custom layouts on creation; hubs get standard (visualization + table) or table-only
@@ -38,9 +35,6 @@ Explore the app today!
 - Cross-References — Entries mentioning a page appear inline on that page's timeline, filtered to relevant lines
 
 ### Rich Text Editing & input
-
-<video width="640" height="480" src="https://github.com/user-attachments/assets/6e81fc02-b86e-4575-be7a-aeb7ec144d1f" controls></video>
-
 - Rich Text Editor — ContentEditable with formatting (bold/italic/underline), headings (H1-H3), lists (bullet/dash/numbered), links, date insertion, monospace, indent/outdent
 - @-Mention Autocomplete — Configurable trigger characters per hub; dropdown inserts linked mention spans; collapsed mode shows trigger only
 - Component Insertion — ~ trigger to insert timeline, feedback, table, or visualization blocks inline
@@ -55,9 +49,6 @@ Explore the app today!
 - Time Range Filter — 3M / 6M / 12M / All toggle on the feedback list to filter by date
 
 ### Visualization & Analytics
-
-<video width="640" height="480" src="https://github.com/user-attachments/assets/dd5f8185-3739-4238-a46b-dea8cd7da85b" controls></video>
-
 - Configurable Chart Block — Per-page visualization with multiple charts; data sources include entry count, page count, property distribution, feedback by type/dimension/time/per-page
 - Chart Types — Bar, Line, Area, Pie (donut with labels and percentages)
 - Multi-Scope Selection — Charts can scope to specific pages, hubs (per-child breakdown), or all data
@@ -86,5 +77,82 @@ Explore the app today!
 - Contextual Guides — Multi-step dismissable hints; infrastructure built, ready for wiring to features
 - Help Modal — Keyboard shortcut reference
 
+## Architecture Overview
+
+### Information Architecture
+Data Model
+
+<img width="453" height="625" alt="Screenshot 2026-05-14 at 10 19 03" src="https://github.com/user-attachments/assets/c260457b-9429-4369-bd1c-4096be1c2b6c" />
+
+### Page Hierarchy
+
+    Timeline --> TimelineBlock["📋 timeline block<br/><small>pending tasks + daily entries</small>"]
+
+    Projects --> ProjA["Project Alpha<br/><small>type: project</small>"]
+    Projects --> ProjB["Project Beta<br/><small>type: project</small>"]
+    Projects --> ProjMore["..."]
+
+    Colleagues --> Alice["Alice<br/><small>type: colleague</small>"]
+    Colleagues --> Bob["Bob<br/><small>type: colleague</small>"]
+    Colleagues --> ColMore["..."]
+
+    Candidates --> CandMore["..."]
+
+### Block Types
+| Block | Renders | Key Behaviors |
+|-------|---------|---------------|
+| `text` | Rich text editor | Formatting, mentions, links, checkboxes |
+| `timeline` | Timeline view | Pending tasks, today editor, date-grouped history, cross-refs |
+| `feedback` | Feedback list | Add/edit/delete, property-based categorization, time filtering |
+| `table` | Child page list | Sortable columns, drag-to-reorder, property badges |
+| `visualization` | Charts | Multiple configurable charts per block, 7 data sources |
+
+### Cross-Reference System
+
+<img width="392" height="200" alt="Screenshot 2026-05-14 at 10 24 28" src="https://github.com/user-attachments/assets/fdcc138e-f246-464d-ace1-0211dbd2bc6e" />
+
+## Software Architecture
+| Layer  | Technology |
+| ------------- | ------------- |
+| Frontend  | React 19 + TypeScript 6 |
+| Routing  | React Router DOM 7 |
+| Build | Vite 8 |
+| Database | Dexie 4.4 (IndexedDB) |
+| Charts | Recharts 3.8 |
+| Deploy | GitHub Pages via GitHub Actions |
+| PWA | Custom service worker |
+
+### Application Layers
+
+<img width="459" height="565" alt="Screenshot 2026-05-14 at 10 20 39" src="https://github.com/user-attachments/assets/f8b6eff2-e73f-46d3-bedf-499ec00155b9" />
+
+### Routing & Component Map
+| Route | Component | Description |
+|-------|-----------|-------------|
+| `/` | `RootPage` | Flat page index table |
+| `/timeline` | Redirect | → `/page/{main-timeline-id}` |
+| `/colleagues` | `HubPage` | Colleague hub |
+| `/colleagues/:id` | `DetailPage` | Colleague detail |
+| `/candidates` | `HubPage` | Candidate hub |
+| `/candidates/:id` | `DetailPage` | Candidate detail |
+| `/projects` | `HubPage` | Project hub |
+| `/projects/:id` | `DetailPage` | Project detail |
+| `/page/:id` | `DetailPage` | Generic page detail |
+
+### State Management
+| Pattern | What | Where |
+|---------|------|-------|
+| React Context | Global modals, prefs, autocomplete, guides, toasts | `useAppContext`, `useAutocomplete`, `useOnboardingGuides`, `useToast` |
+| Dexie `useLiveQuery` | All database reads (reactive) | Every data hook |
+| localStorage | User preferences, onboarding, backup settings | Read on init, write on change |
+| URL params | Current page/route | React Router |
+
+### Service Worker Strategy
+| Request Type | Strategy |
+|---|---|
+| Navigation | Network-first, fallback to cached `index.html` (SPA routing) |
+| `/assets/*` (hashed) | Cache-first (immutable content-hashed files) |
+| Video (`.mp4`, `.webm`, `.mov`) | Skip service worker (pass through to network) |
+| Other same-origin GET | Network-first with cache fallback |
 
 [Try the app today](https://krisztiangriz.github.io/timeline-app/). I hope you enjoy it!
