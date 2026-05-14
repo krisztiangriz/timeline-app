@@ -11,6 +11,7 @@ import { useAutocomplete } from '../../hooks/useAutocomplete'
 import { useModalContext } from '../../hooks/useAppContext'
 import { enrichMentionHtml } from '../../utils/mentionEnricher'
 import { formatTableDate } from '../../utils/dateUtils'
+import { CloseIcon } from '../Icons/Icons'
 import styles from './RichTextEditor.module.css'
 
 type AutocompleteOption =
@@ -72,7 +73,6 @@ export function RichTextEditor({
   const [showLinkInput, setShowLinkInput] = useState(false)
   const [linkUrl, setLinkUrl] = useState('')
   const [linkPos, setLinkPos] = useState({ top: 0, left: 0 })
-  const savedSelection = useRef<Range | null>(null)
 
   // ---- Mention state ----
   const [mentionQuery, setMentionQuery] = useState<{ prefix: string; text: string } | null>(null)
@@ -379,8 +379,16 @@ export function RichTextEditor({
   function openLinkInput() {
     const sel = window.getSelection()
     if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return
-    savedSelection.current = sel.getRangeAt(0).cloneRange()
-    const rect = sel.getRangeAt(0).getBoundingClientRect()
+
+    const range = sel.getRangeAt(0)
+    const marker = document.createElement('span')
+    marker.setAttribute('data-link-pending', 'true')
+    const fragment = range.extractContents()
+    marker.appendChild(fragment)
+    range.insertNode(marker)
+    emitChange()
+
+    const rect = marker.getBoundingClientRect()
     const editorRect = editorRef.current?.getBoundingClientRect()
     if (editorRect) {
       setLinkPos({ top: rect.bottom - editorRect.top + 4, left: rect.left - editorRect.left })
@@ -390,14 +398,35 @@ export function RichTextEditor({
   }
 
   function applyLink() {
-    if (!linkUrl.trim()) { setShowLinkInput(false); return }
-    if (savedSelection.current) {
-      const sel = window.getSelection()
-      if (sel) { sel.removeAllRanges(); sel.addRange(savedSelection.current) }
+    if (!linkUrl.trim()) { cancelLink(); return }
+    const url = linkUrl.startsWith('http') ? linkUrl : `https://${linkUrl}`
+    const el = editorRef.current
+    if (el) {
+      const marker = el.querySelector('[data-link-pending]')
+      if (marker) {
+        const link = document.createElement('a')
+        link.href = url
+        link.target = '_blank'
+        link.rel = 'noopener'
+        link.contentEditable = 'false'
+        link.innerHTML = marker.innerHTML
+        marker.replaceWith(link)
+      }
     }
-    exec('createLink', linkUrl.startsWith('http') ? linkUrl : `https://${linkUrl}`)
+    emitChange()
     setShowLinkInput(false)
-    savedSelection.current = null
+  }
+
+  function cancelLink() {
+    const el = editorRef.current
+    if (el) {
+      const marker = el.querySelector('[data-link-pending]')
+      if (marker) {
+        marker.replaceWith(...Array.from(marker.childNodes))
+      }
+    }
+    emitChange()
+    setShowLinkInput(false)
   }
 
   // ---- Mention detection ----
@@ -713,6 +742,14 @@ export function RichTextEditor({
   function handleClick(e: React.MouseEvent) {
     const target = e.target as HTMLElement
 
+    // Open links in new tab
+    const link = target.closest('a[href]') as HTMLAnchorElement | null
+    if (link) {
+      e.preventDefault()
+      window.open(link.href, '_blank', 'noopener')
+      return
+    }
+
     // Navigate on mention click
     if (onMentionClick) {
       const mention = target.closest('[data-page-id]') as HTMLElement | null
@@ -855,15 +892,18 @@ export function RichTextEditor({
             onChange={(e) => setLinkUrl(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Enter') { e.preventDefault(); applyLink() }
-              if (e.key === 'Escape') setShowLinkInput(false)
+              if (e.key === 'Escape') { e.preventDefault(); cancelLink() }
             }}
             placeholder="Enter URL..."
             autoFocus
           />
-          <button className={styles.linkConfirm} onClick={applyLink}>
+          <button className={styles.linkConfirm} onClick={applyLink} aria-label="Confirm">
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
               <path d="M2 6L5 9L10 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
+          </button>
+          <button className={styles.linkConfirm} onClick={cancelLink} aria-label="Cancel">
+            <CloseIcon size={12} />
           </button>
         </div>
       )}

@@ -24,7 +24,12 @@ export const RichTextDisplay = memo(function RichTextDisplay({ html, className, 
   const navigate = useNavigate()
   const { allPages } = useAutocomplete()
   const displayClassName = [styles.editor, className].filter(Boolean).join(' ')
-  const cleanHtml = useMemo(() => enrichMentionHtml(DOMPurify.sanitize(html), allPages, collapseMentions), [html, allPages, collapseMentions])
+  const cleanHtml = useMemo(() => {
+    let sanitized = enrichMentionHtml(DOMPurify.sanitize(html), allPages, collapseMentions)
+    // Ensure all links open in new tab
+    sanitized = sanitized.replace(/<a /g, '<a target="_blank" rel="noopener" ')
+    return sanitized
+  }, [html, allPages, collapseMentions])
 
   if (!html || html === '<br>') {
     return null
@@ -32,6 +37,16 @@ export const RichTextDisplay = memo(function RichTextDisplay({ html, className, 
 
   function handleClick(e: React.MouseEvent) {
     const target = e.target as HTMLElement
+
+    // Open links in new tab
+    const link = target.closest('a[href]') as HTMLAnchorElement | null
+    if (link) {
+      e.stopPropagation()
+      e.preventDefault()
+      window.open(link.href, '_blank', 'noopener')
+      return
+    }
+
     const mention = target.closest('[data-page-id]') as HTMLElement | null
     if (mention) {
       e.stopPropagation()

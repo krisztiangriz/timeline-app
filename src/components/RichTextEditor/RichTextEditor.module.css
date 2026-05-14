@@ -201,7 +201,7 @@
   display: flex;
   align-items: center;
   gap: var(--space-xs);
-  padding: var(--space-xs) var(--space-sm);
+  padding: var(--space-sm);
   background: var(--color-surface);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-dropdown);
@@ -212,7 +212,8 @@
 .linkInput {
   font-size: var(--font-size-sm);
   line-height: var(--line-height-base);
-  padding: 2px 6px;
+  height: 32px;
+  padding: 0 var(--space-sm);
   border: 1px solid transparent;
   border-radius: var(--radius-sm);
   width: 200px;
@@ -226,8 +227,8 @@
 }
 
 .linkConfirm {
-  width: 24px;
-  height: 24px;
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
