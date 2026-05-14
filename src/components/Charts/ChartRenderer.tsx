@@ -53,7 +53,7 @@ function ChartContainer({ className, children }: { className: string; children: 
 
 const tooltipStyle: React.CSSProperties = {
   background: 'var(--color-surface)', borderRadius: 12, boxShadow: '0px 2px 8px var(--color-shadow)',
-  border: 'none', padding: '8px 12px', fontSize: 12, lineHeight: '20px', color: 'var(--color-text-secondary)',
+  border: 'none', padding: '8px 12px', fontSize: 12, lineHeight: '20px',
 }
 const tooltipLabelStyle: React.CSSProperties = { color: 'var(--color-text-primary)', fontWeight: 600, fontSize: 12 }
 const FALLBACK_COLOR = 'var(--color-text-placeholder)'
@@ -64,7 +64,7 @@ function getSeriesColor(index: number, total: number, palette: string[]) {
 }
 
 const cursorStyle = { fill: 'var(--color-border-light)', stroke: 'var(--color-border-light)' }
-const TP = { contentStyle: tooltipStyle, labelStyle: tooltipLabelStyle, cursor: cursorStyle, wrapperStyle: { zIndex: 1000 } }
+const TP = { contentStyle: tooltipStyle, labelStyle: tooltipLabelStyle, itemStyle: { color: 'var(--color-text-secondary)' }, cursor: cursorStyle, wrapperStyle: { zIndex: 1000 } }
 const axisStroke = 'var(--color-border)'
 const tickStyle = { fontSize: 10, fill: 'var(--color-text-body)' }
 const legendStyle: React.CSSProperties = { fontSize: 10, color: 'var(--color-text-body)', paddingTop: 4 }
@@ -243,7 +243,7 @@ function PropertyDistributionChart({ config, pages, hubProperties, propertyValue
           <XAxis dataKey="name" tick={tickStyle} stroke={axisStroke} interval={0} />
           <Tooltip {...TP} />
           {data.length > 1 && <Legend content={cellLegend(data.map((s) => ({ name: s.name, color: s.color })))} />}
-          <Bar dataKey="value">
+          <Bar dataKey="value" name="Count">
             {data.map((s, i) => <Cell key={s.name || i} fill={s.color} />)}
           </Bar>
         </BarChart>
@@ -312,7 +312,7 @@ function FeedbackByTypeChart({ config, pages, hubProperties, feedbacks, containe
         <BarChart data={data}>
           <XAxis dataKey="name" tick={tickStyle} stroke={axisStroke} interval={0} />
           <Tooltip {...TP} />
-          <Bar dataKey="value">
+          <Bar dataKey="value" name="Feedback">
             {data.map((d, i) => <Cell key={i} fill={d.color} />)}
           </Bar>
         </BarChart>
@@ -354,7 +354,7 @@ function FeedbackByDimensionChart({ config, pages, hubProperties, feedbacks, con
         <BarChart data={data}>
           <XAxis dataKey="name" tick={tickStyle} stroke={axisStroke} interval={0} />
           <Tooltip {...TP} />
-          <Bar dataKey="value">
+          <Bar dataKey="value" name="Feedback">
             {data.map((d, i) => <Cell key={i} fill={d.color} />)}
           </Bar>
         </BarChart>
@@ -479,7 +479,7 @@ function FeedbackPerPageChart({ config, pages, feedbacks, containerClass }: Char
         <BarChart data={data}>
           <XAxis dataKey="name" tick={tickStyle} stroke={axisStroke} interval={0} />
           <Tooltip {...TP} />
-          <Bar dataKey="value">
+          <Bar dataKey="value" name="Feedback">
             {data.map((_, i) => <Cell key={i} fill={getColor(i, palette)} />)}
           </Bar>
         </BarChart>
@@ -504,10 +504,10 @@ function PageCountChart({ config, monthCount = 12, pages, containerClass }: Char
               <XAxis dataKey="month" tick={tickStyle} stroke={axisStroke} interval="preserveStartEnd" />
               <Tooltip {...TP} />
               {chartType === 'line'
-                ? <Line type="monotone" dataKey="count" stroke={FALLBACK_COLOR} strokeWidth={2} dot={false} />
+                ? <Line type="monotone" dataKey="count" name="Pages" stroke={FALLBACK_COLOR} strokeWidth={2} dot={false} />
                 : chartType === 'area'
-                ? <Area type="monotone" dataKey="count" fill={FALLBACK_COLOR} stroke={FALLBACK_COLOR} fillOpacity={0.6} />
-                : <Bar dataKey="count" fill={FALLBACK_COLOR} />
+                ? <Area type="monotone" dataKey="count" name="Pages" fill={FALLBACK_COLOR} stroke={FALLBACK_COLOR} fillOpacity={0.6} />
+                : <Bar dataKey="count" name="Pages" fill={FALLBACK_COLOR} />
               }
             </ChartComp>
           )
