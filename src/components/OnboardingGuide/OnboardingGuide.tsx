@@ -151,7 +151,7 @@ export function OnboardingGuide({
       {/* Optional video (takes priority over image) */}
       {step.video && (
         <div className={styles.imageWrap}>
-          <video autoPlay loop muted playsInline className={styles.video}>
+          <video key={step.video} autoPlay loop muted playsInline className={styles.video}>
             <source src={step.video} type="video/mp4" />
           </video>
         </div>
