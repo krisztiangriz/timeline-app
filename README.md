@@ -1,7 +1,7 @@
 # Welcome to Timeline
 
 <video width="640" height="480" src="https://github.com/user-attachments/assets/9056a1ef-9cc8-4565-adae-efc776ccc4f1" controls></video>
-[Timeline](https://krisztiangriz.github.io/timeline-app/) is a clever, privacy focused progressive web todo app, that collects tagged input and visualizes data.
+[Timeline](https://krisztiangriz.github.io/timeline-app/) is a privacy focused, minimal PWA where you can capture, organize and visualize your work.
 
 ## How it works
 
