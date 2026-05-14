@@ -6,6 +6,7 @@ import { FeedbackList } from '../PageDetail/FeedbackList'
 import { EmptyState } from '../EmptyState/EmptyState'
 import { useBlocks, useBlockActions } from '../../hooks/useBlocks'
 import { useChildPages, getPagePath } from '../../hooks/usePages'
+import { useNavigateToPage } from '../../hooks/useNavigateToPage'
 import { useAutocomplete } from '../../hooks/useAutocomplete'
 import { usePreferences } from '../../hooks/useAppContext'
 import { useTableSort } from '../../hooks/useTableSort'
@@ -42,24 +43,12 @@ function BlockList({ pageId, page, blocks, tabId }: {
   pageId: number; page: Page; blocks: Block[]; tabId?: number
 }) {
   const { updateBlock, insertBlockAfter } = useBlockActions()
-  const navigate = useNavigate()
-  const { allPages } = useAutocomplete()
-  const allPagesRef = useRef(allPages)
-  allPagesRef.current = allPages
+  const handleMentionClick = useNavigateToPage()
 
   // Onboarding: editor-walkthrough trigger
   const { triggerGuide } = useOnboardingGuides()
   const editorAnchorRef = useRef<HTMLDivElement>(null)
   const handleEditorFocus = useCallback(() => { triggerGuide('editor-walkthrough') }, [triggerGuide])
-
-  const handleMentionClick = useCallback((mentionPageId: number) => {
-    const p = allPagesRef.current.find((pg) => pg.id === mentionPageId)
-    if (p) {
-      navigate(getPagePath(p, allPagesRef.current))
-    } else {
-      navigate(`/page/${mentionPageId}`)
-    }
-  }, [navigate])
 
   const handleInsertComponent = useCallback(async (afterBlockId: number, type: 'timeline' | 'feedback' | 'table' | 'visualization') => {
     await insertBlockAfter(afterBlockId, pageId, type, tabId)

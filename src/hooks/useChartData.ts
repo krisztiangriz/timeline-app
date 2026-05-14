@@ -48,7 +48,6 @@ function getCutoff(monthCount: number): Date {
 }
 
 // Re-export from constants for backward compatibility
-export { CHART_COLORS, getColor } from '../constants/colors'
 import { CHART_COLORS } from '../constants/colors'
 
 // ---- Scope filtering ----

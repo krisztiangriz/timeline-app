@@ -23,9 +23,11 @@ export const ConfigurableViz = memo(function ConfigurableViz({ blockId, pageId }
   const configs = useChartConfigs(blockId)
   const { allPages } = useAutocomplete()
   const allEntries = useAllEntries()
-  const allHubProperties = useLiveQuery(() => db.hubProperties.toArray(), []) ?? []
-  const allFeedbacks = useLiveQuery(() => db.feedbacks.toArray(), []) ?? []
-  const allPropertyValues = useLiveQuery(() => db.pagePropertyValues.toArray(), []) ?? []
+  const { allHubProperties, allFeedbacks, allPropertyValues } = useLiveQuery(async () => ({
+    allHubProperties: await db.hubProperties.toArray(),
+    allFeedbacks: await db.feedbacks.toArray(),
+    allPropertyValues: await db.pagePropertyValues.toArray(),
+  }), []) ?? { allHubProperties: [], allFeedbacks: [], allPropertyValues: [] }
   const [range, setRangeState] = useState<RangeMonths>(() => {
     const stored = localStorage.getItem(`viz-range-${blockId}`)
     return stored === '0' ? 0 : stored === '3' ? 3 : stored === '6' ? 6 : 12

@@ -33,11 +33,6 @@ export function useCrossRefEntries(pageId?: number) {
         .where('tagRefs')
         .equals(pageIdStr)
         .toArray()
-        .catch(() =>
-          db.timelineEntries
-            .filter((e) => e.tagRefs.includes(pageIdStr))
-            .toArray()
-        )
     },
     [pageIdStr]
   ) ?? []

@@ -8,8 +8,8 @@ import {
   useEntryCount,
   usePagesByProperty,
   usePageCount,
-  getColor,
 } from '../../hooks/useChartData'
+import { getColor } from '../../constants/colors'
 import { useChartPalette } from '../../hooks/useChartPalette'
 import { EmptyState } from '../EmptyState/EmptyState'
 import type { ChartConfig, ChartScope, ChartDataSource, ChartType, TimelineEntry, Page } from '../../types'

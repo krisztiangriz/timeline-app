@@ -9,3 +9,8 @@ export function stripHtml(html: string): string {
     .replace(/&gt;/g, '>')
     .replace(/&quot;/g, '"')
 }
+
+/** Strip data-checkbox spans from HTML, keeping inner text and all other formatting */
+export function stripCheckboxHtml(html: string): string {
+  return html.replace(/<span data-checkbox="[^"]*">([\s\S]*?)<\/span>/g, '$1').trim()
+}

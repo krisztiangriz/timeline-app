@@ -1,11 +1,10 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { stripHtml } from '../../utils/stripHtml'
+import { stripHtml, stripCheckboxHtml } from '../../utils/stripHtml'
 import { filterHtmlToMentionLines } from '../../utils/mentionParser'
 
 import { useTimelineEntries, useCrossRefEntries, addEntry, updateEntry, deleteEntry, mergePendingEntries } from '../../hooks/useTimeline'
-import { usePageByRole, useChildPages, getPagePath } from '../../hooks/usePages'
-import { useAutocomplete } from '../../hooks/useAutocomplete'
+import { usePageByRole, useChildPages } from '../../hooks/usePages'
+import { useNavigateToPage } from '../../hooks/useNavigateToPage'
 import { useToast } from '../../hooks/useToast'
 import { formatEntryDate, startOfDay } from '../../utils/dateUtils'
 import { TimelineEntryRow } from './TimelineEntryRow'
@@ -17,11 +16,6 @@ import { OnboardingGuide } from '../OnboardingGuide/OnboardingGuide'
 import styles from './TimelineView.module.css'
 
 const NOOP = () => {}
-
-/** Strip data-checkbox spans from HTML, keeping inner text and all other formatting */
-function stripCheckboxHtml(html: string): string {
-  return html.replace(/<span data-checkbox="[^"]*">([\s\S]*?)<\/span>/g, '$1').trim()
-}
 
 /** Ensure each line in pending HTML has a checkbox. Used when migrating old entries. */
 function ensureCheckboxes(html: string): string {
@@ -60,9 +54,7 @@ interface TimelineViewProps {
 export function TimelineView({ pageId, title, readOnly = false, page }: TimelineViewProps) {
   const directEntries = useTimelineEntries(pageId)
   const crossRefEntries = useCrossRefEntries(pageId)
-  const { allPages } = useAutocomplete()
   const { show: showToast } = useToast()
-  const navigate = useNavigate()
 
   const directIds = useMemo(() => new Set(directEntries.map((e) => e.id!)), [directEntries])
 
@@ -298,17 +290,7 @@ export function TimelineView({ pageId, title, readOnly = false, page }: Timeline
     await deleteEntry(entryId)
   }
 
-  const allPagesRef = useRef(allPages)
-  allPagesRef.current = allPages
-
-  const handleMentionClick = useCallback((mentionPageId: number) => {
-    const page = allPagesRef.current.find((p) => p.id === mentionPageId)
-    if (page) {
-      navigate(getPagePath(page, allPagesRef.current))
-    } else {
-      navigate(`/page/${mentionPageId}`)
-    }
-  }, [navigate])
+  const handleMentionClick = useNavigateToPage()
 
   // ---- Filtered pending (for non-main-timeline pages) ----
   const isMainTimeline = page?.role === 'main-timeline'

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback, type CSSProperties } from 'react'
 import { useOnboardingGuides } from '../../hooks/useOnboardingGuides'
-import { CheckIcon } from '../Icons/Icons'
+import { CheckIcon, ArrowLeftIcon, ArrowRightIcon } from '../Icons/Icons'
 import styles from './OnboardingGuide.module.css'
 
 /* ------------------------------------------------------------------ */
@@ -180,9 +180,7 @@ export function OnboardingGuide({
                 onClick={() => prevStep(guideId)}
                 aria-label="Back"
               >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                  <path d="M10 4.927L2.92709 11.9999L10 19.0676L11.5 17.5676L6.92709 12.9999H21V10.9999H6.92709L11.5 6.427L10 4.927Z" fill="currentColor"/>
-                </svg>
+                <ArrowLeftIcon />
               </button>
             )}
             {!isLastStep && (
@@ -191,9 +189,7 @@ export function OnboardingGuide({
                 onClick={() => nextStep(guideId)}
                 aria-label="Next"
               >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                  <path d="M14 4.927L12.5 6.427L17.0677 10.9999H3V12.9999H17.0677L12.5 17.5676L14 19.0676L21.0677 11.9999L14 4.927Z" fill="currentColor"/>
-                </svg>
+                <ArrowRightIcon />
               </button>
             )}
             {isLastStep && (
