@@ -263,6 +263,7 @@ export function RichTextEditor({
 
     // Emit change and clear pending state
     const html = el.innerHTML
+    lastSetValue.current = html
     onChange(html)
     setPendingMentionInsert(null)
   }, [pendingMentionInsert, setPendingMentionInsert, allPages, collapseMentions, onChange])
@@ -271,6 +272,7 @@ export function RichTextEditor({
     const el = editorRef.current
     if (!el) return
     const html = el.innerHTML
+    lastSetValue.current = html
     onChange(html)
     // Toggle empty state — but never show placeholder while focused
     const text = el.textContent?.trim() ?? ''
