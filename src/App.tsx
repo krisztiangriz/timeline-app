@@ -9,6 +9,7 @@ import { useAutoBackup } from './hooks/useAutoBackup'
 import { usePageActions, usePageByRole, getPagePath } from './hooks/usePages'
 import { seedDefaultPropertyValues } from './hooks/useHubProperties'
 import { initializeTheme } from './hooks/useTheme'
+import { safeSetItem } from './utils/safeStorage'
 import { db } from './db/database'
 import type { PageType, PageRole } from './types'
 import type { PageFormData, HubInfo } from './components/PageForm/PageForm'
@@ -61,14 +62,13 @@ function GlobalOverlays() {
   // Auto-select hub based on current URL
   const defaultParentHubId = useMemo(() => {
     const path = location.pathname
-    const match = hubs.find((h) => {
-      const hub = allPages.find((p) => p.id === h.id)
-      return (hub?.role === 'colleague-hub' && path.startsWith('/colleagues')) ||
-        (hub?.role === 'candidate-hub' && path.startsWith('/candidates')) ||
-        (hub?.role === 'project-hub' && path.startsWith('/projects'))
-    })
+    const match = hubs.find((h) =>
+      (h.role === 'colleague-hub' && path.startsWith('/colleagues')) ||
+      (h.role === 'candidate-hub' && path.startsWith('/candidates')) ||
+      (h.role === 'project-hub' && path.startsWith('/projects'))
+    )
     return match?.id
-  }, [hubs, allPages, location.pathname])
+  }, [hubs, location.pathname])
 
   async function handleAddPage(data: PageFormData): Promise<number | undefined> {
     const parentId = data.parentHubId
@@ -79,7 +79,7 @@ function GlobalOverlays() {
       const pageId = data.existingPageId!
       setAddPageOpen(false)
       showToast('Hub created')
-      localStorage.setItem('user-created-page', 'true')
+      safeSetItem('user-created-page', 'true')
       navigate(`/page/${pageId}`)
       return pageId
     }
@@ -131,7 +131,7 @@ function GlobalOverlays() {
 
       setAddPageOpen(false)
       showToast('Page created')
-      localStorage.setItem('user-created-page', 'true')
+      safeSetItem('user-created-page', 'true')
 
       // If page was created from trigger dropdown, insert mention instead of navigating
       if (addPageInitial?.triggerText) {
@@ -186,47 +186,61 @@ function TimelineRedirect() {
   return <Navigate to={`/page/${page.id}`} replace />
 }
 
-let defaultsInitialized = false
-
-/** Auto-create default structural pages on fresh install, then seed demo data */
+/** Auto-create default structural pages on fresh install (idempotent, atomic) */
 function useEnsureDefaults() {
   useEffect(() => {
-    if (defaultsInitialized) return
-    defaultsInitialized = true
-
     ;(async () => {
-      const allPages = await db.pages.toArray()
-      if (allPages.length > 0) return // not a fresh install
+      const existingPages = await db.pages.toArray()
+      if (existingPages.length > 0) return // not a fresh install
 
-      const now = new Date()
-      const base = { description: '', createdAt: now, updatedAt: now, editCount: 0 }
+      await db.transaction('rw', [db.pages, db.blocks], async () => {
+        // Double-check inside transaction (race protection)
+        const pages = await db.pages.toArray()
+        if (pages.length > 0) return
 
-      async function createHub(name: string, role?: PageRole, trigger?: string) {
-        const pageId = await db.pages.add({
-          ...base, name, type: 'hub' as const,
-          ...(role ? { role } : {}),
-          ...(trigger ? { mentionTrigger: trigger } : {}),
+        const now = new Date()
+        const base = { description: '', createdAt: now, updatedAt: now, editCount: 0 }
+
+        async function createHub(name: string, role?: PageRole, trigger?: string) {
+          const pageId = await db.pages.add({
+            ...base, name, type: 'hub' as const,
+            ...(role ? { role } : {}),
+            ...(trigger ? { mentionTrigger: trigger } : {}),
+          })
+          await db.blocks.add({ pageId: pageId as number, type: 'visualization', order: 0 })
+          await db.blocks.add({ pageId: pageId as number, type: 'table', order: 1 })
+        }
+
+        // Main timeline
+        const timelineId = await db.pages.add({
+          ...base, name: 'Timeline', type: 'general' as const, role: 'main-timeline',
         })
-        await db.blocks.add({ pageId: pageId as number, type: 'visualization', order: 0 })
-        await db.blocks.add({ pageId: pageId as number, type: 'table', order: 1 })
-      }
+        await db.blocks.add({ pageId: timelineId as number, type: 'timeline', order: 0 })
 
-      // Main timeline
-      const timelineId = await db.pages.add({
-        ...base, name: 'Timeline', type: 'general' as const, role: 'main-timeline',
+        // Visualization page
+        const vizId = await db.pages.add({
+          ...base, name: 'Visualization', type: 'general' as const,
+        })
+        await db.blocks.add({ pageId: vizId as number, type: 'visualization', order: 0 })
+
+        // Projects hub
+        await createHub('Projects', 'project-hub', '#')
       })
-      await db.blocks.add({ pageId: timelineId as number, type: 'timeline', order: 0 })
-
-      // Visualization page
-      const vizId = await db.pages.add({
-        ...base, name: 'Visualization', type: 'general' as const,
-      })
-      await db.blocks.add({ pageId: vizId as number, type: 'visualization', order: 0 })
-
-      // Projects hub
-      await createHub('Projects', 'project-hub', '#')
     })()
   }, [])
+}
+
+/** Listens for storage-unavailable events and shows a one-time toast */
+function StorageWarningListener() {
+  const { show: showToast } = useToast()
+  useEffect(() => {
+    function handleStorageUnavailable() {
+      showToast('Storage unavailable — preferences won\'t persist')
+    }
+    window.addEventListener('storage-unavailable', handleStorageUnavailable)
+    return () => window.removeEventListener('storage-unavailable', handleStorageUnavailable)
+  }, [showToast])
+  return null
 }
 
 export default function App() {
@@ -239,6 +253,7 @@ export default function App() {
         <AutocompleteProvider>
         <OnboardingGuidesProvider>
         <ToastProvider>
+        <StorageWarningListener />
         <Suspense fallback={null}>
         <Routes>
           <Route path="/" element={<RootPage />} />

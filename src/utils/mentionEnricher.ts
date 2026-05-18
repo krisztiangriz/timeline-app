@@ -1,31 +1,34 @@
 import type { Page } from '../types'
 
-/**
- * Enrich mention spans in HTML with `data-trigger`, `title`, and optionally `data-collapsed` attributes.
- * This enables CSS-based collapsing of mention names to just the trigger character.
- *
- * @param html - The raw HTML containing mention spans
- * @param allPages - All pages to look up trigger characters and collapse settings
- * @param collapse - When true, adds data-collapsed for hubs with mentionCollapsed (default false)
- * @returns Enriched HTML with attributes on mention spans
- */
-export function enrichMentionHtml(html: string, allPages: Page[], collapse = false): string {
-  if (!html || !html.includes('data-mention')) return html
+// Cache the mentionInfo map to avoid rebuilding O(n²) on every call
+let cachedPages: Page[] | null = null
+let cachedMentionInfo: Map<number, { trigger: string; collapsed: boolean }> = new Map()
 
-  // Build lookup: pageId → { trigger, collapsed }
-  const mentionInfo = new Map<number, { trigger: string; collapsed: boolean }>()
+function getMentionInfo(allPages: Page[]): Map<number, { trigger: string; collapsed: boolean }> {
+  if (cachedPages === allPages) return cachedMentionInfo
+  const info = new Map<number, { trigger: string; collapsed: boolean }>()
   for (const page of allPages) {
     if (page.mentionTrigger) {
-      // The hub itself
-      mentionInfo.set(page.id!, { trigger: page.mentionTrigger, collapsed: !!page.mentionCollapsed })
-      // All children of this hub
+      info.set(page.id!, { trigger: page.mentionTrigger, collapsed: !!page.mentionCollapsed })
       for (const child of allPages) {
         if (child.parentId === page.id) {
-          mentionInfo.set(child.id!, { trigger: page.mentionTrigger, collapsed: !!page.mentionCollapsed })
+          info.set(child.id!, { trigger: page.mentionTrigger, collapsed: !!page.mentionCollapsed })
         }
       }
     }
   }
+  cachedPages = allPages
+  cachedMentionInfo = info
+  return info
+}
+
+/**
+ * Enrich mention spans in HTML with `data-trigger`, `title`, and optionally `data-collapsed` attributes.
+ */
+export function enrichMentionHtml(html: string, allPages: Page[], collapse = false): string {
+  if (!html || !html.includes('data-mention')) return html
+
+  const mentionInfo = getMentionInfo(allPages)
 
   // Enrich mention spans with data-trigger, title, and optionally data-collapsed
   return html.replace(
@@ -44,7 +47,9 @@ export function enrichMentionHtml(html: string, allPages: Page[], collapse = fal
         return `<span${cleaned}${collapsedAttr}>${textContent}</span>`
       }
 
-      return `<span${attrs} data-trigger="${info.trigger}" title="${textContent}"${collapsedAttr}>${textContent}</span>`
+      const safeTrigger = info.trigger.replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      const safeTitle = textContent.replace(/"/g, '&quot;')
+      return `<span${attrs} data-trigger="${safeTrigger}" title="${safeTitle}"${collapsedAttr}>${textContent}</span>`
     }
   )
 }

@@ -87,10 +87,16 @@ export function filterEntriesByScopes(entries: TimelineEntry[], scopes: ChartSco
   return result
 }
 
-// ---- All entries ----
+// ---- All entries (scoped by date range) ----
 
-export function useAllEntries() {
-  return useLiveQuery(() => db.timelineEntries.toArray()) ?? []
+export function useAllEntries(monthCount?: number) {
+  const cutoff = monthCount && monthCount > 0 ? getCutoff(monthCount) : undefined
+  return useLiveQuery(() => {
+    if (cutoff) {
+      return db.timelineEntries.where('date').aboveOrEqual(cutoff).toArray()
+    }
+    return db.timelineEntries.toArray()
+  }, [cutoff?.getTime()]) ?? []
 }
 
 // ---- Aggregation: entry count (scope-aware) ----

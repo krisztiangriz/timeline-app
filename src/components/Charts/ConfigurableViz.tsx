@@ -12,6 +12,7 @@ import { db } from '../../db/database'
 import type { ChartConfig, ChartDataSource, ChartType, ChartScope, TimelineEntry, Page, HubProperty, PagePropertyValue, Feedback } from '../../types'
 import { useOnboardingGuides } from '../../hooks/useOnboardingGuides'
 import { OnboardingGuide } from '../OnboardingGuide/OnboardingGuide'
+import { safeGetItem, safeSetItem } from '../../utils/safeStorage'
 import styles from './Charts.module.css'
 
 interface ConfigurableVizProps {
@@ -22,16 +23,16 @@ interface ConfigurableVizProps {
 export const ConfigurableViz = memo(function ConfigurableViz({ blockId, pageId }: ConfigurableVizProps) {
   const configs = useChartConfigs(blockId)
   const { allPages } = useAutocomplete()
-  const allEntries = useAllEntries()
+  const [range, setRangeState] = useState<RangeMonths>(() => {
+    const stored = safeGetItem(`viz-range-${blockId}`)
+    return stored === '0' ? 0 : stored === '3' ? 3 : stored === '6' ? 6 : 12
+  })
+  const allEntries = useAllEntries(range || undefined)
   const { allHubProperties, allFeedbacks, allPropertyValues } = useLiveQuery(async () => ({
     allHubProperties: await db.hubProperties.toArray(),
     allFeedbacks: await db.feedbacks.toArray(),
     allPropertyValues: await db.pagePropertyValues.toArray(),
   }), []) ?? { allHubProperties: [], allFeedbacks: [], allPropertyValues: [] }
-  const [range, setRangeState] = useState<RangeMonths>(() => {
-    const stored = localStorage.getItem(`viz-range-${blockId}`)
-    return stored === '0' ? 0 : stored === '3' ? 3 : stored === '6' ? 6 : 12
-  })
   const [addOpen, setAddOpen] = useState(false)
   const [editing, setEditing] = useState<ChartConfig | undefined>()
 
@@ -43,7 +44,7 @@ export const ConfigurableViz = memo(function ConfigurableViz({ blockId, pageId }
 
   function setRange(r: RangeMonths) {
     setRangeState(r)
-    localStorage.setItem(`viz-range-${blockId}`, String(r))
+    safeSetItem(`viz-range-${blockId}`, String(r))
   }
 
   async function handleAdd(name: string, dataSource: ChartDataSource, chartType: ChartType, scopes?: ChartScope[], propertyId?: number) {

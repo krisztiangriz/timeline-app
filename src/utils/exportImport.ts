@@ -2,6 +2,32 @@ import { db } from '../db/database'
 import DOMPurify from 'dompurify'
 import type { Page } from '../types'
 
+// ---- Import validation helpers ----
+
+function isValidPage(p: unknown): boolean {
+  if (!p || typeof p !== 'object') return false
+  const pg = p as Record<string, unknown>
+  return typeof pg.name === 'string' && typeof pg.type === 'string'
+}
+
+function isValidEntry(e: unknown): boolean {
+  if (!e || typeof e !== 'object') return false
+  const en = e as Record<string, unknown>
+  return typeof en.pageId === 'number' && typeof en.text === 'string'
+}
+
+function isValidFeedback(f: unknown): boolean {
+  if (!f || typeof f !== 'object') return false
+  const fb = f as Record<string, unknown>
+  return typeof fb.subjectId === 'number' && typeof fb.type === 'string'
+}
+
+function isValidBlock(b: unknown): boolean {
+  if (!b || typeof b !== 'object') return false
+  const bl = b as Record<string, unknown>
+  return typeof bl.pageId === 'number' && typeof bl.type === 'string'
+}
+
 interface ExportData {
   version: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12
   exportedAt: string
@@ -174,29 +200,41 @@ async function importData(jsonString: string): Promise<void> {
   }
 
   // Rehydrate date fields (JSON.parse returns strings, not Date objects)
-  const pages = (data.pages as Record<string, unknown>[]).map((p) => ({
-    ...p,
-    createdAt: new Date(p.createdAt as string),
-    updatedAt: new Date(p.updatedAt as string),
-  }))
-  const entries = (data.timelineEntries as Record<string, unknown>[]).map((e) => ({
-    ...e,
-    text: typeof e.text === 'string' ? DOMPurify.sanitize(e.text) : e.text,
-    date: new Date(e.date as string),
-    createdAt: new Date(e.createdAt as string),
-    updatedAt: new Date(e.updatedAt as string),
-  }))
-  const feedbacks = (data.feedbacks as Record<string, unknown>[]).map((f) => ({
-    ...f,
-    description: typeof f.description === 'string' ? DOMPurify.sanitize(f.description) : f.description,
-    createdAt: new Date(f.createdAt as string),
-  }))
+  const pages = (data.pages as Record<string, unknown>[])
+    .filter(isValidPage)
+    .map((p) => ({
+      ...p,
+      createdAt: new Date(p.createdAt as string),
+      updatedAt: new Date(p.updatedAt as string),
+      // Validate mentionTrigger is at most 1 character
+      ...(p.mentionTrigger && typeof p.mentionTrigger === 'string' && p.mentionTrigger.length > 1
+        ? { mentionTrigger: p.mentionTrigger[0] }
+        : {}),
+    }))
+  const entries = (data.timelineEntries as Record<string, unknown>[])
+    .filter(isValidEntry)
+    .map((e) => ({
+      ...e,
+      text: typeof e.text === 'string' ? DOMPurify.sanitize(e.text) : e.text,
+      date: new Date(e.date as string),
+      createdAt: new Date(e.createdAt as string),
+      updatedAt: new Date(e.updatedAt as string),
+    }))
+  const feedbacks = (data.feedbacks as Record<string, unknown>[])
+    .filter(isValidFeedback)
+    .map((f) => ({
+      ...f,
+      description: typeof f.description === 'string' ? DOMPurify.sanitize(f.description) : f.description,
+      createdAt: new Date(f.createdAt as string),
+    }))
   // Sanitize text content in blocks
   const blocks = data.blocks?.length
-    ? (data.blocks as Record<string, unknown>[]).map((b) => ({
-        ...b,
-        content: typeof b.content === 'string' ? DOMPurify.sanitize(b.content) : b.content,
-      }))
+    ? (data.blocks as Record<string, unknown>[])
+        .filter(isValidBlock)
+        .map((b) => ({
+          ...b,
+          content: typeof b.content === 'string' ? DOMPurify.sanitize(b.content) : b.content,
+        }))
     : undefined
 
   // Run everything in a transaction so failure rolls back

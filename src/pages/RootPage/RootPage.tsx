@@ -20,6 +20,7 @@ import type { PageType } from '../../types'
 import { DragHandleIcon } from '../../components/Icons/Icons'
 import { useOnboardingGuides } from '../../hooks/useOnboardingGuides'
 import { OnboardingGuide } from '../../components/OnboardingGuide/OnboardingGuide'
+import { safeGetItem } from '../../utils/safeStorage'
 import layout from '../../styles/layout.module.css'
 import table from '../../styles/table.module.css'
 
@@ -51,8 +52,8 @@ export function RootPage() {
   const { triggerGuide } = useOnboardingGuides()
   const tableRef = useRef<HTMLDivElement>(null)
   const hasPages = flatRows.length > 0
-  const onboardingDone = localStorage.getItem('onboarding-completed') === 'true'
-  const userCreatedPage = localStorage.getItem('user-created-page') === 'true'
+  const onboardingDone = safeGetItem('onboarding-completed') === 'true'
+  const userCreatedPage = safeGetItem('user-created-page') === 'true'
   useEffect(() => {
     if (hasPages && onboardingDone && userCreatedPage) triggerGuide('home-intro')
   }, [hasPages, onboardingDone, userCreatedPage, triggerGuide])

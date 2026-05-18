@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { downloadBackup } from '../utils/exportImport'
+import { safeGetItem, safeSetItem } from '../utils/safeStorage'
 
 export type BackupFrequency = 'daily' | 'weekly' | 'monthly' | 'off'
 
@@ -13,13 +14,13 @@ const INTERVALS: Record<Exclude<BackupFrequency, 'off'>, number> = {
 }
 
 function getFrequency(): BackupFrequency {
-  const v = localStorage.getItem(LS_FREQUENCY)
+  const v = safeGetItem(LS_FREQUENCY)
   if (v === 'daily' || v === 'weekly' || v === 'monthly' || v === 'off') return v
   return 'off'
 }
 
 function getLastBackup(): string | null {
-  return localStorage.getItem(LS_LAST)
+  return safeGetItem(LS_LAST)
 }
 
 function isDue(frequency: BackupFrequency): boolean {
@@ -43,7 +44,7 @@ export function useAutoBackup() {
       if (!isDue(getFrequency())) return
       try {
         await downloadBackup()
-        localStorage.setItem(LS_LAST, new Date().toISOString())
+        safeSetItem(LS_LAST, new Date().toISOString())
       } catch {
         // Silently fail — don't block the app
       }
@@ -64,7 +65,7 @@ export function useBackupSettings() {
 
   const setFrequency = useCallback((v: BackupFrequency) => {
     setFrequencyState(v)
-    localStorage.setItem(LS_FREQUENCY, v)
+    safeSetItem(LS_FREQUENCY, v)
   }, [])
 
   return { frequency, setFrequency, lastBackup }

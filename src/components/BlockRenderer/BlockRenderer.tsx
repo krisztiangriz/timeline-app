@@ -1,4 +1,4 @@
-import { useState, useEffect, lazy, Suspense, useCallback, useRef } from 'react'
+import { useState, useEffect, lazy, Suspense, useCallback, useRef, memo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { RichTextEditor } from '../RichTextEditor/RichTextEditor'
 import { TimelineView } from '../TimelineView/TimelineView'
@@ -39,7 +39,7 @@ export function BlockRenderer({ page, activeTabId }: BlockRendererProps) {
 
 // ---- Block list ----
 
-function BlockList({ pageId, page, blocks, tabId }: {
+const BlockList = memo(function BlockList({ pageId, page, blocks, tabId }: {
   pageId: number; page: Page; blocks: Block[]; tabId?: number
 }) {
   const { updateBlock, insertBlockAfter } = useBlockActions()
@@ -101,7 +101,7 @@ function BlockList({ pageId, page, blocks, tabId }: {
       <OnboardingGuide guideId="editor-walkthrough" anchorRef={editorAnchorRef} position="bottom-left" />
     </div>
   )
-}
+})
 
 // ---- Text block ----
 

@@ -11,6 +11,7 @@ import { useChartPalette, PALETTE_OPTIONS } from '../../hooks/useChartPalette'
 import { useTheme, type Theme } from '../../hooks/useTheme'
 import { ColorPicker } from '../../components/ColorPicker/ColorPicker'
 import type { Page } from '../../types'
+import { safeRemoveItem } from '../../utils/safeStorage'
 import styles from './SettingsModal.module.css'
 
 interface SettingsModalProps {
@@ -273,8 +274,8 @@ export function SettingsModal({ open, onClose, onToast }: SettingsModalProps) {
         <span className={styles.backupStatus}>Status: {onboardingGuides.filter((g) => isGuideDismissed(g.id)).length}/{onboardingGuides.length}</span>
         <div className={styles.showHideRow}>
           <button className={styles.iconButton} onClick={() => {
-            localStorage.removeItem('onboarding-completed')
-            localStorage.removeItem('user-created-page')
+            safeRemoveItem('onboarding-completed')
+            safeRemoveItem('user-created-page')
             resetAllGuides()
             setOnboardingOpen(true)
             onClose()

@@ -69,6 +69,7 @@ export function RichTextEditor({
 }: RichTextEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null)
   const isFocusedRef = useRef(false)
+  const lastSetValue = useRef('')
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout>>(null)
   const [showLinkInput, setShowLinkInput] = useState(false)
   const [linkUrl, setLinkUrl] = useState('')
@@ -129,8 +130,9 @@ export function RichTextEditor({
   useLayoutEffect(() => {
     const el = editorRef.current
     if (!el) return
-    if (el.innerHTML !== value) {
+    if (value !== lastSetValue.current) {
       el.innerHTML = enrichMentionHtml(value, allPages, collapseMentions)
+      lastSetValue.current = value
     }
     const text = el.textContent?.trim() ?? ''
     const hasElements = el.querySelector('[data-checkbox], [data-mention]') !== null

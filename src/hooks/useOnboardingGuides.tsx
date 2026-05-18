@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useCallback, useMemo, type ReactNode } from 'react'
+import { safeGetItem, safeSetItem, safeRemoveItem } from '../utils/safeStorage'
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -60,7 +61,7 @@ const STORAGE_KEY_DISABLED = 'onboarding-guides-disabled'
 
 function getDismissedGuides(): string[] {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY_DISMISSED)
+    const raw = safeGetItem(STORAGE_KEY_DISMISSED)
     return raw ? JSON.parse(raw) : []
   } catch {
     return []
@@ -68,18 +69,18 @@ function getDismissedGuides(): string[] {
 }
 
 function setDismissedGuides(ids: string[]) {
-  localStorage.setItem(STORAGE_KEY_DISMISSED, JSON.stringify(ids))
+  safeSetItem(STORAGE_KEY_DISMISSED, JSON.stringify(ids))
 }
 
 function getGuidesDisabled(): boolean {
-  return localStorage.getItem(STORAGE_KEY_DISABLED) === 'true'
+  return safeGetItem(STORAGE_KEY_DISABLED) === 'true'
 }
 
 function setGuidesDisabledStorage(disabled: boolean) {
   if (disabled) {
-    localStorage.setItem(STORAGE_KEY_DISABLED, 'true')
+    safeSetItem(STORAGE_KEY_DISABLED, 'true')
   } else {
-    localStorage.removeItem(STORAGE_KEY_DISABLED)
+    safeRemoveItem(STORAGE_KEY_DISABLED)
   }
 }
 

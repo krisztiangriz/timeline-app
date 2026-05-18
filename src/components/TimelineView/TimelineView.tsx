@@ -2,8 +2,9 @@ import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import { stripHtml, stripCheckboxHtml } from '../../utils/stripHtml'
 import { filterHtmlToMentionLines } from '../../utils/mentionParser'
 
-import { useTimelineEntries, useCrossRefEntries, addEntry, updateEntry, deleteEntry, mergePendingEntries } from '../../hooks/useTimeline'
+import { useTimelineEntries, useCrossRefEntries, usePendingEntry, addEntry, updateEntry, deleteEntry, mergePendingEntries } from '../../hooks/useTimeline'
 import { usePageByRole, useChildPages } from '../../hooks/usePages'
+import { db } from '../../db/database'
 import { useNavigateToPage } from '../../hooks/useNavigateToPage'
 import { useToast } from '../../hooks/useToast'
 import { formatEntryDate, startOfDay } from '../../utils/dateUtils'
@@ -295,13 +296,8 @@ export function TimelineView({ pageId, title, readOnly = false, page }: Timeline
   // ---- Filtered pending (for non-main-timeline pages) ----
   const isMainTimeline = page?.role === 'main-timeline'
   const mainTimelinePage = usePageByRole('main-timeline')
-  const mainTimelineEntries = useTimelineEntries(isMainTimeline ? undefined : mainTimelinePage?.id)
+  const mainPendingEntry = usePendingEntry(isMainTimeline ? undefined : mainTimelinePage?.id)
   const hubChildren = useChildPages(page?.type === 'hub' ? page.id : undefined)
-
-  const mainPendingEntry = useMemo(
-    () => isMainTimeline ? undefined : mainTimelineEntries.find((e) => e.isPending),
-    [mainTimelineEntries, isMainTimeline]
-  )
 
   // Determine which page IDs are relevant for filtering
   const relevantIds = useMemo(() => {
@@ -356,9 +352,11 @@ export function TimelineView({ pageId, title, readOnly = false, page }: Timeline
       // Append to today's entry on the main timeline
       if (cleanText) {
         const todayStart = startOfDay(new Date())
-        const mainTodayEntry = mainTimelineEntries.find(
-          (e) => !e.isPending && new Date(e.date) >= todayStart && e.pageId === mainTimelinePage.id
-        )
+        const mainTodayEntries = await db.timelineEntries
+          .where('pageId').equals(mainTimelinePage.id)
+          .filter((e) => !e.isPending && new Date(e.date) >= todayStart)
+          .toArray()
+        const mainTodayEntry = mainTodayEntries[0]
         if (mainTodayEntry?.id) {
           const newText = mainTodayEntry.text
             ? mainTodayEntry.text + '<div>' + cleanText + '</div>'

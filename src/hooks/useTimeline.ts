@@ -38,6 +38,23 @@ export function useCrossRefEntries(pageId?: number) {
   ) ?? []
 }
 
+/**
+ * Get only the pending entry for a page (avoids loading all entries).
+ */
+export function usePendingEntry(pageId?: number) {
+  return useLiveQuery(
+    () => {
+      if (!pageId) return undefined
+      return db.timelineEntries
+        .where('pageId')
+        .equals(pageId)
+        .filter((e) => e.isPending)
+        .first()
+    },
+    [pageId]
+  )
+}
+
 // Standalone async functions — stable references, no hook overhead
 
 export async function addEntry(

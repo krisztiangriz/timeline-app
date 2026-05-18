@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { Modal } from '../Modal/Modal'
+import { safeSetItem } from '../../utils/safeStorage'
 import styles from './OnboardingModal.module.css'
 
 interface OnboardingModalProps {
@@ -15,7 +16,7 @@ export function OnboardingModal({ open, onClose }: OnboardingModalProps) {
   }, [open])
 
   function handleGetStarted() {
-    localStorage.setItem('onboarding-completed', 'true')
+    safeSetItem('onboarding-completed', 'true')
     onClose()
   }
 

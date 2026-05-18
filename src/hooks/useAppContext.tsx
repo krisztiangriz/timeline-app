@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState, useCallback, useMemo, type ReactNode } from 'react'
+import { safeGetItem, safeSetItem } from '../utils/safeStorage'
 
 // ---- Types for page creation from trigger dropdown ----
 
@@ -97,14 +98,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [addPageOpen, setAddPageOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [helpOpen, setHelpOpen] = useState(false)
-  const [onboardingOpen, setOnboardingOpen] = useState(() => localStorage.getItem('onboarding-completed') !== 'true')
+  const [onboardingOpen, setOnboardingOpen] = useState(() => safeGetItem('onboarding-completed') !== 'true')
   const [addPageInitial, setAddPageInitial] = useState<AddPageInitial | undefined>(undefined)
   const [pendingMentionInsert, setPendingMentionInsert] = useState<PendingMentionInsert | null>(null)
-  const [showArchived, setShowArchivedState] = useState(() => localStorage.getItem('show-archived') === 'true')
+  const [showArchived, setShowArchivedState] = useState(() => safeGetItem('show-archived') === 'true')
 
   const setShowArchived = useCallback((v: boolean) => {
     setShowArchivedState(v)
-    localStorage.setItem('show-archived', String(v))
+    safeSetItem('show-archived', String(v))
   }, [])
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {

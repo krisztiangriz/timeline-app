@@ -1,4 +1,5 @@
 import { useSyncExternalStore, useCallback } from 'react'
+import { safeGetItem, safeSetItem } from '../utils/safeStorage'
 
 export type Theme = 'light' | 'dark'
 
@@ -13,7 +14,7 @@ function applyTheme(theme: Theme) {
 
 // Read stored theme (or default to 'light')
 function getStoredTheme(): Theme {
-  const stored = localStorage.getItem(STORAGE_KEY)
+  const stored = safeGetItem(STORAGE_KEY)
   return stored === 'dark' ? 'dark' : 'light'
 }
 
@@ -32,7 +33,7 @@ function getSnapshot(): Theme {
 
 function setTheme(theme: Theme) {
   currentTheme = theme
-  localStorage.setItem(STORAGE_KEY, theme)
+  safeSetItem(STORAGE_KEY, theme)
   applyTheme(theme)
   listeners.forEach((cb) => cb())
 }

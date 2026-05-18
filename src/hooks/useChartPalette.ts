@@ -1,6 +1,7 @@
 import { useState, useCallback, useMemo } from 'react'
 import { CHART_COLORS } from '../constants/colors'
 import { useTheme } from './useTheme'
+import { safeGetItem, safeSetItem, safeRemoveItem } from '../utils/safeStorage'
 
 const LS_KEY = 'chart-palette'
 
@@ -17,18 +18,18 @@ export const PALETTE_OPTIONS = [
 
 function readPalette(): string[] {
   try {
-    const stored = localStorage.getItem(LS_KEY)
+    const stored = safeGetItem(LS_KEY)
     if (stored) return JSON.parse(stored)
-  } catch { /* localStorage unavailable or corrupt */ }
+  } catch { /* parse error */ }
   return CHART_COLORS
 }
 
 function writePalette(palette: string[]) {
-  try { localStorage.setItem(LS_KEY, JSON.stringify(palette)) } catch { /* ignore */ }
+  safeSetItem(LS_KEY, JSON.stringify(palette))
 }
 
 function clearPalette() {
-  try { localStorage.removeItem(LS_KEY) } catch { /* ignore */ }
+  safeRemoveItem(LS_KEY)
 }
 
 /** Convert hex color to HSL, boost lightness for dark mode, return hex */

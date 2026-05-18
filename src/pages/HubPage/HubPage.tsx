@@ -60,10 +60,14 @@ export function HubPage({ role }: HubPageProps) {
 
   async function handleEditSubmit(data: PageFormData) {
     if (!hub?.id) return
-    await updatePage(hub.id, { name: data.name, mentionTrigger: data.mentionTrigger, mentionCollapsed: data.mentionCollapsed })
-    await updateTabs(hub.id, data.tabs)
-    await persistBlockEdits(data.blockOrder, data.deletedBlockIds, deleteBlock)
-    setEditPageOpen(false); showToast('Page updated')
+    try {
+      await updatePage(hub.id, { name: data.name, mentionTrigger: data.mentionTrigger, mentionCollapsed: data.mentionCollapsed })
+      await updateTabs(hub.id, data.tabs)
+      await persistBlockEdits(data.blockOrder, data.deletedBlockIds, deleteBlock)
+      setEditPageOpen(false); showToast('Page updated')
+    } catch {
+      showToast('Failed to update page')
+    }
   }
 
   if (!hub) return null
