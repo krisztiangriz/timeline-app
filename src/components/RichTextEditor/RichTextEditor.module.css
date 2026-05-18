@@ -94,13 +94,15 @@
 
 /* Links */
 .editor a {
-  color: var(--color-text-body);
+  color: inherit;
+  font-weight: var(--font-weight-medium);
   text-decoration: underline;
+  text-underline-offset: 2px;
   cursor: pointer;
 }
 
 .editor a:hover {
-  opacity: 0.8;
+  color: var(--color-text-tertiary);
 }
 
 /* Bullet lists */
