@@ -1,10 +1,22 @@
-import { memo, useMemo } from 'react'
+import { memo, useMemo, useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import DOMPurify from 'dompurify'
 import { getPagePath } from '../../hooks/usePages'
 import { useAutocomplete } from '../../hooks/useAutocomplete'
 import { enrichMentionHtml } from '../../utils/mentionEnricher'
 import styles from './RichTextEditor.module.css'
+
+// Lazy-load DOMPurify — loaded once on first render, then cached
+let purifyInstance: { sanitize: (html: string) => string } | null = null
+let purifyPromise: Promise<void> | null = null
+
+function loadPurify() {
+  if (!purifyPromise) {
+    purifyPromise = import('dompurify').then((mod) => {
+      purifyInstance = mod.default
+    })
+  }
+  return purifyPromise
+}
 
 interface RichTextDisplayProps {
   html: string
@@ -24,14 +36,23 @@ export const RichTextDisplay = memo(function RichTextDisplay({ html, className, 
   const navigate = useNavigate()
   const { allPages } = useAutocomplete()
   const displayClassName = [styles.editor, className].filter(Boolean).join(' ')
+  const [purifyLoaded, setPurifyLoaded] = useState(!!purifyInstance)
+
+  useEffect(() => {
+    if (!purifyInstance) {
+      loadPurify().then(() => setPurifyLoaded(true))
+    }
+  }, [])
+
   const cleanHtml = useMemo(() => {
-    let sanitized = enrichMentionHtml(DOMPurify.sanitize(html), allPages, collapseMentions)
+    if (!purifyInstance) return ''
+    let sanitized = enrichMentionHtml(purifyInstance.sanitize(html), allPages, collapseMentions)
     // Ensure all links open in new tab
     sanitized = sanitized.replace(/<a /g, '<a target="_blank" rel="noopener" ')
     return sanitized
-  }, [html, allPages, collapseMentions])
+  }, [html, allPages, collapseMentions, purifyLoaded])
 
-  if (!html || html === '<br>') {
+  if (!html || html === '<br>' || !purifyLoaded) {
     return null
   }
 

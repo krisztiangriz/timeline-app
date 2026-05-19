@@ -14,6 +14,7 @@
   border-radius: var(--radius-lg);
   box-shadow: 0 4px 16px var(--color-shadow), 0 1px 4px var(--color-shadow);
   animation: guideIn 0.2s ease-out;
+  will-change: transform, opacity;
 }
 
 /* When not anchored, center in viewport */

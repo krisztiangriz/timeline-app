@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, memo } from 'react'
 import type { HubProperty } from '../../types'
 import styles from './PropertyRow.module.css'
 
@@ -8,7 +8,7 @@ interface PropertyRowProps {
   onChange: (value: string) => void
 }
 
-export function PropertyRow({ property, value, onChange }: PropertyRowProps) {
+export const PropertyRow = memo(function PropertyRow({ property, value, onChange }: PropertyRowProps) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
@@ -57,4 +57,4 @@ export function PropertyRow({ property, value, onChange }: PropertyRowProps) {
       )}
     </div>
   )
-}
+})

@@ -14,6 +14,7 @@
   flex-direction: column;
   width: 400px;
   max-width: calc(100vw - 32px);
+  will-change: transform, opacity;
   max-height: calc(100dvh - 64px);
   background: var(--color-surface);
   border-radius: var(--radius-lg);

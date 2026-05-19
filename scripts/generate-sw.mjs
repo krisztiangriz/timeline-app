@@ -25,15 +25,23 @@ function collectFiles(dir, files = []) {
 
 const allFiles = collectFiles(DIST)
 
-// Build precache URL list (relative to base)
+// Build precache URL list (critical assets only — lazy chunks cached on first use)
+const CRITICAL_SIZE_THRESHOLD = 30 * 1024 // 30 kB — vendor chunks and core bundle
+
 const precacheUrls = allFiles
-  .map((f) => BASE + relative(DIST, f))
-  .filter((url) =>
-    // Include HTML, JS, CSS, SVG, JSON — exclude sw.js itself and sourcemaps
+  .map((f) => ({ url: BASE + relative(DIST, f), size: statSync(f).size, path: f }))
+  .filter(({ url, size }) =>
+    // Always exclude sw.js and sourcemaps
     !url.endsWith('/sw.js') &&
     !url.endsWith('.map') &&
-    (url.endsWith('.html') || url.endsWith('.js') || url.endsWith('.css') || url.endsWith('.svg') || url.endsWith('.json'))
+    (
+      // Always precache HTML, CSS, SVG, JSON (small, critical for layout)
+      url.endsWith('.html') || url.endsWith('.css') || url.endsWith('.svg') || url.endsWith('.json') ||
+      // Only precache large JS (vendor + core) — lazy chunks will cache on first use
+      (url.endsWith('.js') && size >= CRITICAL_SIZE_THRESHOLD)
+    )
   )
+  .map(({ url }) => url)
 
 // Ensure index.html is first (for offline navigation fallback)
 precacheUrls.sort((a, b) => {

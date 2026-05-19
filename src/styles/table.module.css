@@ -58,6 +58,7 @@
   cursor: pointer;
   position: relative;
   padding: var(--space-sm) 0;
+  padding-left: calc(var(--depth, 0) * 16px);
 }
 
 .row::before {

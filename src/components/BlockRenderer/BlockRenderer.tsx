@@ -105,7 +105,7 @@ const BlockList = memo(function BlockList({ pageId, page, blocks, tabId }: {
 
 // ---- Text block ----
 
-function TextBlock({ block, onUpdate, onInsertComponent, onMentionClick, placeholder, onEditorFocus }: {
+const TextBlock = memo(function TextBlock({ block, onUpdate, onInsertComponent, onMentionClick, placeholder, onEditorFocus }: {
   block: Block | { pageId: number; tabId?: number; type: 'text'; content: string; order: number }
   onUpdate: (content: string) => void
   onInsertComponent: (type: 'timeline' | 'feedback' | 'table' | 'visualization') => void
@@ -123,7 +123,7 @@ function TextBlock({ block, onUpdate, onInsertComponent, onMentionClick, placeho
       <RichTextEditor value={html} onChange={setHtml} onBlur={save} onAutoSave={autoSave} placeholder={placeholder ?? ''} onInsertComponent={onInsertComponent} onMentionClick={onMentionClick} />
     </div>
   )
-}
+})
 
 // ---- Component block content ----
 

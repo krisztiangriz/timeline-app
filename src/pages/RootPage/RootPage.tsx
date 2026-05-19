@@ -137,7 +137,7 @@ export function RootPage() {
             if (page.archived) cls += ' ' + table.rowArchived
 
             return (
-              <div key={page.id} className={cls} style={{ paddingLeft: depth * 16 }}
+              <div key={page.id} className={cls} style={{ '--depth': depth } as React.CSSProperties}
                 draggable={!cantDrag}
                 onDragStart={(e) => { if (cantDrag) { e.preventDefault(); return }; handleDragStart(e, page.id!) }}
                 onDragEnd={handleDragEnd}

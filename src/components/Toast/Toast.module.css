@@ -20,6 +20,7 @@
   font-size: var(--font-size-sm);
   line-height: var(--line-height-sm);
   font-weight: var(--font-weight-medium);
+  will-change: transform, opacity;
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-dropdown);
   white-space: nowrap;
