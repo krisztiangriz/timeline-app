@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { downloadBackup } from '../utils/exportImport'
 import { safeGetItem, safeSetItem } from '../utils/safeStorage'
 import { useToast } from './useToast'
@@ -37,6 +37,8 @@ function isDue(frequency: BackupFrequency): boolean {
  */
 export function useAutoBackup() {
   const { show: showToast } = useToast()
+  const showToastRef = useRef(showToast)
+  showToastRef.current = showToast
 
   useEffect(() => {
     const frequency = getFrequency()
@@ -48,16 +50,16 @@ export function useAutoBackup() {
       try {
         await downloadBackup()
         safeSetItem(LS_LAST, new Date().toISOString())
-        showToast('Backup saved')
+        showToastRef.current('Backup saved')
       } catch {
-        showToast('Backup failed — export manually from Settings')
+        showToastRef.current('Backup failed — export manually from Settings')
       }
     }
 
     // Small delay so the app finishes rendering before triggering the download
     const timer = setTimeout(run, 2000)
     return () => clearTimeout(timer)
-  }, [showToast])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps — uses ref for toast, timer must be stable
 }
 
 /**
