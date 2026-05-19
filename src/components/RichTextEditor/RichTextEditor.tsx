@@ -12,6 +12,7 @@ import { useModalContext } from '../../hooks/useAppContext'
 import { enrichMentionHtml } from '../../utils/mentionEnricher'
 import { formatTableDate } from '../../utils/dateUtils'
 import { CloseIcon } from '../Icons/Icons'
+import type { Page } from '../../types'
 import styles from './RichTextEditor.module.css'
 
 type AutocompleteOption =
@@ -24,6 +25,15 @@ const COMPONENT_OPTIONS: AutocompleteOption[] = [
   { kind: 'component', id: 'table', label: 'Table', componentType: 'table' },
   { kind: 'component', id: 'visualization', label: 'Visualization', componentType: 'visualization' },
 ]
+
+/** Get the mention trigger and collapse info for a page (via its parent hub) */
+function getMentionTriggerInfo(pageId: number, allPages: Page[]) {
+  const page = allPages.find((p) => p.id === pageId)
+  const parentHub = page?.parentId ? allPages.find((p) => p.id === page.parentId) : undefined
+  const trigger = parentHub?.mentionTrigger ?? allPages.find((p) => p.id === pageId && p.mentionTrigger)?.mentionTrigger
+  const collapsed = parentHub?.mentionCollapsed ?? allPages.find((p) => p.id === pageId && p.mentionTrigger)?.mentionCollapsed
+  return { trigger, collapsed: !!collapsed }
+}
 
 interface RichTextEditorProps {
   value: string
@@ -71,6 +81,7 @@ export function RichTextEditor({
   const isFocusedRef = useRef(false)
   const lastSetValue = useRef('')
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout>>(null)
+  const blurTimer = useRef<ReturnType<typeof setTimeout>>(null)
   const [showLinkInput, setShowLinkInput] = useState(false)
   const [linkUrl, setLinkUrl] = useState('')
   const [linkPos, setLinkPos] = useState({ top: 0, left: 0 })
@@ -170,9 +181,10 @@ export function RichTextEditor({
     }
   }, [autoFocus, initialClickPosition])
 
-  // Cleanup auto-save timer on unmount
+  // Cleanup timers on unmount
   useEffect(() => () => {
     if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current)
+    if (blurTimer.current) clearTimeout(blurTimer.current)
   }, [])
 
   // Consume pendingMentionInsert: find trigger text in editor and replace with mention span
@@ -222,17 +234,12 @@ export function RichTextEditor({
     span.appendChild(document.createTextNode(name))
 
     // Set trigger attribute for collapse behavior
-    const mentionPage = allPages.find((p) => p.id === pageId)
-    const parentHub = mentionPage?.parentId ? allPages.find((p) => p.id === mentionPage.parentId) : undefined
-    const trigger = parentHub?.mentionTrigger ?? allPages.find((p) => p.id === pageId && p.mentionTrigger)?.mentionTrigger
+    const { trigger, collapsed } = getMentionTriggerInfo(pageId, allPages)
     if (trigger) {
       span.setAttribute('data-trigger', trigger)
       span.setAttribute('title', name)
-      if (collapseMentions) {
-        const hub = parentHub ?? allPages.find((p) => p.id === pageId && p.mentionTrigger)
-        if (hub?.mentionCollapsed) {
-          span.setAttribute('data-collapsed', 'true')
-        }
+      if (collapseMentions && collapsed) {
+        span.setAttribute('data-collapsed', 'true')
       }
     }
 
@@ -317,7 +324,7 @@ export function RichTextEditor({
       autoSaveTimer.current = null
       onAutoSave?.(editorRef.current?.innerHTML ?? '')
     }
-    setTimeout(() => {
+    blurTimer.current = setTimeout(() => {
       if (!showLinkInput && !mentionQuery) {
         // Re-show placeholder if empty and still not focused
         const el = editorRef.current
@@ -515,17 +522,12 @@ export function RichTextEditor({
     span.contentEditable = 'false'
     span.appendChild(document.createTextNode(option.name))
     // Store trigger character for CSS-based collapse
-    const mentionPage = allPages.find((p) => p.id === option.id)
-    const parentHub = mentionPage?.parentId ? allPages.find((p) => p.id === mentionPage.parentId) : undefined
-    const trigger = parentHub?.mentionTrigger ?? allPages.find((p) => p.id === option.id && p.mentionTrigger)?.mentionTrigger
+    const { trigger, collapsed } = getMentionTriggerInfo(option.id, allPages)
     if (trigger) {
       span.setAttribute('data-trigger', trigger)
       span.setAttribute('title', option.name)
-      if (collapseMentions) {
-        const hub = parentHub ?? allPages.find((p) => p.id === option.id && p.mentionTrigger)
-        if (hub?.mentionCollapsed) {
-          span.setAttribute('data-collapsed', 'true')
-        }
+      if (collapseMentions && collapsed) {
+        span.setAttribute('data-collapsed', 'true')
       }
     }
 

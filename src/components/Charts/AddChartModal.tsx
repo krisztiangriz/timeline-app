@@ -196,18 +196,6 @@ export function AddChartModal({ open, onClose, onAdd, editing, onUpdate, pageId,
     prevOpen.current = open
   }, [open, editing, allPages, pageId])
 
-  // Auto-fill name from data source label when source changes (only if user hasn't customized it)
-  useEffect(() => {
-    if (!userEditedName.current) {
-      if (source === 'property-distribution' && propertyId) {
-        const prop = pageProperties.find((p: HubProperty) => p.id === propertyId)
-        setName(prop?.name ?? '')
-      } else {
-        setName(DATA_SOURCE_LABELS[source] ?? '')
-      }
-    }
-  }, [source, propertyId, pageProperties])
-
   const validTypes = VALID_CHART_TYPES[source] ?? (['bar'] as ChartType[])
   const effectiveType = validTypes.includes(type) ? type : validTypes[0]
 
@@ -302,7 +290,7 @@ export function AddChartModal({ open, onClose, onAdd, editing, onUpdate, pageId,
                   <button
                     key={s}
                     className={styles.scopeOption}
-                    onClick={() => { setSource(s); setPropertyId(undefined); setSourceOpen(false) }}
+                    onClick={() => { setSource(s); setPropertyId(undefined); setSourceOpen(false); if (!userEditedName.current) setName(DATA_SOURCE_LABELS[s] ?? '') }}
                     type="button"
                   >
                     <div
@@ -318,7 +306,7 @@ export function AddChartModal({ open, onClose, onAdd, editing, onUpdate, pageId,
                     <button
                       key={`prop-${prop.id}`}
                       className={styles.scopeOption}
-                      onClick={() => { setSource('property-distribution'); setPropertyId(prop.id); setSourceOpen(false) }}
+                      onClick={() => { setSource('property-distribution'); setPropertyId(prop.id); setSourceOpen(false); if (!userEditedName.current) setName(prop.name ?? '') }}
                       type="button"
                     >
                       <div

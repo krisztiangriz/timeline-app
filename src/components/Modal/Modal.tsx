@@ -26,6 +26,7 @@ export function Modal({
   compact,
 }: ModalProps) {
   const bodyRef = useRef<HTMLDivElement>(null)
+  const modalRef = useRef<HTMLDivElement>(null)
   const [scrolledTop, setScrolledTop] = useState(false)
   const [scrolledBottom, setScrolledBottom] = useState(false)
 
@@ -43,7 +44,7 @@ export function Modal({
     return () => cancelAnimationFrame(frame)
   }, [open, children, checkOverflow])
 
-  // Close on Escape
+  // Keyboard handling: Escape, Enter, focus trap
   useEffect(() => {
     if (!open) return
     const handler = (e: KeyboardEvent) => {
@@ -64,10 +65,36 @@ export function Modal({
         e.preventDefault()
         onConfirm()
       }
+
+      // Focus trap (skip for modals without close button, e.g., onboarding)
+      if (e.key === 'Tab' && !hideClose && modalRef.current) {
+        const focusables = modalRef.current.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), [href], input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        )
+        if (focusables.length === 0) return
+        const first = focusables[0]
+        const last = focusables[focusables.length - 1]
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault()
+          last.focus()
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault()
+          first.focus()
+        }
+      }
     }
     window.addEventListener('keydown', handler)
+
+    // Auto-focus first focusable element on open
+    if (!hideClose && modalRef.current) {
+      const first = modalRef.current.querySelector<HTMLElement>(
+        'input:not([disabled]), textarea:not([disabled]), button:not([disabled])'
+      )
+      first?.focus()
+    }
+
     return () => window.removeEventListener('keydown', handler)
-  }, [open, onClose, onConfirm, confirmDisabled])
+  }, [open, onClose, onConfirm, confirmDisabled, hideClose])
 
   // Prevent body scroll when modal is open
   useEffect(() => {
@@ -85,7 +112,7 @@ export function Modal({
 
   return (
     <div className={styles.overlay} onClick={onClose}>
-      <div className={compact ? `${styles.modal} ${styles.modalCompact}` : styles.modal} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <div ref={modalRef} className={compact ? `${styles.modal} ${styles.modalCompact}` : styles.modal} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="modal-title">
         <div className={scrolledTop ? styles.headerBorder : styles.header}>
           <h1 className={styles.title} id="modal-title">{title}</h1>
           {!hideClose && (
