@@ -85,16 +85,21 @@ export function Modal({
     }
     window.addEventListener('keydown', handler)
 
-    // Auto-focus first focusable element on open
-    if (!hideClose && modalRef.current) {
+    return () => window.removeEventListener('keydown', handler)
+  }, [open, onClose, onConfirm, confirmDisabled, hideClose])
+
+  // Auto-focus first focusable element when modal opens (once per open)
+  const didAutoFocus = useRef(false)
+  useEffect(() => {
+    if (open && !didAutoFocus.current && !hideClose && modalRef.current) {
       const first = modalRef.current.querySelector<HTMLElement>(
         'input:not([disabled]), textarea:not([disabled]), button:not([disabled])'
       )
       first?.focus()
+      didAutoFocus.current = true
     }
-
-    return () => window.removeEventListener('keydown', handler)
-  }, [open, onClose, onConfirm, confirmDisabled, hideClose])
+    if (!open) didAutoFocus.current = false
+  }, [open, hideClose])
 
   // Prevent body scroll when modal is open
   useEffect(() => {

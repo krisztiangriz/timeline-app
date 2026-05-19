@@ -6,6 +6,7 @@ import { addFeedback } from '../../hooks/useFeedback'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../../db/database'
 import { CloseIcon, SearchIcon, PlusIcon } from '../Icons/Icons'
+import { DropdownPortal } from '../DropdownPortal/DropdownPortal'
 import type { Page } from '../../types'
 import styles from './FeedbackModal.module.css'
 import radio from '../../styles/radio.module.css'
@@ -40,6 +41,7 @@ export function FeedbackModal({ open, onClose, onSuccess }: FeedbackModalProps) 
   const [selectedSubjects, setSelectedSubjects] = useState<Page[]>([])
   const [activeIndex, setActiveIndex] = useState(-1)
   const resultsRef = useRef<HTMLDivElement>(null)
+  const searchWrapperRef = useRef<HTMLDivElement>(null)
   const [description, setDescription] = useState('')
   const [propertyValues, setPropertyValues] = useState<Record<number, string>>({})
 
@@ -147,7 +149,7 @@ export function FeedbackModal({ open, onClose, onSuccess }: FeedbackModalProps) 
       {/* Subject lookup */}
       <div className={styles.section}>
         <span className={styles.label}>Subject</span>
-        <div className={styles.searchWrapper}>
+        <div className={styles.searchWrapper} ref={searchWrapperRef}>
           <SearchIcon />
           <input
             className={styles.searchInput}
@@ -163,21 +165,21 @@ export function FeedbackModal({ open, onClose, onSuccess }: FeedbackModalProps) 
               <PlusIcon size={12} />
             </button>
           )}
-          {subjectResults.length > 0 && (
-            <div className={styles.searchResults} ref={resultsRef}>
-              {subjectResults.map((page, i) => (
-                <button
-                  key={page.id}
-                  className={i === activeIndex ? styles.searchResultActive : styles.searchResult}
-                  onClick={() => handleSelectSubject(page)}
-                  onMouseEnter={() => setActiveIndex(i)}
-                >
-                  {page.name}
-                </button>
-              ))}
-            </div>
-          )}
         </div>
+        <DropdownPortal anchorRef={searchWrapperRef} open={subjectResults.length > 0}>
+          <div className={styles.searchResults} ref={resultsRef}>
+            {subjectResults.map((page, i) => (
+              <button
+                key={page.id}
+                className={i === activeIndex ? styles.searchResultActive : styles.searchResult}
+                onClick={() => handleSelectSubject(page)}
+                onMouseEnter={() => setActiveIndex(i)}
+              >
+                {page.name}
+              </button>
+            ))}
+          </div>
+        </DropdownPortal>
         {selectedSubjects.length > 0 && (
           <div className={styles.subjectChips}>
             {selectedSubjects.map((s) => {

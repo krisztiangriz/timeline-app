@@ -94,7 +94,7 @@
 
 .textInput {
   padding: var(--space-sm) var(--space-md);
-  border: 1px solid transparent;
+  border: 1px solid var(--color-border-light);
   border-radius: var(--radius-md);
   font-size: var(--font-size-base);
   line-height: var(--line-height-base);

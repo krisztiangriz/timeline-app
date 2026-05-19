@@ -50,11 +50,13 @@
   color: var(--color-negative);
 }
 
-.sectionDateContainer:hover .sectionDate {
+.sectionDateContainer:hover .sectionDate,
+.sectionDateContainer:focus-within .sectionDate {
   opacity: 0;
 }
 
-.sectionDateContainer:hover .sectionDeleteLabel {
+.sectionDateContainer:hover .sectionDeleteLabel,
+.sectionDateContainer:focus-within .sectionDeleteLabel {
   opacity: 1;
   pointer-events: auto;
 }

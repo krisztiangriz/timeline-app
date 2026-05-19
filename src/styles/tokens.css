@@ -6,7 +6,7 @@
   --color-text-secondary: #5E6E8C;     /* N600 */
   --color-text-body: #485670;          /* N700 */
   --color-text-tertiary: #5E6E8C;      /* N600 — same as secondary */
-  --color-text-placeholder: #B8C5DB;   /* N300 */
+  --color-text-placeholder: #8B9BB5;   /* N400 — meets 4.5:1 on white */
   --color-border: #B8C5DB;             /* N300 */
   --color-border-light: #ECF1F9;       /* N100 */
   --color-surface-hover: #ECF1F9;      /* N100 */
@@ -17,7 +17,7 @@
   --color-accent-blue: #6699FF;        /* Primary */
   --color-accent-green: #45C9A1;       /* Success */
   --color-positive: #34D399;           /* Success (alt) */
-  --color-negative: #FF6363;           /* Error */
+  --color-negative: #E53E3E;           /* Error — meets 4.5:1 on white */
   --color-neutral: #5E6E8C;           /* N600 — feedback neutral */
   --color-primary-soft: #E8F0FF;       /* Primary background */
   --color-success-soft: #E6F7F2;       /* Success background */
@@ -82,7 +82,7 @@
   --color-text-secondary: #A3B1C6;
   --color-text-body: #C5D0E0;
   --color-text-tertiary: #8B9BB5;
-  --color-text-placeholder: #5A6A80;
+  --color-text-placeholder: #7B8FA6;
   --color-border: #3A4250;
   --color-border-light: #2C3240;
   --color-surface-hover: #2C3240;

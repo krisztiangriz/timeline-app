@@ -177,7 +177,7 @@
   font-size: var(--font-size-base);
   line-height: var(--line-height-base);
   padding: var(--space-2xs) var(--space-sm);
-  border: 1px solid transparent;
+  border: 1px solid var(--color-border-light);
   border-radius: var(--radius-sm);
   height: 32px;
   background: var(--color-input-bg);
@@ -190,7 +190,7 @@
 .colorInput {
   width: 72px;
   padding: var(--space-2xs) var(--space-sm);
-  border: 1px solid transparent;
+  border: 1px solid var(--color-border-light);
   border-radius: var(--radius-sm);
   font-size: 11px;
   line-height: var(--line-height-base);
@@ -313,7 +313,7 @@
   align-items: center;
   gap: var(--space-sm);
   padding: 0 var(--space-md);
-  border: 1px solid transparent;
+  border: 1px solid var(--color-border-light);
   border-radius: var(--radius-md);
   background: var(--color-input-bg);
   height: 32px;
@@ -349,11 +349,6 @@
 }
 
 .mergeSearchResults {
-  position: absolute;
-  top: calc(100% + 4px);
-  left: 0;
-  right: 0;
-  z-index: 50;
   display: flex;
   flex-direction: column;
   background: var(--color-surface);

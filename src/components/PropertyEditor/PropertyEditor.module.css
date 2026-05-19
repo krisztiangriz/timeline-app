@@ -148,7 +148,7 @@
   font-size: var(--font-size-base);
   line-height: var(--line-height-base);
   padding: var(--space-2xs) var(--space-sm);
-  border: 1px solid transparent;
+  border: 1px solid var(--color-border-light);
   border-radius: var(--radius-sm);
   background: var(--color-input-bg);
   height: 32px;

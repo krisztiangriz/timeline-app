@@ -120,10 +120,10 @@ export function RootPage() {
 
         <div ref={tableRef} className={table.table} onDragOver={handleRootDragOver} onDrop={handleRootDrop}>
           <div className={table.tableHeader}>
-            <span className={table.thName} onClick={() => toggleSort('name')}>Name <span className={table.sortArrow}>{arrow('name')}</span></span>
+            <button className={table.thName} onClick={() => toggleSort('name')}>Name <span className={table.sortArrow}>{arrow('name')}</span></button>
             <span className={table.thType}>Type</span>
-            <span className={table.thDate} onClick={() => toggleSort('createdAt')}>Created on <span className={table.sortArrow}>{arrow('createdAt')}</span></span>
-            <span className={table.thDate} onClick={() => toggleSort('updatedAt')}>Last updated <span className={table.sortArrow}>{arrow('updatedAt')}</span></span>
+            <button className={table.thDate} onClick={() => toggleSort('createdAt')}>Created on <span className={table.sortArrow}>{arrow('createdAt')}</span></button>
+            <button className={table.thDate} onClick={() => toggleSort('updatedAt')}>Last updated <span className={table.sortArrow}>{arrow('updatedAt')}</span></button>
           </div>
 
           {flatRows.map(({ page, depth }) => {
@@ -138,6 +138,8 @@ export function RootPage() {
 
             return (
               <div key={page.id} className={cls} style={{ '--depth': depth } as React.CSSProperties}
+                tabIndex={0}
+                role="link"
                 draggable={!cantDrag}
                 onDragStart={(e) => { if (cantDrag) { e.preventDefault(); return }; handleDragStart(e, page.id!) }}
                 onDragEnd={handleDragEnd}
@@ -145,6 +147,7 @@ export function RootPage() {
                 onDragLeave={(e) => handleDragLeave(e, page.id!)}
                 onDrop={(e) => handleDrop(e, page.id!)}
                 onClick={() => navigate(getPagePath(page, allPages))}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(getPagePath(page, allPages)) } }}
               >
                 <div className={table.nameCell}>
                   {!cantDrag && <div className={table.dragHandle}>{dragHandleSvg}</div>}

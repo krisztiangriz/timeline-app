@@ -10,6 +10,7 @@ import { downloadExport, triggerImport, triggerMergeImport } from '../../utils/e
 import { useChartPalette, PALETTE_OPTIONS } from '../../hooks/useChartPalette'
 import { useTheme, type Theme } from '../../hooks/useTheme'
 import { ColorPicker } from '../../components/ColorPicker/ColorPicker'
+import { DropdownPortal } from '../../components/DropdownPortal/DropdownPortal'
 import type { Page } from '../../types'
 import { safeRemoveItem } from '../../utils/safeStorage'
 import styles from './SettingsModal.module.css'
@@ -38,6 +39,7 @@ export function SettingsModal({ open, onClose, onToast }: SettingsModalProps) {
   const [mergeSelected, setMergeSelected] = useState<Page | null>(null)
   const [mergeActiveIndex, setMergeActiveIndex] = useState(-1)
   const mergeResultsRef = useRef<HTMLDivElement>(null)
+  const mergeSearchWrapperRef = useRef<HTMLDivElement>(null)
 
   // Merge lookup: filter pages by search query
   const mergeResults = useMemo(() => {
@@ -171,7 +173,8 @@ export function SettingsModal({ open, onClose, onToast }: SettingsModalProps) {
                 </button>
               </div>
             ) : (
-              <div className={styles.mergeSearchWrapper}>
+              <>
+              <div className={styles.mergeSearchWrapper} ref={mergeSearchWrapperRef}>
                 <SearchIcon />
                 <input
                   className={styles.mergeSearchInput}
@@ -187,21 +190,22 @@ export function SettingsModal({ open, onClose, onToast }: SettingsModalProps) {
                     <PlusIcon size={12} />
                   </button>
                 )}
-                {mergeResults.length > 0 && (
-                  <div className={styles.mergeSearchResults} ref={mergeResultsRef}>
-                    {mergeResults.map((page, i) => (
-                      <button
-                        key={page.id}
-                        className={i === mergeActiveIndex ? styles.mergeSearchResultActive : styles.mergeSearchResult}
-                        onClick={() => selectMergePage(page)}
-                        onMouseEnter={() => setMergeActiveIndex(i)}
-                      >
-                        {page.name}
-                      </button>
-                    ))}
-                  </div>
-                )}
               </div>
+              <DropdownPortal anchorRef={mergeSearchWrapperRef} open={mergeResults.length > 0}>
+                <div className={styles.mergeSearchResults} ref={mergeResultsRef}>
+                  {mergeResults.map((page, i) => (
+                    <button
+                      key={page.id}
+                      className={i === mergeActiveIndex ? styles.mergeSearchResultActive : styles.mergeSearchResult}
+                      onClick={() => selectMergePage(page)}
+                      onMouseEnter={() => setMergeActiveIndex(i)}
+                    >
+                      {page.name}
+                    </button>
+                  ))}
+                </div>
+              </DropdownPortal>
+              </>
             )}
             <button className={styles.confirmButton} onClick={handleMergeImport} aria-label="Choose file"
               style={{ opacity: mergeSelected ? 1 : 0.4, pointerEvents: mergeSelected ? 'auto' : 'none' }}>{<CheckIcon />}</button>

@@ -63,6 +63,15 @@ select {
   outline: none;
 }
 
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+[tabindex="0"]:focus-visible {
+  outline: 2px solid var(--color-text-secondary);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
 input[type="checkbox"] {
   accent-color: var(--color-text-body);
 }

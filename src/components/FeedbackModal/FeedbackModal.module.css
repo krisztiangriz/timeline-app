@@ -17,7 +17,7 @@
   align-items: center;
   gap: var(--space-sm);
   padding: 0 var(--space-md);
-  border: 1px solid transparent;
+  border: 1px solid var(--color-border-light);
   border-radius: var(--radius-md);
   background: var(--color-input-bg);
   height: 32px;
@@ -25,6 +25,12 @@
 
 .searchWrapper:focus-within {
   border-color: var(--color-input-border);
+  outline: 2px solid var(--color-text-secondary);
+  outline-offset: 2px;
+}
+
+.searchWrapper input:focus-visible {
+  outline: none;
 }
 
 .searchInput {
@@ -52,11 +58,6 @@
 }
 
 .searchResults {
-  position: absolute;
-  top: calc(100% + 4px);
-  left: 0;
-  right: 0;
-  z-index: 50;
   display: flex;
   flex-direction: column;
   background: var(--color-surface);
@@ -127,7 +128,7 @@
   font-size: var(--font-size-base);
   line-height: var(--line-height-base);
   font-family: var(--font-family);
-  border: 1px solid transparent;
+  border: 1px solid var(--color-border-light);
   border-radius: var(--radius-sm);
   background: var(--color-input-bg);
   resize: none;

@@ -156,7 +156,7 @@ function TableBlock({ page }: { page: Page }) {
         <span className={tableStyles.thDate} onClick={() => toggleSort('updatedAt')}>Last updated <span className={tableStyles.sortArrow}>{arrow('updatedAt')}</span></span>
       </div>
       {sorted.map((child) => (
-        <div key={child.id} className={child.archived ? `${tableStyles.row} ${tableStyles.rowArchived}` : tableStyles.row} onClick={() => navigate(getPagePath(child, allPages))}>
+        <div key={child.id} className={child.archived ? `${tableStyles.row} ${tableStyles.rowArchived}` : tableStyles.row} tabIndex={0} role="link" onClick={() => navigate(getPagePath(child, allPages))} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(getPagePath(child, allPages)) } }}>
           <div className={tableStyles.nameCell}><span className={tableStyles.rowName}>{child.name}</span></div>
           <span className={tableStyles.dateCell}>{formatTableDate(child.createdAt)}</span>
           <span className={tableStyles.dateCell}>{formatTableDate(child.updatedAt)}</span>

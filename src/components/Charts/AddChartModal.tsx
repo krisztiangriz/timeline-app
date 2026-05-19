@@ -240,6 +240,7 @@ export function AddChartModal({ open, onClose, onAdd, editing, onUpdate, pageId,
               onClick={() => setScopeOpen((v) => !v)}
               type="button"
               ref={scopeTriggerRef}
+              aria-expanded={scopeOpen}
             >
               <span>{scopeSummary}</span>
               <svg className={scopeOpen ? styles.scopeChevronOpen : styles.scopeChevron} width="16" height="16" viewBox="0 0 24 24" fill="none">
@@ -276,6 +277,7 @@ export function AddChartModal({ open, onClose, onAdd, editing, onUpdate, pageId,
               onClick={() => setSourceOpen((v) => !v)}
               type="button"
               ref={sourceTriggerRef}
+              aria-expanded={sourceOpen}
             >
               <span>{source === 'property-distribution'
                 ? (pageProperties.find((p: HubProperty) => p.id === propertyId)?.name ?? 'Select property...')
