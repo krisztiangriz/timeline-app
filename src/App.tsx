@@ -243,9 +243,14 @@ function StorageWarningListener() {
   return null
 }
 
+/** Runs auto-backup inside ToastProvider context */
+function BackupRunner() {
+  useAutoBackup()
+  return null
+}
+
 export default function App() {
   useEnsureDefaults()
-  useAutoBackup()
 
   return (
     <BrowserRouter basename="/timeline-app">
@@ -254,6 +259,7 @@ export default function App() {
         <OnboardingGuidesProvider>
         <ToastProvider>
         <StorageWarningListener />
+        <BackupRunner />
         <Suspense fallback={null}>
         <Routes>
           <Route path="/" element={<RootPage />} />

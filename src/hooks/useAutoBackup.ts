@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { downloadBackup } from '../utils/exportImport'
 import { safeGetItem, safeSetItem } from '../utils/safeStorage'
+import { useToast } from './useToast'
 
 export type BackupFrequency = 'daily' | 'weekly' | 'monthly' | 'off'
 
@@ -35,6 +36,8 @@ function isDue(frequency: BackupFrequency): boolean {
  * Runs once on app load. If a backup is due, triggers a JSON file download.
  */
 export function useAutoBackup() {
+  const { show: showToast } = useToast()
+
   useEffect(() => {
     const frequency = getFrequency()
     if (!isDue(frequency)) return
@@ -45,15 +48,16 @@ export function useAutoBackup() {
       try {
         await downloadBackup()
         safeSetItem(LS_LAST, new Date().toISOString())
+        showToast('Backup saved')
       } catch {
-        // Silently fail — don't block the app
+        showToast('Backup failed — export manually from Settings')
       }
     }
 
     // Small delay so the app finishes rendering before triggering the download
     const timer = setTimeout(run, 2000)
     return () => clearTimeout(timer)
-  }, [])
+  }, [showToast])
 }
 
 /**
