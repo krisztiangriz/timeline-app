@@ -1,7 +1,6 @@
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { downloadBackup } from '../utils/exportImport'
 import { safeGetItem, safeSetItem } from '../utils/safeStorage'
-import { useToast } from './useToast'
 
 export type BackupFrequency = 'daily' | 'weekly' | 'monthly' | 'off'
 
@@ -34,32 +33,27 @@ function isDue(frequency: BackupFrequency): boolean {
 
 /**
  * Runs once on app load. If a backup is due, triggers a JSON file download.
+ * Dispatches custom events for toast feedback (since this hook runs outside ToastProvider).
  */
 export function useAutoBackup() {
-  const { show: showToast } = useToast()
-  const showToastRef = useRef(showToast)
-  showToastRef.current = showToast
-
   useEffect(() => {
     const frequency = getFrequency()
     if (!isDue(frequency)) return
 
-    // Re-check right before downloading (guards against multiple tabs)
     const run = async () => {
       if (!isDue(getFrequency())) return
       try {
         await downloadBackup()
         safeSetItem(LS_LAST, new Date().toISOString())
-        showToastRef.current('Backup saved')
+        window.dispatchEvent(new CustomEvent('backup-success'))
       } catch {
-        showToastRef.current('Backup failed — export manually from Settings')
+        window.dispatchEvent(new CustomEvent('backup-failed'))
       }
     }
 
-    // Small delay so the app finishes rendering before triggering the download
     const timer = setTimeout(run, 2000)
     return () => clearTimeout(timer)
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps — uses ref for toast, timer must be stable
+  }, [])
 }
 
 /**

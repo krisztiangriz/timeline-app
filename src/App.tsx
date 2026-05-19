@@ -243,14 +243,25 @@ function StorageWarningListener() {
   return null
 }
 
-/** Runs auto-backup inside ToastProvider context */
-function BackupRunner() {
-  useAutoBackup()
+/** Listens for backup events and shows toast notifications */
+function BackupToastListener() {
+  const { show: showToast } = useToast()
+  useEffect(() => {
+    const onSuccess = () => showToast('Backup saved')
+    const onFailed = () => showToast('Backup failed — export manually from Settings')
+    window.addEventListener('backup-success', onSuccess)
+    window.addEventListener('backup-failed', onFailed)
+    return () => {
+      window.removeEventListener('backup-success', onSuccess)
+      window.removeEventListener('backup-failed', onFailed)
+    }
+  }, [showToast])
   return null
 }
 
 export default function App() {
   useEnsureDefaults()
+  useAutoBackup()
 
   return (
     <BrowserRouter basename="/timeline-app">
@@ -259,7 +270,7 @@ export default function App() {
         <OnboardingGuidesProvider>
         <ToastProvider>
         <StorageWarningListener />
-        <BackupRunner />
+        <BackupToastListener />
         <Suspense fallback={null}>
         <Routes>
           <Route path="/" element={<RootPage />} />
