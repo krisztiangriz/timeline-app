@@ -24,9 +24,19 @@
   pointer-events: none;
 }
 
-/* Title (Ctrl+1) */
+/* Title (Ctrl+T) */
 .editor h1 {
-  font-size: var(--font-size-h1);
+  font-size: 20px;
+  line-height: 28px;
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+  margin: 0;
+  padding: 0;
+}
+
+/* Heading (Ctrl+H) */
+.editor h2 {
+  font-size: 18px;
   line-height: 24px;
   font-weight: var(--font-weight-bold);
   color: var(--color-text-primary);
@@ -34,22 +44,12 @@
   padding: 0;
 }
 
-/* Heading (Ctrl+2) */
-.editor h2 {
-  font-size: var(--font-size-lg);
-  line-height: 22px;
-  font-weight: var(--font-weight-bold);
-  color: var(--color-text-primary);
-  margin: 0;
-  padding: 0;
-}
-
-/* Sub heading (Ctrl+3) */
+/* Sub heading (Ctrl+S) */
 .editor h3 {
-  font-size: var(--font-size-base);
-  line-height: var(--line-height-base);
-  font-weight: var(--font-weight-bold);
-  color: var(--color-text-secondary);
+  font-size: 16px;
+  line-height: 20px;
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
   margin: 0;
   padding: 0;
 }
