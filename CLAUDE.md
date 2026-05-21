@@ -1,0 +1,148 @@
+# Timeline App — OpenCode Configuration
+
+## Project Overview
+A privacy-focused, minimal progressive web app for capturing, organizing and
+visualizing work. Built with React + Dexie (IndexedDB) + Vite. Deployed to
+GitHub Pages as a PWA.
+
+## Tech Stack
+- **Frontend:** React 18, TypeScript, CSS Modules
+- **Database:** Dexie (IndexedDB) — local-first, no backend
+- **Charts:** Recharts (lazy-loaded via ConfigurableViz)
+- **Build:** Vite with manual chunks (react, dexie, recharts vendor splits)
+- **Deploy:** GitHub Pages at `/timeline-app/` base path
+
+## Build & Deploy
+```bash
+npm run build    # tsc -b && vite build && node scripts/generate-sw.mjs
+git push         # triggers GitHub Actions deploy
+```
+
+## Key Architecture Decisions
+
+### Data Model
+- DB schema version: **12** (Dexie, IndexedDB)
+- All data is local — no server, no auth
+- Pages have `role` field for special pages: `main-timeline`, `colleague-hub`,
+  `candidate-hub`, `project-hub`
+- Pending tasks live ONLY on the main-timeline page (`isPending: true`)
+- Filtered pending shown on other pages via cross-ref (read-only)
+
+### State Management
+- No Redux/Zustand — Dexie `useLiveQuery` for reactive DB state
+- `AutocompleteProvider` shares `allPages` across the app (single subscription)
+- `ModalContext` + `PreferencesContext` split from `AppContext`
+- `ToastProvider` — shared toast queue, `useToast()` hook
+
+### Component Patterns
+- Route-level lazy loading (RootPage, HubPage, DetailPage)
+- Modal lazy loading (PageForm, FeedbackModal, SettingsModal, HelpModal,
+  OnboardingModal)
+- `RichTextEditor` uses `contentEditable` with `lastSetValue` ref to prevent
+  DOM resets on re-render (critical for mention detection)
+- `BlockList` and `TextBlock` wrapped in `memo`
+- `useNavigateToPage()` hook for stable mention navigation callbacks
+- `DropdownPortal` component for dropdowns inside modals (escapes overflow)
+
+### Service Worker
+- Custom SW (no Workbox) in `src/sw-template.js`
+- Post-build script: `scripts/generate-sw.mjs` generates precache manifest
+- Only critical assets precached (vendor chunks + CSS + HTML)
+- Lazy chunks cached on first use via cache-first strategy
+
+## Code Style Preferences
+
+### CSS
+- CSS Modules only — no inline styles except for dynamic values
+- Design tokens via CSS custom properties in `src/styles/tokens.css`
+- `var(--color-*)`, `var(--space-*)`, `var(--font-*)` for all values
+- `will-change: transform, opacity` on animated elements
+- `:focus-visible` for keyboard focus indicators (not `:focus`)
+
+### Typography Scale
+- Page title: 22px / 28px / bold / `--color-text-primary`
+- h1 (Title): 20px / 28px / bold / `--color-text-primary`
+- h2 (Heading): 18px / 24px / bold / `--color-text-primary`
+- h3 (Sub heading): 16px / 20px / semibold (600) / `--color-text-primary`
+- Body: 14px / 24px / regular
+
+### Colors
+- All design tokens in `src/styles/tokens.css` (light + dark theme)
+- `--color-text-placeholder`: `#8B9BB5` (light), `#7B8FA6` (dark) — meets 4.5:1
+- `--color-negative`: `#E53E3E` (light) — meets 4.5:1 on white
+- Trigger characters: always `ui-monospace, 'SF Mono', Monaco, 'Cascadia Mono',
+  monospace`
+
+### React Patterns
+- Prefer `useCallback` with ref pattern for stable callbacks over broad deps
+- Use `useRef` to avoid re-running effects when values change but identity
+  doesn't matter (e.g., `showToastRef.current = showToast`)
+- `safeStorage` utility for all localStorage access (handles Safari private
+  browsing quota errors)
+- All async DB writes wrapped in try/catch with `showToast('Failed to...')`
+
+## Key Constraints / Gotchas
+
+### RichTextEditor
+- Uses `contentEditable` — DOM resets break mention detection
+- `lastSetValue` ref prevents overwriting DOM when parent passes same value
+- `emitChange()` MUST update `lastSetValue.current` before calling `onChange`
+- `blurTimer` stored in ref and cleaned up on unmount
+- DOMPurify is lazy-loaded (not in initial bundle)
+
+### Mentions
+- `enrichMentionHtml` uses a module-level cache keyed by `allPages` reference
+- Collapsed mentions: `data-collapsed="true"` + CSS `::before` shows trigger char
+- `collapseMentions` prop scopes collapse to timeline blocks only
+- Non-collapsed mentions: `color: inherit` + always underlined
+
+### Timeline / Pending
+- Pending section only on main-timeline page (full editor)
+- Other pages show filtered pending (read-only, cross-ref from main timeline)
+- Filtered pending uses `usePendingEntry(pageId)` — NOT `useTimelineEntries`
+- `useCrossRefEntries` uses `*tagRefs` multi-entry Dexie index
+
+### Charts
+- Recharts lazy-loaded via `ConfigurableViz` (separate vendor chunk: ~110KB gz)
+- `useAllEntries(monthCount)` scoped by date range — not full table scan
+- Feedbacks scoped by date range in `ConfigurableViz`
+- Pie charts: donut style (55%/85% inner/outer radius) with right-side labels
+- Single-series charts use `FALLBACK_COLOR` (#B8C5DB grey)
+
+### Modal System
+- `Modal.tsx` has focus trap (Tab/Shift+Tab cycling), auto-focus on open
+- Auto-focus uses `didAutoFocus` ref — fires only ONCE per open, not on
+  every `confirmDisabled` change
+- `overflow: hidden` on `.modal` is intentional — do NOT remove
+- Dropdowns inside modals MUST use `DropdownPortal` to escape overflow clipping
+
+### Auto-Backup
+- `useAutoBackup()` called in `App` (top-level) — NOT inside any provider
+- Uses custom events (`backup-success`, `backup-failed`) for toast feedback
+- `BackupToastListener` component inside `ToastProvider` catches events
+- Timer uses `[]` deps with ref pattern — do NOT add `showToast` to deps
+
+### Service Worker
+- `defaultsInitialized` flag was REMOVED — seeding now uses DB-based idempotent
+  check inside a Dexie transaction
+- SW cache name includes content hash — changes on every build
+
+## Accessibility Standards
+- All interactive `<div>`/`<span>` need `tabIndex={0}`, `role`, `onKeyDown`
+- Hover-only actions need `:focus-within` CSS fallback
+- Toast container: `aria-live="polite"`, `role="status"`
+- Search dropdowns: use `DropdownPortal` + tracks scroll via capture listener
+- ContextMenu: full keyboard nav (ArrowUp/Down, Enter, Escape), `role="menu"`
+
+## Commit Style
+- Short imperative: `Fix auto-backup timer: use ref pattern for stable deps`
+- Group related changes: `Accessibility: contrast fixes, keyboard nav, ARIA`
+- No emoji in commit messages
+
+## File Structure Notes
+- `src/hooks/useNavigateToPage.ts` — shared mention navigation
+- `src/utils/safeStorage.ts` — safe localStorage wrapper
+- `src/utils/mentionEnricher.ts` — HTML enrichment with module-level cache
+- `src/components/DropdownPortal/DropdownPortal.tsx` — portal for modal dropdowns
+- `src/constants/colors.ts` — chart color palette (source of truth)
+- `scripts/generate-sw.mjs` — post-build SW manifest generator
