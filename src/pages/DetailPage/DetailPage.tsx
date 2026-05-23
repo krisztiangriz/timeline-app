@@ -79,7 +79,10 @@ export function DetailPage({ routePrefix }: DetailPageProps) {
     const parentHub = page?.parentId ? allPages.find((p) => p.id === page.parentId) : undefined
     return {
       name: page?.name ?? '',
-      tabs: tabs.map((l) => l.name),
+      tabs: tabs.map((l) => {
+        const block = allBlocks.find((b) => b.tabId === l.id)
+        return { name: l.name, type: block?.type ?? 'text' as const }
+      }),
       mentionTrigger: page?.mentionTrigger,
       mentionCollapsed: page?.mentionCollapsed,
       inheritedTrigger: parentHub?.mentionTrigger,

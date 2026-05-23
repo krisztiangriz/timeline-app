@@ -73,7 +73,7 @@ export function PageHeader({
         {actions && <div className={styles.actions}>{actions}</div>}
       </div>
 
-      {tabs.length > 0 && (
+      {tabs.length > 1 && (
         <div className={styles.tabGroup}>
           {tabs.map((tab, i) => (
             <Fragment key={tab.id}>

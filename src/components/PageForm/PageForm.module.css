@@ -106,6 +106,29 @@
   border-color: var(--color-input-border);
 }
 
+.selectInput {
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-base);
+  height: 32px;
+  background: var(--color-input-bg);
+  font-family: var(--font-family);
+  color: var(--color-text-primary);
+  width: 100%;
+  cursor: pointer;
+  appearance: none;
+  padding-right: var(--space-xl);
+  background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%235E6E8C' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right var(--space-md) center;
+}
+
+.selectInput:focus {
+  border-color: var(--color-input-border);
+}
+
 .tabHeader {
   display: flex;
   align-items: center;
@@ -154,6 +177,12 @@
   flex: 1;
   font-size: var(--font-size-base);
   line-height: var(--line-height-base);
+}
+
+.tabTypeLabel {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-placeholder);
+  font-weight: var(--font-weight-regular);
 }
 
 .tabRequired {

@@ -51,7 +51,10 @@ export function HubPage({ role }: HubPageProps) {
 
   const editInitial = useMemo(() => ({
     name: hub?.name ?? '',
-    tabs: tabs.map((t) => t.name),
+    tabs: tabs.map((t) => {
+      const block = allBlocks.find((b) => b.tabId === t.id)
+      return { name: t.name, type: block?.type ?? 'text' as const }
+    }),
     mentionTrigger: hub?.mentionTrigger,
     mentionCollapsed: hub?.mentionCollapsed,
     blocks: allBlocks.filter((b) => b.id).map((b) => ({ id: b.id!, type: b.type, tabId: b.tabId })),

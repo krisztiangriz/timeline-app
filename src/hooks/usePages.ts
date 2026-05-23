@@ -1,6 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db/database'
-import type { Page, PageRole } from '../types'
+import type { Page, PageRole, BlockType } from '../types'
 
 /**
  * Get child pages of a given parent.
@@ -137,10 +137,9 @@ export function usePageActions() {
     })
   }
 
-  async function updateTabs(pageId: number, tabs: string[]) {
+  async function updateTabs(pageId: number, tabs: { name: string; type: BlockType }[]) {
     await db.transaction('rw', [db.pages, db.layouts, db.blocks, db.chartConfigs], async () => {
       const existing = await db.layouts.where('pageId').equals(pageId).sortBy('order')
-      const hadNoTabs = existing.length === 0
 
       // Safety net: determine how many leading tabs are protected
       const page = await db.pages.get(pageId)
@@ -157,37 +156,26 @@ export function usePageActions() {
 
       // Update existing tabs that are kept (preserve their IDs)
       for (let i = 0; i < Math.min(toKeep, tabs.length); i++) {
-        await db.layouts.update(existing[i].id!, { name: tabs[i], order: i })
+        await db.layouts.update(existing[i].id!, { name: tabs[i].name, order: i })
       }
 
-      // Add new tabs beyond the existing count
+      // Add new tabs beyond the existing count — create block for each
       for (let i = toKeep; i < tabs.length; i++) {
-        await db.layouts.add({ pageId, type: 'tab' as const, name: tabs[i], order: i })
+        const tabId = await db.layouts.add({ pageId, type: 'tab' as const, name: tabs[i].name, order: i })
+        await db.blocks.add({ pageId, tabId: tabId as number, type: tabs[i].type, ...(tabs[i].type === 'text' ? { content: '' } : {}) })
       }
 
-      // Remove excess tabs — move their blocks to first remaining tab (or page-level)
+      // Remove excess tabs — delete their blocks (one block per tab)
       if (toKeep < existing.length) {
-        const finalTabs = await db.layouts.where('pageId').equals(pageId).sortBy('order')
-        const firstTabId = finalTabs.length > 0 ? finalTabs[0].id! : undefined
-
         for (let i = toKeep; i < existing.length; i++) {
           const tabBlocks = await db.blocks.where('pageId').equals(pageId).filter((b) => b.tabId === existing[i].id!).toArray()
           for (const b of tabBlocks) {
-            // Move block to first remaining tab (or page-level if no tabs remain)
-            await db.blocks.update(b.id!, { tabId: firstTabId })
+            if (b.type === 'visualization' && b.id) {
+              await db.chartConfigs.where('blockId').equals(b.id).delete()
+            }
+            if (b.id) await db.blocks.delete(b.id)
           }
           await db.layouts.delete(existing[i].id!)
-        }
-      }
-
-      // Auto-migrate: if page previously had no tabs and now has tabs, move page-level blocks to first tab
-      if (hadNoTabs && tabs.length > 0) {
-        const finalTabs = await db.layouts.where('pageId').equals(pageId).sortBy('order')
-        if (finalTabs.length > 0) {
-          const firstTabId = finalTabs[0].id!
-          await db.blocks.where('pageId').equals(pageId)
-            .filter((b) => !b.tabId)
-            .modify({ tabId: firstTabId })
         }
       }
     })

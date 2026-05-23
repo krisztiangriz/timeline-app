@@ -112,20 +112,14 @@ function GlobalOverlays() {
           }
           // Append user-added extra tabs
           for (let i = 0; i < data.tabs.length; i++) {
-            const tabId = await db.layouts.add({ pageId, type: 'tab' as const, name: data.tabs[i], order: tabDefs.length + i })
-            await db.blocks.add({ pageId, tabId: tabId as number, type: 'text', content: '' })
+            const tab = data.tabs[i]
+            const tabId = await db.layouts.add({ pageId, type: 'tab' as const, name: tab.name, order: tabDefs.length + i })
+            await db.blocks.add({ pageId, tabId: tabId as number, type: tab.type, ...(tab.type === 'text' ? { content: '' } : {}) })
           }
           break
         }
-        case 'simple':
-          await db.blocks.add({ pageId, type: 'visualization' })
-          await db.blocks.add({ pageId, type: 'timeline' })
-          break
-        case 'text':
-          await db.blocks.add({ pageId, type: 'text', content: '' })
-          break
-        case 'custom':
-          // Empty — user configures after creation
+        case 'empty':
+          // No tabs, no blocks — user configures via Edit Page later
           break
       }
 
