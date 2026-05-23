@@ -17,14 +17,6 @@ import styles from './RichTextEditor.module.css'
 
 type AutocompleteOption =
   | { kind: 'mention'; id: number; name: string; prefix: string }
-  | { kind: 'component'; id: string; label: string; componentType: 'timeline' | 'feedback' | 'table' | 'visualization' }
-
-const COMPONENT_OPTIONS: AutocompleteOption[] = [
-  { kind: 'component', id: 'timeline', label: 'Timeline', componentType: 'timeline' },
-  { kind: 'component', id: 'feedback', label: 'Feedback', componentType: 'feedback' },
-  { kind: 'component', id: 'table', label: 'Table', componentType: 'table' },
-  { kind: 'component', id: 'visualization', label: 'Visualization', componentType: 'visualization' },
-]
 
 /** Get the mention trigger and collapse info for a page (via its parent hub) */
 function getMentionTriggerInfo(pageId: number, allPages: Page[]) {
@@ -50,8 +42,6 @@ interface RichTextEditorProps {
   onEnter?: () => void
   /** Called when user clicks a mention span with a page ID */
   onMentionClick?: (pageId: number) => void
-  /** Called when user selects a component from the ~ picker */
-  onInsertComponent?: (type: 'timeline' | 'feedback' | 'table' | 'visualization') => void
   /** When true, new lines automatically get a checkbox prepended */
   autoCheckbox?: boolean
   /** Called when a checkbox is toggled to checked. Receives the text content of that line (HTML stripped of the checkbox span) and the remaining editor HTML after removal. */
@@ -72,7 +62,6 @@ export function RichTextEditor({
   className,
   onEnter,
   onMentionClick,
-  onInsertComponent,
   autoCheckbox,
   onCheckboxComplete,
   onAutoSave,
@@ -105,13 +94,6 @@ export function RichTextEditor({
   const autocompleteOptions = useMemo<AutocompleteOption[]>(() => {
     if (!mentionQuery) return []
     const q = mentionQuery.text.toLowerCase()
-
-    if (mentionQuery.prefix === '~') {
-      return COMPONENT_OPTIONS.filter((c) => {
-        if (c.kind !== 'component') return false
-        return c.label.toLowerCase().includes(q)
-      })
-    }
 
     // Trigger — find the page that owns this trigger
     const triggerPage = allPages.find((p) => p.mentionTrigger === mentionQuery.prefix && !p.archived)
@@ -463,7 +445,7 @@ export function RichTextEditor({
     let prefix: string | null = null
     for (let i = offset - 1; i >= 0; i--) {
       const ch = text[i]
-      if (ch === '!' || ch === '~' || hubTriggers.has(ch)) {
+      if (ch === '!' || hubTriggers.has(ch)) {
         if (i === 0 || /\s/.test(text[i - 1])) {
           triggerIdx = i
           prefix = ch
@@ -505,16 +487,6 @@ export function RichTextEditor({
     const text = node.textContent || ''
     const before = text.substring(0, start)
     const after = text.substring(offset)
-
-    // Component insertion — remove ~text, call onInsertComponent, close
-    if (option.kind === 'component') {
-      node.textContent = before + after
-      setMentionQuery(null)
-      mentionRange.current = null
-      emitChange()
-      onInsertComponent?.(option.componentType)
-      return
-    }
 
     const span = document.createElement('span')
     span.setAttribute('data-mention', 'true')
@@ -603,7 +575,7 @@ export function RichTextEditor({
     }
 
     // "Add page" option showing (no results, non-~ trigger)
-    if (mentionQuery && autocompleteOptions.length === 0 && mentionQuery.prefix !== '~') {
+    if (mentionQuery && autocompleteOptions.length === 0) {
       if (e.key === 'Enter' || e.key === 'Tab') {
         e.preventDefault()
         handleAddPageFromDropdown()
@@ -930,24 +902,15 @@ export function RichTextEditor({
               }}
               onMouseEnter={() => setMentionIndex(i)}
             >
-              {opt.kind === 'component' ? (
-                <>
-                  <span className={styles.mentionPrefix}>~</span>
-                  {opt.label}
-                </>
-              ) : (
-                <>
-                  <span className={styles.mentionPrefix}>{opt.prefix}</span>
-                  {opt.name}
-                </>
-              )}
+              <span className={styles.mentionPrefix}>{opt.prefix}</span>
+              {opt.name}
             </div>
           ))}
         </div>
       )}
 
       {/* "Add page" option when no matches for a trigger lookup */}
-      {mentionQuery && autocompleteOptions.length === 0 && mentionQuery.prefix !== '~' && (
+      {mentionQuery && autocompleteOptions.length === 0 && (
         <div
           className={styles.mentionDropdown}
           style={{ top: mentionPos.top, left: mentionPos.left }}

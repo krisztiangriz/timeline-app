@@ -325,6 +325,110 @@ class TimelineDB extends Dexie {
     this.version(17).stores({
       dimensions: null,
     })
+    // v18: one block per tab — split multi-block tabs, clean hubs, remove order index
+    this.version(18).stores({
+      blocks: '++id, pageId, [pageId+tabId]',
+    }).upgrade(async (tx) => {
+      const pages = tx.table('pages')
+      const blocks = tx.table('blocks')
+      const layouts = tx.table('layouts')
+
+      const allPages = await pages.toArray() as Page[]
+      const allBlocks = await blocks.toArray() as { id?: number; pageId: number; tabId?: number; type: string; content?: string; order: number }[]
+      const allTabs = await layouts.toArray() as { id?: number; pageId: number; type: string; name: string; order: number }[]
+
+      const BLOCK_TYPE_NAMES: Record<string, string> = {
+        timeline: 'Timeline',
+        feedback: 'Feedback',
+        visualization: 'Visualization',
+        text: 'Notes',
+        table: 'Table',
+      }
+
+      for (const page of allPages) {
+        const isHub = page.type === 'hub'
+        const isMainTimeline = page.role === 'main-timeline'
+
+        // Hub pages: ensure exactly visualization + table at page-level, delete all tabs + extras
+        if (isHub) {
+          const pageBlocks = allBlocks.filter((b) => b.pageId === page.id)
+          const pageTabs = allTabs.filter((t) => t.pageId === page.id)
+          // Delete all tabs for hubs
+          for (const tab of pageTabs) {
+            if (tab.id) await layouts.delete(tab.id)
+          }
+          // Delete non viz/table blocks, cascade chartConfigs
+          for (const b of pageBlocks) {
+            if (b.type !== 'visualization' && b.type !== 'table') {
+              if (b.id) await blocks.delete(b.id)
+            } else {
+              // Clear tabId (page-level for hubs)
+              if (b.tabId && b.id) await blocks.update(b.id, { tabId: undefined })
+            }
+          }
+          // Ensure viz + table exist
+          const remaining = await blocks.where('pageId').equals(page.id!).toArray()
+          const hasViz = remaining.some((b: { type: string }) => b.type === 'visualization')
+          const hasTable = remaining.some((b: { type: string }) => b.type === 'table')
+          if (!hasViz) await blocks.add({ pageId: page.id!, type: 'visualization' })
+          if (!hasTable) await blocks.add({ pageId: page.id!, type: 'table' })
+          continue
+        }
+
+        // Main timeline: leave as-is (page-level)
+        if (isMainTimeline) continue
+
+        // Regular pages: split multi-block tabs + move page-level blocks to tabs
+        const pageBlocks = allBlocks.filter((b) => b.pageId === page.id)
+        const pageTabs = allTabs.filter((t) => t.pageId === page.id)
+        let maxTabOrder = pageTabs.reduce((max, t) => Math.max(max, t.order), -1)
+
+        // Track used tab names for deduplication
+        const usedNames = new Set(pageTabs.map((t) => t.name))
+
+        function getUniqueName(base: string): string {
+          if (!usedNames.has(base)) { usedNames.add(base); return base }
+          let i = 2
+          while (usedNames.has(`${base} ${i}`)) i++
+          usedNames.add(`${base} ${i}`)
+          return `${base} ${i}`
+        }
+
+        // Handle page-level blocks (no tabId) → create tabs for them
+        const pageLevelBlocks = pageBlocks.filter((b) => !b.tabId)
+        for (const b of pageLevelBlocks) {
+          // Delete table blocks on non-hub pages
+          if (b.type === 'table') {
+            if (b.id) await blocks.delete(b.id)
+            continue
+          }
+          maxTabOrder++
+          const tabName = getUniqueName(BLOCK_TYPE_NAMES[b.type] ?? 'Notes')
+          const tabId = await layouts.add({ pageId: page.id!, type: 'tab', name: tabName, order: maxTabOrder })
+          if (b.id) await blocks.update(b.id, { tabId: tabId as number })
+        }
+
+        // Handle tabs with multiple blocks → keep first, split rest into new tabs
+        for (const tab of pageTabs) {
+          const tabBlocks = pageBlocks.filter((b) => b.tabId === tab.id).sort((a, b) => a.order - b.order)
+          if (tabBlocks.length <= 1) continue
+
+          // Keep first block in original tab
+          for (let i = 1; i < tabBlocks.length; i++) {
+            const b = tabBlocks[i]
+            // Delete table blocks on non-hub pages
+            if (b.type === 'table') {
+              if (b.id) await blocks.delete(b.id)
+              continue
+            }
+            maxTabOrder++
+            const tabName = getUniqueName(BLOCK_TYPE_NAMES[b.type] ?? 'Notes')
+            const newTabId = await layouts.add({ pageId: page.id!, type: 'tab', name: tabName, order: maxTabOrder })
+            if (b.id) await blocks.update(b.id, { tabId: newTabId as number })
+          }
+        }
+      }
+    })
   }
 }
 

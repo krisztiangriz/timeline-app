@@ -84,7 +84,7 @@ export function DetailPage({ routePrefix }: DetailPageProps) {
       mentionCollapsed: page?.mentionCollapsed,
       inheritedTrigger: parentHub?.mentionTrigger,
       inheritedFrom: parentHub?.name,
-      blocks: allBlocks.filter((b) => b.id).map((b) => ({ id: b.id!, type: b.type, tabId: b.tabId, order: b.order })),
+      blocks: allBlocks.filter((b) => b.id).map((b) => ({ id: b.id!, type: b.type, tabId: b.tabId })),
       tabInfo: tabs.map((t) => ({ id: t.id!, name: t.name })),
     }
   }, [page, tabs, allPages, allBlocks])
@@ -94,7 +94,7 @@ export function DetailPage({ routePrefix }: DetailPageProps) {
     try {
       await updatePage(pageId, { name: data.name, mentionTrigger: data.mentionTrigger, mentionCollapsed: data.mentionCollapsed })
       await updateTabs(pageId, data.tabs)
-      await persistBlockEdits(data.blockOrder, data.deletedBlockIds, deleteBlock)
+      await persistBlockEdits(data.blocks, data.deletedBlockIds, deleteBlock)
       setEditPageOpen(false); showToast('Page updated')
     } catch {
       showToast('Failed to update page')

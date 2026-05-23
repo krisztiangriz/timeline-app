@@ -108,21 +108,21 @@ function GlobalOverlays() {
           ]
           for (let i = 0; i < tabDefs.length; i++) {
             const tabId = await db.layouts.add({ pageId, type: 'tab' as const, name: tabDefs[i].name, order: i })
-            await db.blocks.add({ pageId, tabId: tabId as number, type: tabDefs[i].blockType, order: 0 })
+            await db.blocks.add({ pageId, tabId: tabId as number, type: tabDefs[i].blockType })
           }
           // Append user-added extra tabs
           for (let i = 0; i < data.tabs.length; i++) {
             const tabId = await db.layouts.add({ pageId, type: 'tab' as const, name: data.tabs[i], order: tabDefs.length + i })
-            await db.blocks.add({ pageId, tabId: tabId as number, type: 'text', content: '', order: 0 })
+            await db.blocks.add({ pageId, tabId: tabId as number, type: 'text', content: '' })
           }
           break
         }
         case 'simple':
-          await db.blocks.add({ pageId, type: 'visualization', order: 0 })
-          await db.blocks.add({ pageId, type: 'timeline', order: 1 })
+          await db.blocks.add({ pageId, type: 'visualization' })
+          await db.blocks.add({ pageId, type: 'timeline' })
           break
         case 'text':
-          await db.blocks.add({ pageId, type: 'text', content: '', order: 0 })
+          await db.blocks.add({ pageId, type: 'text', content: '' })
           break
         case 'custom':
           // Empty — user configures after creation
@@ -207,21 +207,21 @@ function useEnsureDefaults() {
             ...(role ? { role } : {}),
             ...(trigger ? { mentionTrigger: trigger } : {}),
           })
-          await db.blocks.add({ pageId: pageId as number, type: 'visualization', order: 0 })
-          await db.blocks.add({ pageId: pageId as number, type: 'table', order: 1 })
+          await db.blocks.add({ pageId: pageId as number, type: 'visualization' })
+          await db.blocks.add({ pageId: pageId as number, type: 'table' })
         }
 
         // Main timeline
         const timelineId = await db.pages.add({
           ...base, name: 'Timeline', type: 'general' as const, role: 'main-timeline',
         })
-        await db.blocks.add({ pageId: timelineId as number, type: 'timeline', order: 0 })
+        await db.blocks.add({ pageId: timelineId as number, type: 'timeline' })
 
         // Visualization page
         const vizId = await db.pages.add({
           ...base, name: 'Visualization', type: 'general' as const,
         })
-        await db.blocks.add({ pageId: vizId as number, type: 'visualization', order: 0 })
+        await db.blocks.add({ pageId: vizId as number, type: 'visualization' })
 
         // Projects hub
         await createHub('Projects', 'project-hub', '#')

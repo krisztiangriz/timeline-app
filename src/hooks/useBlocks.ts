@@ -3,7 +3,7 @@ import { db } from '../db/database'
 import type { Block, BlockType, Page } from '../types'
 
 /**
- * Get all blocks for a page (optionally filtered by tab), ordered.
+ * Get all blocks for a page (optionally filtered by tab).
  */
 export function useBlocks(pageId?: number, tabId?: number | null) {
   return useLiveQuery(
@@ -14,14 +14,14 @@ export function useBlocks(pageId?: number, tabId?: number | null) {
         return db.blocks
           .where('[pageId+tabId]')
           .equals([pageId, tabId])
-          .sortBy('order')
+          .toArray()
       }
       // Page-level blocks (no tab) or all blocks
       return db.blocks
         .where('pageId')
         .equals(pageId)
         .filter((b) => tabId === undefined ? true : !b.tabId)
-        .sortBy('order')
+        .toArray()
     },
     [pageId, tabId]
   ) ?? []
@@ -58,28 +58,7 @@ async function getRequiredBlockTypes(pageId: number): Promise<Set<BlockType>> {
  */
 export function useBlockActions() {
   async function addBlock(pageId: number, type: BlockType, tabId?: number, content?: string): Promise<number> {
-    const maxOrder = await db.blocks
-      .where('pageId').equals(pageId)
-      .filter((b) => tabId ? b.tabId === tabId : !b.tabId)
-      .last()
-    const order = (maxOrder?.order ?? -1) + 1
-    const id = await db.blocks.add({ pageId, tabId, type, content, order })
-    return id as number
-  }
-
-  async function insertBlockAfter(afterBlockId: number, pageId: number, type: BlockType, tabId?: number, content?: string): Promise<number> {
-    const afterBlock = await db.blocks.get(afterBlockId)
-    if (!afterBlock) return addBlock(pageId, type, tabId, content)
-
-    // Shift subsequent blocks in one batch
-    await db.blocks
-      .where('pageId').equals(pageId)
-      .filter((b) => b.order > afterBlock.order && (tabId ? b.tabId === tabId : !b.tabId))
-      .modify((b) => { b.order += 2 })
-
-    const id = await db.blocks.add({
-      pageId, tabId, type, content, order: afterBlock.order + 1,
-    })
+    const id = await db.blocks.add({ pageId, tabId, type, content })
     return id as number
   }
 
@@ -120,5 +99,5 @@ export function useBlockActions() {
     await db.blocks.delete(id)
   }
 
-  return { insertBlockAfter, updateBlock, deleteBlock }
+  return { addBlock, updateBlock, deleteBlock }
 }

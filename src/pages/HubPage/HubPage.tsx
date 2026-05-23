@@ -54,7 +54,7 @@ export function HubPage({ role }: HubPageProps) {
     tabs: tabs.map((t) => t.name),
     mentionTrigger: hub?.mentionTrigger,
     mentionCollapsed: hub?.mentionCollapsed,
-    blocks: allBlocks.filter((b) => b.id).map((b) => ({ id: b.id!, type: b.type, tabId: b.tabId, order: b.order })),
+    blocks: allBlocks.filter((b) => b.id).map((b) => ({ id: b.id!, type: b.type, tabId: b.tabId })),
     tabInfo: tabs.map((t) => ({ id: t.id!, name: t.name })),
   }), [hub, tabs, allBlocks])
 
@@ -63,7 +63,7 @@ export function HubPage({ role }: HubPageProps) {
     try {
       await updatePage(hub.id, { name: data.name, mentionTrigger: data.mentionTrigger, mentionCollapsed: data.mentionCollapsed })
       await updateTabs(hub.id, data.tabs)
-      await persistBlockEdits(data.blockOrder, data.deletedBlockIds, deleteBlock)
+      await persistBlockEdits(data.blocks, data.deletedBlockIds, deleteBlock)
       setEditPageOpen(false); showToast('Page updated')
     } catch {
       showToast('Failed to update page')

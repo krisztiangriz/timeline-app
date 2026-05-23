@@ -107,8 +107,8 @@ async function ensurePageRoles(): Promise<void> {
       updatedAt: now,
       editCount: 0,
     } as Page)
-    await db.blocks.add({ pageId: candidateHubId as number, type: 'table', order: 0 })
-    await db.blocks.add({ pageId: candidateHubId as number, type: 'text', content: '', order: 1 })
+    await db.blocks.add({ pageId: candidateHubId as number, type: 'table' })
+    await db.blocks.add({ pageId: candidateHubId as number, type: 'text', content: '' })
 
     // Move orphaned candidates
     const candidates = allPages.filter((p) => p.type === 'candidate')

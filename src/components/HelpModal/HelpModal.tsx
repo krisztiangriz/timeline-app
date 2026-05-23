@@ -59,12 +59,6 @@ const SHORTCUTS = [
       { label: 'Mention project', keys: '# ...' },
     ],
   },
-  {
-    title: 'Components',
-    items: [
-      { label: 'Block', keys: '~' },
-    ],
-  },
 ]
 
 export function HelpModal({ open, onClose }: HelpModalProps) {

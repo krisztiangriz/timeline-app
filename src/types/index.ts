@@ -58,10 +58,9 @@ export type BlockType = 'text' | 'timeline' | 'feedback' | 'table' | 'visualizat
 export interface Block {
   id?: number
   pageId: number
-  tabId?: number    // Tab.id for tab grouping, undefined = no tab
+  tabId?: number    // Tab.id for tab grouping, undefined = page-level (hubs, main-timeline only)
   type: BlockType
   content?: string  // HTML for text blocks
-  order: number
 }
 
 export interface PageSetting {

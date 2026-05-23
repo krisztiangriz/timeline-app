@@ -270,16 +270,16 @@ export function getPagePath(page: Page, allPages: Page[]): string {
   return `/page/${page.id}`
 }
 
-/** Persist block order and delete removed blocks after a page edit */
+/** Persist block tab assignments and delete removed blocks after a page edit */
 export async function persistBlockEdits(
-  blockOrder?: { id: number; order: number; tabId?: number }[],
+  blocks?: { id: number; tabId?: number }[],
   deletedBlockIds?: number[],
   deleteBlock?: (id: number) => Promise<void>,
 ) {
-  if (blockOrder) {
+  if (blocks) {
     await db.transaction('rw', db.blocks, async () => {
-      for (const b of blockOrder) {
-        await db.blocks.update(b.id, { order: b.order, tabId: b.tabId })
+      for (const b of blocks) {
+        await db.blocks.update(b.id, { tabId: b.tabId })
       }
     })
   }

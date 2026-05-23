@@ -42,7 +42,7 @@ export function BlockRenderer({ page, activeTabId }: BlockRendererProps) {
 const BlockList = memo(function BlockList({ pageId, page, blocks, tabId }: {
   pageId: number; page: Page; blocks: Block[]; tabId?: number
 }) {
-  const { updateBlock, insertBlockAfter } = useBlockActions()
+  const { updateBlock } = useBlockActions()
   const handleMentionClick = useNavigateToPage()
 
   // Onboarding: editor-walkthrough trigger
@@ -50,15 +50,9 @@ const BlockList = memo(function BlockList({ pageId, page, blocks, tabId }: {
   const editorAnchorRef = useRef<HTMLDivElement>(null)
   const handleEditorFocus = useCallback(() => { triggerGuide('editor-walkthrough') }, [triggerGuide])
 
-  const handleInsertComponent = useCallback(async (afterBlockId: number, type: 'timeline' | 'feedback' | 'table' | 'visualization') => {
-    await insertBlockAfter(afterBlockId, pageId, type, tabId)
-    const newBlock = await db.blocks.where('pageId').equals(pageId).filter((b) => tabId ? b.tabId === tabId : !b.tabId).sortBy('order').then((arr) => arr[arr.length - 1])
-    if (newBlock) await insertBlockAfter(newBlock.id!, pageId, 'text', tabId, '')
-  }, [pageId, tabId, insertBlockAfter])
-
   // Determine if page has any real content (for placeholder suppression)
   const hasContent = blocks.some((b) => b.type !== 'text' || (b.content?.trim() ?? '').length > 0)
-  const defaultPlaceholder = 'Type here... (use ~ to insert components)'
+  const defaultPlaceholder = 'Type here...'
   const firstTextIdx = blocks.findIndex((b) => b.type === 'text')
 
   return (
@@ -70,7 +64,7 @@ const BlockList = memo(function BlockList({ pageId, page, blocks, tabId }: {
         if (block.type === 'text') {
           return (
             <div key={block.id} className={blockClass} ref={isFirstText ? editorAnchorRef : undefined}>
-              <TextBlock block={block} onUpdate={(content) => updateBlock(block.id!, { content })} onInsertComponent={(type) => handleInsertComponent(block.id!, type)}
+              <TextBlock block={block} onUpdate={(content) => updateBlock(block.id!, { content })}
                 onMentionClick={handleMentionClick} placeholder={hasContent ? '' : defaultPlaceholder} onEditorFocus={isFirstText ? handleEditorFocus : undefined} />
     </div>
   )
@@ -86,12 +80,8 @@ const BlockList = memo(function BlockList({ pageId, page, blocks, tabId }: {
       {blocks.length === 0 && (
         <div ref={editorAnchorRef}>
           <TextBlock
-            block={{ pageId, tabId, type: 'text', content: '', order: 0 }}
-            onUpdate={async (content) => { await db.blocks.add({ pageId, tabId, type: 'text', content, order: 0 }) }}
-            onInsertComponent={async (type) => {
-              const textId = await db.blocks.add({ pageId, tabId, type: 'text', content: '', order: 0 })
-              await insertBlockAfter(textId as number, pageId, type, tabId)
-            }}
+            block={{ pageId, tabId, type: 'text', content: '' }}
+            onUpdate={async (content) => { await db.blocks.add({ pageId, tabId, type: 'text', content }) }}
             onMentionClick={handleMentionClick}
             placeholder={defaultPlaceholder}
             onEditorFocus={handleEditorFocus}
@@ -105,10 +95,9 @@ const BlockList = memo(function BlockList({ pageId, page, blocks, tabId }: {
 
 // ---- Text block ----
 
-const TextBlock = memo(function TextBlock({ block, onUpdate, onInsertComponent, onMentionClick, placeholder, onEditorFocus }: {
-  block: Block | { pageId: number; tabId?: number; type: 'text'; content: string; order: number }
+const TextBlock = memo(function TextBlock({ block, onUpdate, onMentionClick, placeholder, onEditorFocus }: {
+  block: Block | { pageId: number; tabId?: number; type: 'text'; content: string }
   onUpdate: (content: string) => void
-  onInsertComponent: (type: 'timeline' | 'feedback' | 'table' | 'visualization') => void
   onMentionClick?: (pageId: number) => void
   placeholder?: string
   onEditorFocus?: () => void
@@ -120,7 +109,7 @@ const TextBlock = memo(function TextBlock({ block, onUpdate, onInsertComponent, 
 
   return (
     <div onFocus={onEditorFocus}>
-      <RichTextEditor value={html} onChange={setHtml} onBlur={save} onAutoSave={autoSave} placeholder={placeholder ?? ''} onInsertComponent={onInsertComponent} onMentionClick={onMentionClick} />
+      <RichTextEditor value={html} onChange={setHtml} onBlur={save} onAutoSave={autoSave} placeholder={placeholder ?? ''} onMentionClick={onMentionClick} />
     </div>
   )
 })

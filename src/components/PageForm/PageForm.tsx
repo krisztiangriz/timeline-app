@@ -13,7 +13,6 @@ export interface BlockItem {
   id: number
   type: BlockType
   tabId?: number
-  order: number
 }
 
 export interface PageFormData {
@@ -29,7 +28,6 @@ export interface PageFormData {
   inheritedFrom?: string
   blocks?: BlockItem[]
   tabInfo?: { id: number; name: string }[]
-  blockOrder?: BlockItem[]
   deletedBlockIds?: number[]
 }
 
@@ -95,13 +93,13 @@ function BlockListEditor({ blocks, tabInfo, onReorder, onDelete, onDeleteTab, pr
   onDragOver: (v: { group: string; idx: number }) => void
 }) {
   // Page-level blocks (no tabId)
-  const pageLevel = blocks.filter((b) => !b.tabId).sort((a, b) => a.order - b.order)
+  const pageLevel = blocks.filter((b) => !b.tabId)
 
   // Build tab groups from tabInfo — every tab always renders (even with 0 blocks)
   const tabGroups = tabInfo.map((tab) => ({
     key: String(tab.id),
     label: tab.name,
-    items: blocks.filter((b) => b.tabId === tab.id).sort((a, b) => a.order - b.order),
+    items: blocks.filter((b) => b.tabId === tab.id),
   }))
 
   function handleDrop(group: string, targetIdx: number) {
@@ -119,13 +117,9 @@ function BlockListEditor({ blocks, tabInfo, onReorder, onDelete, onDeleteTab, pr
       const [moved] = groupItems.splice(sourceIdx, 1)
       groupItems.splice(targetIdx, 0, moved)
 
-      const updated = blocks.map((b) => {
-        const inGroup = isPageLevel ? !b.tabId : b.tabId === Number(group)
-        if (!inGroup) return b
-        const newIdx = groupItems.findIndex((g) => g.id === b.id)
-        return newIdx >= 0 ? { ...b, order: newIdx } : b
-      })
-      onReorder(updated)
+      // Rebuild block list preserving new order
+      const otherBlocks = blocks.filter((b) => isPageLevel ? !!b.tabId : b.tabId !== Number(group))
+      onReorder([...otherBlocks, ...groupItems])
     } else {
       // Cross-group move: change the block's tabId and reorder both groups
       const sourceIsPage = sourceGroup === 'page'
@@ -137,24 +131,14 @@ function BlockListEditor({ blocks, tabInfo, onReorder, onDelete, onDeleteTab, pr
       const movedWithNewTab = { ...moved, tabId: targetTabId }
       targetItems.splice(targetIdx, 0, movedWithNewTab)
 
-      // Rebuild full block list
-      const updated = blocks.map((b) => {
-        if (b.id === moved.id) return { ...b, tabId: targetTabId, order: targetIdx }
-        // Reorder source group
-        const inSource = sourceIsPage ? !b.tabId && b.id !== moved.id : b.tabId === Number(sourceGroup) && b.id !== moved.id
-        if (inSource) {
-          const newIdx = sourceItems.findIndex((g) => g.id === b.id)
-          return newIdx >= 0 ? { ...b, order: newIdx } : b
-        }
-        // Reorder target group (excluding the moved block which is handled above)
-        const inTarget = targetIsPage ? !b.tabId : b.tabId === Number(group)
-        if (inTarget) {
-          const newIdx = targetItems.findIndex((g) => g.id === b.id)
-          return newIdx >= 0 ? { ...b, order: newIdx } : b
-        }
-        return b
+      // Rebuild full block list: keep blocks not in source or target groups, then append reordered groups
+      const updated = blocks.filter((b) => {
+        if (b.id === moved.id) return false
+        if (sourceIsPage ? !b.tabId : b.tabId === Number(sourceGroup)) return false
+        if (targetIsPage ? !b.tabId : b.tabId === Number(group)) return false
+        return true
       })
-      onReorder(updated)
+      onReorder([...updated, ...sourceItems, ...targetItems])
     }
     onDragEnd()
   }
@@ -324,8 +308,8 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
         // Add default blocks (visualization + table)
         const existingBlocks = await db.blocks.where('pageId').equals(createdHubId).count()
         if (existingBlocks === 0) {
-          await db.blocks.add({ pageId: createdHubId, type: 'visualization', order: 0 })
-          await db.blocks.add({ pageId: createdHubId, type: 'table', order: 1 })
+          await db.blocks.add({ pageId: createdHubId, type: 'visualization' })
+          await db.blocks.add({ pageId: createdHubId, type: 'table' })
         }
         // Notify parent (for navigation/toast)
         onSubmit({
@@ -343,7 +327,7 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
     onSubmit({
       name, tabs, parentHubId: isHubType ? undefined : parentHubId, template, isHub: isHubType,
       mentionTrigger: trigger || undefined, mentionCollapsed: collapsed || undefined,
-      blockOrder: blocksModified.current ? blockList : undefined,
+      blocks: blocksModified.current ? blockList : undefined,
       deletedBlockIds: deletedBlockIds.length > 0 ? deletedBlockIds : undefined,
     })
   }
