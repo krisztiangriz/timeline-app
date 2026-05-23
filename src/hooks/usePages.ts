@@ -141,21 +141,11 @@ export function usePageActions() {
     await db.transaction('rw', [db.pages, db.layouts, db.blocks, db.chartConfigs], async () => {
       const existing = await db.layouts.where('pageId').equals(pageId).sortBy('order')
 
-      // Safety net: determine how many leading tabs are protected
-      const page = await db.pages.get(pageId)
-      let requiredTabCount = 0
-      if (page?.parentId) {
-        const parent = await db.pages.get(page.parentId)
-        if (parent?.role === 'colleague-hub' || parent?.role === 'project-hub') requiredTabCount = 3
-      }
-
       // Match existing tabs by position — update names in-place to preserve IDs
-      const toKeep = requiredTabCount > 0
-        ? Math.max(requiredTabCount, Math.min(existing.length, tabs.length))
-        : Math.min(existing.length, tabs.length)
+      const toKeep = Math.min(existing.length, tabs.length)
 
       // Update existing tabs that are kept (preserve their IDs)
-      for (let i = 0; i < Math.min(toKeep, tabs.length); i++) {
+      for (let i = 0; i < toKeep; i++) {
         await db.layouts.update(existing[i].id!, { name: tabs[i].name, order: i })
       }
 

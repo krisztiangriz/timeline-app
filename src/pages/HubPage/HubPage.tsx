@@ -85,7 +85,7 @@ export function HubPage({ role }: HubPageProps) {
         </div>
         <BlockRenderer page={hub} />
       </div>
-      <PageForm open={editPageOpen} onClose={() => setEditPageOpen(false)} onSubmit={handleEditSubmit} initial={editInitial} isEdit isHub hubId={hub.id!} protectedTabCount={0} />
+      <PageForm open={editPageOpen} onClose={() => setEditPageOpen(false)} onSubmit={handleEditSubmit} initial={editInitial} isEdit isHub hubId={hub.id!} />
     </div>
   )
 }

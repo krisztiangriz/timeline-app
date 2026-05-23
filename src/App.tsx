@@ -98,29 +98,11 @@ function GlobalOverlays() {
         await seedDefaultPropertyValues(pageId, parentId)
       }
 
-      // Create blocks/tabs based on selected template
-      switch (data.template) {
-        case 'tabbed': {
-          const tabDefs = [
-            { name: 'Timeline', blockType: 'timeline' as const },
-            { name: 'Feedback', blockType: 'feedback' as const },
-            { name: 'Visualization', blockType: 'visualization' as const },
-          ]
-          for (let i = 0; i < tabDefs.length; i++) {
-            const tabId = await db.layouts.add({ pageId, type: 'tab' as const, name: tabDefs[i].name, order: i })
-            await db.blocks.add({ pageId, tabId: tabId as number, type: tabDefs[i].blockType })
-          }
-          // Append user-added extra tabs
-          for (let i = 0; i < data.tabs.length; i++) {
-            const tab = data.tabs[i]
-            const tabId = await db.layouts.add({ pageId, type: 'tab' as const, name: tab.name, order: tabDefs.length + i })
-            await db.blocks.add({ pageId, tabId: tabId as number, type: tab.type, ...(tab.type === 'text' ? { content: '' } : {}) })
-          }
-          break
-        }
-        case 'empty':
-          // No tabs, no blocks — user configures via Edit Page later
-          break
+      // Create tabs + blocks from the form data
+      for (let i = 0; i < data.tabs.length; i++) {
+        const tab = data.tabs[i]
+        const tabId = await db.layouts.add({ pageId, type: 'tab' as const, name: tab.name, order: i })
+        await db.blocks.add({ pageId, tabId: tabId as number, type: tab.type, ...(tab.type === 'text' ? { content: '' } : {}) })
       }
 
       setAddPageOpen(false)

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { Modal } from '../Modal/Modal'
 import { PropertyEditorContent } from '../PropertyEditor/PropertyEditor'
 import { DragHandleIcon, TrashIcon, CheckIcon, PlusIcon, CloseIcon } from '../Icons/Icons'
+import { DropdownPortal } from '../DropdownPortal/DropdownPortal'
 import { db } from '../../db/database'
 import type { BlockType } from '../../types'
 import styles from './PageForm.module.css'
@@ -46,7 +47,6 @@ interface PageFormProps {
   isEdit?: boolean
   isHub?: boolean
   hubs?: HubInfo[]
-  protectedTabCount?: number
   hubId?: number  // when editing a hub, enables step 2 (property config)
 }
 
@@ -62,15 +62,16 @@ function RadioOption({ selected, onChange, label, description, disabled }: {
   )
 }
 
-function getDefaultTemplate(hub: HubInfo | undefined): PageTemplate {
-  if (!hub) return 'empty'
-  if (hub.role === 'colleague-hub' || hub.role === 'project-hub') return 'tabbed'
-  return 'empty'
-}
-
 const EMPTY_HUBS: HubInfo[] = []
 
-export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHubProp, hubs = EMPTY_HUBS, protectedTabCount = 0, hubId }: PageFormProps) {
+const BLOCK_TYPE_LABELS: Partial<Record<BlockType, string>> = {
+  text: 'Text',
+  timeline: 'Timeline',
+  feedback: 'Feedback',
+  visualization: 'Charts',
+}
+
+export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHubProp, hubs = EMPTY_HUBS, hubId }: PageFormProps) {
   const [name, setName] = useState('')
   const [tabs, setTabs] = useState<{ name: string; type: BlockType }[]>([])
   const [addingTab, setAddingTab] = useState(false)
@@ -78,7 +79,7 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
   const [newTabType, setNewTabType] = useState<BlockType>('text')
   const [parentHubId, setParentHubId] = useState<number | undefined>(undefined)
   const [isHubType, setIsHubType] = useState(false)
-  const [template, setTemplate] = useState<PageTemplate>('empty')
+  const [template] = useState<PageTemplate>('empty')
   const [trigger, setTrigger] = useState('')
   const [collapsed, setCollapsed] = useState(false)
   const [blockList, setBlockList] = useState<BlockItem[]>([])
@@ -89,6 +90,10 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
   const prevOpen = useRef(false)
   const [createdHubId, setCreatedHubId] = useState<number | null>(null)
   const hubConfirmed = useRef(false)
+  const [hubSelectOpen, setHubSelectOpen] = useState(false)
+  const hubSelectAnchorRef = useRef<HTMLDivElement>(null)
+  const [blockTypeSelectOpen, setBlockTypeSelectOpen] = useState(false)
+  const blockTypeAnchorRef = useRef<HTMLDivElement>(null)
 
   // Creating a new hub — properties appear immediately when Hub type is selected
   const isCreatingHub = !isEdit && isHubType
@@ -141,7 +146,6 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
       setNewTabName('')
       setParentHubId(initial?.parentHubId)
       setIsHubType(false)
-      setTemplate(getDefaultTemplate(hubs.find(h => h.id === initial?.parentHubId)))
       setTrigger(initial?.mentionTrigger ?? '')
       setCollapsed(initial?.mentionCollapsed ?? false)
       setBlockList(initial?.blocks ?? [])
@@ -155,12 +159,19 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
     prevOpen.current = open
   }, [open, initial, hubs])
 
-  // Smart default: update template when hub selection or type changes
+  // Pre-populate default tabs based on parent hub type
   useEffect(() => {
-    if (isEdit) return
-    if (isHubType) { setTemplate('empty'); return }
+    if (isEdit || isHubType) return
     const hub = hubs.find(h => h.id === parentHubId)
-    setTemplate(getDefaultTemplate(hub))
+    if (hub?.role === 'colleague-hub' || hub?.role === 'project-hub') {
+      setTabs([
+        { name: 'Timeline', type: 'timeline' },
+        { name: 'Feedback', type: 'feedback' },
+        { name: 'Visualization', type: 'visualization' },
+      ])
+    } else {
+      setTabs([])
+    }
   }, [parentHubId, isHubType, isEdit, hubs])
 
   const BLOCK_TYPE_DEFAULT_NAMES: Record<BlockType, string> = {
@@ -179,12 +190,11 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
   }
 
   function confirmTab() {
-    if (newTabName.trim()) {
-      setTabs((t) => [...t, { name: newTabName.trim(), type: newTabType }])
-      setNewTabName('')
-      setNewTabType('text')
-      setAddingTab(false)
-    }
+    const name = newTabName.trim() || (BLOCK_TYPE_LABELS[newTabType] ?? newTabType)
+    setTabs((t) => [...t, { name, type: newTabType }])
+    setNewTabName('')
+    setNewTabType('text')
+    setAddingTab(false)
   }
 
   function handleTabReorder(targetIdx: number) {
@@ -311,36 +321,47 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
         </div>
       )}
 
-      {/* Template (creation only — page type) */}
-      {!isEdit && !isHubProp && !isHubType && (
-        <div className={styles.section}>
-          <span className={styles.label}>Template</span>
-          <div className={styles.radioCol}>
-            <RadioOption selected={template === 'tabbed'} onChange={() => setTemplate('tabbed')} label="Tabbed" description="Timeline, Feedback, Visualization" />
-            <RadioOption selected={template === 'empty'} onChange={() => setTemplate('empty')} label="Empty" description="Add tabs later" />
-          </div>
-        </div>
-      )}
-
       {/* Add to hub (creation only, page type only) */}
       {!isEdit && !isHubProp && !isHubType && hubs.length > 0 && (
         <div className={styles.section}>
           <span className={styles.label}>Add to</span>
-          <select
-            className={styles.selectInput}
-            value={parentHubId ?? ''}
-            onChange={(e) => setParentHubId(e.target.value ? Number(e.target.value) : undefined)}
-          >
-            <option value="">None (standalone page)</option>
-            {hubs.map((hub) => (
-              <option key={hub.id} value={hub.id}>{hub.name}{hub.mentionTrigger ? ` (${hub.mentionTrigger})` : ''}</option>
-            ))}
-          </select>
+          <div ref={hubSelectAnchorRef} style={{ position: 'relative', width: '100%' }}>
+            <button
+              className={styles.hubSelectTrigger}
+              onClick={() => setHubSelectOpen((v) => !v)}
+              aria-expanded={hubSelectOpen}
+              aria-haspopup="listbox"
+              type="button"
+            >
+              <span>
+                {parentHubId
+                  ? (() => { const h = hubs.find(h => h.id === parentHubId); return h ? `${h.name}${h.mentionTrigger ? ` (${h.mentionTrigger})` : ''}` : 'None (standalone page)' })()
+                  : 'None (standalone page)'}
+              </span>
+              <svg width="10" height="6" viewBox="0 0 10 6" fill="none"><path d="M1 1L5 5L9 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+            </button>
+          </div>
+          <DropdownPortal anchorRef={hubSelectAnchorRef} open={hubSelectOpen}>
+            <>
+              <div style={{ position: 'fixed', inset: 0, zIndex: -1 }} onClick={() => setHubSelectOpen(false)} />
+              <div className={styles.hubSelectMenu} role="listbox">
+                <button className={!parentHubId ? styles.hubSelectItemActive : styles.hubSelectItem} role="option" onClick={() => { setParentHubId(undefined); setHubSelectOpen(false) }}>
+                  None (standalone page)
+                </button>
+                {hubs.map((hub) => (
+                  <button key={hub.id} className={parentHubId === hub.id ? styles.hubSelectItemActive : styles.hubSelectItem} role="option" onClick={() => { setParentHubId(hub.id); setHubSelectOpen(false) }}>
+                    <span>{hub.name}</span>
+                    {hub.mentionTrigger && <kbd className={styles.triggerBadge}>{hub.mentionTrigger}</kbd>}
+                  </button>
+                ))}
+              </div>
+            </>
+          </DropdownPortal>
         </div>
       )}
 
-      {/* Layout: Tabs & Blocks (edit mode OR creation with tabbed template) */}
-      {((isEdit && !isHubProp) || (!isEdit && !isHubProp && !isHubType && template === 'tabbed')) && <div className={styles.section}>
+      {/* Layout: Tabs */}
+      {!isHubProp && !isHubType && <div className={styles.section}>
         <div className={styles.tabHeader}>
           <span className={styles.label}>Layout</span>
           {!addingTab && (
@@ -349,14 +370,7 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
             </button>
           )}
         </div>
-        {/* Required tabs (shown as read-only during creation) */}
-        {!isEdit && template === 'tabbed' && ['Timeline', 'Feedback', 'Visualization'].map((name) => (
-          <div key={name} className={styles.tabRow}>
-            <span className={styles.tabRowName}>{name}</span>
-            <span className={styles.tabRequired}>Required</span>
-          </div>
-        ))}
-        {isEdit && tabs.length === 0 && !addingTab && (
+        {tabs.length === 0 && !addingTab && (
           <span className={styles.emptyHint}>Add tabs to organize page content</span>
         )}
         {/* All tabs — editable rows with drag, type label, name input, delete */}
@@ -369,39 +383,55 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
             onDragEnd={() => { setBlockDragIdx(null); setBlockDropIdx(null) }}
           >
             <div className={styles.dragHandle}><DragHandleIcon /></div>
-            <span className={styles.tabTypeLabel}>({tab.type})</span>
+            <span className={styles.tabTypeLabel}>({tab.type === 'visualization' ? 'charts' : tab.type})</span>
             <input
               className={styles.textInput}
-              style={{ flex: 1, height: 32 }}
+              style={{ width: 200, height: 32 }}
               value={tab.name}
               onChange={(e) => setTabs((t) => t.map((tt, j) => j === i ? { ...tt, name: e.target.value } : tt))}
             />
-            {!(protectedTabCount > 0 && i < protectedTabCount) && (
-              <button className={styles.deleteButton} onClick={() => setTabs((t) => t.filter((_, j) => j !== i))} aria-label={`Delete ${tab.name}`}>
-                <TrashIcon />
-              </button>
-            )}
+            <button className={styles.deleteButton} onClick={() => setTabs((t) => t.filter((_, j) => j !== i))} aria-label={`Delete ${tab.name}`}>
+              <TrashIcon />
+            </button>
           </div>
         ))}
         {addingTab && (
           <div className={styles.tabRow}>
-            <select className={styles.selectInput} style={{ width: 'auto', flex: '0 0 auto' }} value={newTabType} onChange={(e) => handleTabTypeChange(e.target.value as BlockType)}>
-              <option value="timeline" disabled={usedTypes.has('timeline')}>Timeline</option>
-              <option value="feedback" disabled={usedTypes.has('feedback')}>Feedback</option>
-              <option value="visualization" disabled={usedTypes.has('visualization')}>Visualization</option>
-              <option value="text">Text</option>
-            </select>
-            <input className={styles.textInput} style={{ flex: 1, height: 32 }} type="text" value={newTabName}
-              onChange={(e) => setNewTabName(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') { e.preventDefault(); confirmTab() }
-                if (e.key === 'Escape') { setAddingTab(false); setNewTabName(''); setNewTabType('text') }
-              }}
-              placeholder="Tab name" autoFocus />
-            <button className={styles.tabInputAction} onClick={confirmTab} aria-label="Confirm tab" style={{ opacity: newTabName.trim() ? 1 : 0.4, pointerEvents: newTabName.trim() ? 'auto' : 'none' }}>
+            <div ref={blockTypeAnchorRef} style={{ flex: 1, minWidth: 0, display: 'flex' }}>
+              <button
+                className={styles.blockTypeSelectTrigger}
+                onClick={() => setBlockTypeSelectOpen((v) => !v)}
+                type="button"
+              >
+                {BLOCK_TYPE_LABELS[newTabType] ?? newTabType}
+                <svg width="10" height="6" viewBox="0 0 10 6" fill="none"><path d="M1 1L5 5L9 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+              </button>
+            </div>
+            <DropdownPortal anchorRef={blockTypeAnchorRef} open={blockTypeSelectOpen}>
+              <>
+                <div style={{ position: 'fixed', inset: 0, zIndex: -1 }} onClick={() => setBlockTypeSelectOpen(false)} />
+                <div className={styles.hubSelectMenu} role="listbox">
+                  {(['timeline', 'feedback', 'visualization', 'text'] as BlockType[]).map((type) => {
+                    const disabled = type !== 'text' && usedTypes.has(type)
+                    return (
+                      <button
+                        key={type}
+                        className={disabled ? styles.hubSelectItemDisabled : (newTabType === type ? styles.hubSelectItemActive : styles.hubSelectItem)}
+                        onClick={disabled ? undefined : () => { handleTabTypeChange(type); setBlockTypeSelectOpen(false) }}
+                        role="option"
+                        type="button"
+                      >
+                        {BLOCK_TYPE_LABELS[type] ?? type}
+                      </button>
+                    )
+                  })}
+                </div>
+              </>
+            </DropdownPortal>
+            <button className={styles.tabInputAction} onClick={confirmTab} aria-label="Confirm tab">
               <CheckIcon />
             </button>
-            <button className={styles.tabInputAction} onClick={() => { setAddingTab(false); setNewTabName(''); setNewTabType('text') }} aria-label="Cancel">
+            <button className={styles.tabInputAction} onClick={() => { setAddingTab(false); setNewTabType('text') }} aria-label="Cancel">
               <CloseIcon />
             </button>
           </div>

@@ -1,6 +1,7 @@
 .section {
   display: flex;
   flex-direction: column;
+  gap: var(--space-sm);
 }
 
 .label {
@@ -13,8 +14,9 @@
 
 .radioCol {
   display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
+  flex-direction: row;
+  gap: var(--space-lg);
+  align-items: center;
 }
 
 .radioRowItem {
@@ -106,6 +108,91 @@
   border-color: var(--color-input-border);
 }
 
+/* Hub select custom dropdown */
+
+.hubSelectTrigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  height: 32px;
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-md);
+  background: var(--color-input-bg);
+  font-size: var(--font-size-base);
+  font-family: var(--font-family);
+  color: var(--color-text-primary);
+  cursor: pointer;
+  text-align: left;
+  gap: var(--space-sm);
+}
+
+.hubSelectTrigger:focus-visible {
+  outline: 2px solid var(--color-text-secondary);
+  outline-offset: 2px;
+}
+
+.hubSelectMenu {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-modal);
+  padding: var(--space-xs);
+  min-width: 200px;
+  border: 1px solid var(--color-border-light);
+}
+
+.hubSelectItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: var(--space-sm) var(--space-md);
+  font-size: var(--font-size-base);
+  font-family: var(--font-family);
+  color: var(--color-text-primary);
+  border-radius: var(--radius-sm);
+  text-align: left;
+  cursor: pointer;
+}
+
+.hubSelectItem:hover {
+  background: var(--color-border-light);
+}
+
+.hubSelectItemActive {
+  composes: hubSelectItem;
+  background: var(--color-border-light);
+  font-weight: var(--font-weight-medium);
+}
+
+.hubSelectItemDisabled {
+  composes: hubSelectItem;
+  color: var(--color-text-placeholder);
+  cursor: default;
+  pointer-events: none;
+}
+
+.blockTypeSelectTrigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-xs);
+  height: 32px;
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-md);
+  background: var(--color-input-bg);
+  font-size: var(--font-size-base);
+  font-family: var(--font-family);
+  color: var(--color-text-primary);
+  cursor: pointer;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+}
+
 .selectInput {
   padding: var(--space-sm) var(--space-md);
   border: 1px solid var(--color-border-light);
@@ -154,8 +241,9 @@
   display: flex;
   align-items: center;
   gap: var(--space-md);
-  height: 32px;
+  min-height: 32px;
   border-radius: var(--radius-sm);
+  width: 100%;
 }
 
 .dragHandle {
@@ -183,6 +271,7 @@
   font-size: var(--font-size-sm);
   color: var(--color-text-placeholder);
   font-weight: var(--font-weight-regular);
+  flex: 1;
 }
 
 .tabRequired {

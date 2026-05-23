@@ -48,10 +48,6 @@ export function DetailPage({ routePrefix }: DetailPageProps) {
   const hubPath = parentHub ? getPagePath(parentHub, allPages) : '/'
   const pagePath = routePrefix ? `/${routePrefix}/${page?.id}` : `/page/${page?.id}`
 
-  const protectedTabCount = parentHub?.role === 'colleague-hub' || parentHub?.role === 'project-hub'
-    ? 3
-    : 0
-
   const canDelete = !page?.role
   const isMainTimeline = page?.role === 'main-timeline'
   const canArchive = !isMainTimeline
@@ -147,7 +143,7 @@ export function DetailPage({ routePrefix }: DetailPageProps) {
         </div>
         <BlockRenderer page={page} activeTabId={activeTabId} />
       </div>
-      <PageForm open={editPageOpen} onClose={() => setEditPageOpen(false)} onSubmit={handleEditSubmit} initial={editInitial} isEdit isHub={page.type === 'hub' || undefined} hubId={page.type === 'hub' ? page.id : undefined} protectedTabCount={protectedTabCount} />
+      <PageForm open={editPageOpen} onClose={() => setEditPageOpen(false)} onSubmit={handleEditSubmit} initial={editInitial} isEdit isHub={page.type === 'hub' || undefined} hubId={page.type === 'hub' ? page.id : undefined} />
     </div>
   )
 }
