@@ -18,7 +18,7 @@ export interface BlockItem {
 
 export interface PageFormData {
   name: string
-  tabs: { name: string; type: BlockType }[]
+  tabs: { id?: number; name: string; type: BlockType }[]
   parentHubId?: number
   template: PageTemplate
   isHub: boolean

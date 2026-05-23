@@ -137,35 +137,35 @@ export function usePageActions() {
     })
   }
 
-  async function updateTabs(pageId: number, tabs: { name: string; type: BlockType }[]) {
+  async function updateTabs(pageId: number, tabs: { id?: number; name: string; type: BlockType }[]) {
     await db.transaction('rw', [db.pages, db.layouts, db.blocks, db.chartConfigs], async () => {
       const existing = await db.layouts.where('pageId').equals(pageId).sortBy('order')
+      const submittedIds = new Set(tabs.filter((t) => t.id).map((t) => t.id!))
 
-      // Match existing tabs by position — update names in-place to preserve IDs
-      const toKeep = Math.min(existing.length, tabs.length)
-
-      // Update existing tabs that are kept (preserve their IDs)
-      for (let i = 0; i < toKeep; i++) {
-        await db.layouts.update(existing[i].id!, { name: tabs[i].name, order: i })
+      // Update or create tabs in the new order
+      for (let i = 0; i < tabs.length; i++) {
+        const tab = tabs[i]
+        if (tab.id) {
+          // Existing tab — update name and order
+          await db.layouts.update(tab.id, { name: tab.name, order: i })
+        } else {
+          // New tab — create it + its block
+          const tabId = await db.layouts.add({ pageId, type: 'tab' as const, name: tab.name, order: i })
+          await db.blocks.add({ pageId, tabId: tabId as number, type: tab.type, ...(tab.type === 'text' ? { content: '' } : {}) })
+        }
       }
 
-      // Add new tabs beyond the existing count — create block for each
-      for (let i = toKeep; i < tabs.length; i++) {
-        const tabId = await db.layouts.add({ pageId, type: 'tab' as const, name: tabs[i].name, order: i })
-        await db.blocks.add({ pageId, tabId: tabId as number, type: tabs[i].type, ...(tabs[i].type === 'text' ? { content: '' } : {}) })
-      }
-
-      // Remove excess tabs — delete their blocks (one block per tab)
-      if (toKeep < existing.length) {
-        for (let i = toKeep; i < existing.length; i++) {
-          const tabBlocks = await db.blocks.where('pageId').equals(pageId).filter((b) => b.tabId === existing[i].id!).toArray()
+      // Delete tabs that were removed (exist in DB but not in submitted list)
+      for (const ex of existing) {
+        if (!submittedIds.has(ex.id!)) {
+          const tabBlocks = await db.blocks.where('pageId').equals(pageId).filter((b) => b.tabId === ex.id!).toArray()
           for (const b of tabBlocks) {
             if (b.type === 'visualization' && b.id) {
               await db.chartConfigs.where('blockId').equals(b.id).delete()
             }
             if (b.id) await db.blocks.delete(b.id)
           }
-          await db.layouts.delete(existing[i].id!)
+          await db.layouts.delete(ex.id!)
         }
       }
     })

@@ -77,7 +77,7 @@ export function DetailPage({ routePrefix }: DetailPageProps) {
       name: page?.name ?? '',
       tabs: tabs.map((l) => {
         const block = allBlocks.find((b) => b.tabId === l.id)
-        return { name: l.name, type: block?.type ?? 'text' as const }
+        return { id: l.id!, name: l.name, type: block?.type ?? 'text' as const }
       }),
       mentionTrigger: page?.mentionTrigger,
       mentionCollapsed: page?.mentionCollapsed,

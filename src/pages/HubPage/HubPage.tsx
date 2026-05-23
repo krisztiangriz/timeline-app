@@ -53,7 +53,7 @@ export function HubPage({ role }: HubPageProps) {
     name: hub?.name ?? '',
     tabs: tabs.map((t) => {
       const block = allBlocks.find((b) => b.tabId === t.id)
-      return { name: t.name, type: block?.type ?? 'text' as const }
+      return { id: t.id!, name: t.name, type: block?.type ?? 'text' as const }
     }),
     mentionTrigger: hub?.mentionTrigger,
     mentionCollapsed: hub?.mentionCollapsed,
