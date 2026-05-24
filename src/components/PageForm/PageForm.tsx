@@ -78,6 +78,20 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
   const [blockTypeSelectOpen, setBlockTypeSelectOpen] = useState(false)
   const blockTypeAnchorRef = useRef<HTMLDivElement>(null)
 
+  // Close dropdown portals on Escape
+  useEffect(() => {
+    if (!hubSelectOpen && !blockTypeSelectOpen) return
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.stopPropagation()
+        setHubSelectOpen(false)
+        setBlockTypeSelectOpen(false)
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [hubSelectOpen, blockTypeSelectOpen])
+
   // Creating a new hub — properties appear immediately when Hub type is selected
   const isCreatingHub = !isEdit && isHubType
 
@@ -168,6 +182,8 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
   }
 
   function confirmTab() {
+    // Guard against duplicate non-text types
+    if (newTabType !== 'text' && usedTypes.has(newTabType)) return
     const name = newTabName.trim() || (BLOCK_TYPE_LABELS[newTabType] ?? newTabType)
     setTabs((t) => [...t, { name, type: newTabType }])
     setNewTabName('')

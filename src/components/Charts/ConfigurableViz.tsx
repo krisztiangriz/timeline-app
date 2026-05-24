@@ -28,17 +28,16 @@ export const ConfigurableViz = memo(function ConfigurableViz({ blockId, pageId }
     return stored === '0' ? 0 : stored === '3' ? 3 : stored === '6' ? 6 : 12
   })
   const allEntries = useAllEntries(range || undefined)
-  const { allHubProperties, allFeedbacks, allPropertyValues } = useLiveQuery(async () => {
+  const { allHubProperties, allPropertyValues } = useLiveQuery(async () => ({
+    allHubProperties: await db.hubProperties.toArray(),
+    allPropertyValues: await db.pagePropertyValues.toArray(),
+  }), []) ?? { allHubProperties: [], allPropertyValues: [] }
+  const allFeedbacks = useLiveQuery(() => {
     const cutoff = range ? new Date(Date.now() - range * 30 * 24 * 60 * 60 * 1000) : undefined
-    const feedbackQuery = cutoff
+    return cutoff
       ? db.feedbacks.where('createdAt').aboveOrEqual(cutoff).toArray()
       : db.feedbacks.toArray()
-    return {
-      allHubProperties: await db.hubProperties.toArray(),
-      allFeedbacks: await feedbackQuery,
-      allPropertyValues: await db.pagePropertyValues.toArray(),
-    }
-  }, [range]) ?? { allHubProperties: [], allFeedbacks: [], allPropertyValues: [] }
+  }, [range]) ?? []
   const [addOpen, setAddOpen] = useState(false)
   const [editing, setEditing] = useState<ChartConfig | undefined>()
 

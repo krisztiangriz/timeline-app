@@ -28,14 +28,16 @@ function ensureCheckboxes(html: string): string {
   return `<div><span data-checkbox="false">\u00A0</span>${html}</div>`
 }
 
-/** Split pending HTML into individual line strings (inner content of each <div>) */
+/** Split pending HTML into individual line strings (inner content of each top-level <div>) */
 function splitPendingLines(html: string): string[] {
   if (!html.trim()) return []
+  const container = document.createElement('div')
+  container.innerHTML = html
   const lines: string[] = []
-  const regex = /<div[^>]*>([\s\S]*?)<\/div>/gi
-  let match
-  while ((match = regex.exec(html)) !== null) {
-    if (match[1].trim()) lines.push(match[1])
+  for (const child of Array.from(container.children)) {
+    if (child.tagName === 'DIV' && child.innerHTML.trim()) {
+      lines.push(child.innerHTML)
+    }
   }
   if (lines.length === 0 && html.trim()) lines.push(html.trim())
   return lines
@@ -307,8 +309,8 @@ export function TimelineView({ pageId, title, readOnly = false, page }: Timeline
   }, [isMainTimeline, page, pageId, hubChildren])
 
   // Split and filter the main timeline's pending HTML
-  const { filteredLines, filteredOriginalIndices, allMainLines } = useMemo(() => {
-    if (isMainTimeline || !mainPendingEntry?.text) return { filteredLines: [], filteredOriginalIndices: [], allMainLines: [] }
+  const { filteredLines, filteredOriginalIndices } = useMemo(() => {
+    if (isMainTimeline || !mainPendingEntry?.text) return { filteredLines: [], filteredOriginalIndices: [] }
     const allLines = splitPendingLines(mainPendingEntry.text)
     const filtered: string[] = []
     const indices: number[] = []
@@ -324,20 +326,25 @@ export function TimelineView({ pageId, title, readOnly = false, page }: Timeline
         indices.push(i)
       }
     })
-    return { filteredLines: filtered, filteredOriginalIndices: indices, allMainLines: allLines }
+    return { filteredLines: filtered, filteredOriginalIndices: indices }
   }, [isMainTimeline, mainPendingEntry?.text, relevantIds])
 
   // Handle completion of a filtered pending item
   async function handleFilteredComplete(lineIndex: number) {
     if (!mainPendingEntry?.id || !mainTimelinePage?.id) return
     try {
+      // Re-read the pending entry from DB to avoid stale closure data
+      const freshEntry = await db.timelineEntries.get(mainPendingEntry.id)
+      if (!freshEntry) return
+      const freshLines = splitPendingLines(freshEntry.text)
+
       const targetLine = filteredLines[lineIndex]
       const cleanText = stripCheckboxHtml(targetLine).replace(/\u00A0/g, ' ').replace(/&nbsp;/g, ' ').trim()
 
-      // Remove the line from the full pending HTML using tracked index
-      const originalIndex = filteredOriginalIndices[lineIndex]
-      if (originalIndex === undefined) return
-      const remaining = [...allMainLines]
+      // Find the target line in the fresh data
+      const originalIndex = freshLines.indexOf(targetLine)
+      if (originalIndex === -1) return
+      const remaining = [...freshLines]
       remaining.splice(originalIndex, 1)
       const newHtml = remaining.length > 0 ? remaining.map((l) => `<div>${l}</div>`).join('') : ''
 
