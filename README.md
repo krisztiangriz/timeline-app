@@ -15,8 +15,7 @@ Explore the app today!
 
 ### Content structure & organization
 - Pages & Hubs — Pages typed as general, colleague, candidate, or project; hubs group related child pages with configurable properties
-- Block-Based Document Model — Pages support text, timeline, feedback, table, and visualization blocks arranged in configurable tabs
-- Page Templates — Choose from tabbed, simple, text-only, or custom layouts on creation; hubs get standard (visualization + table) or table-only
+- Block-Based Document Model — Each tab contains exactly one block (text, timeline, feedback, or visualization); hub pages are hardcoded to visualization + table blocks; add and configure tabs via the Layout section in Edit Page
 - Drag & Drop Page Organization — Re-parent pages into hubs or move to root level from the Home table
 - Archiving — Archive pages or entire hubs (cascades to children); toggle visibility in Settings
 
@@ -37,7 +36,6 @@ Explore the app today!
 ### Rich Text Editing & input
 - Rich Text Editor — ContentEditable with formatting (bold/italic/underline), headings (H1-H3), lists (bullet/dash/numbered), links, date insertion, monospace, indent/outdent
 - @-Mention Autocomplete — Configurable trigger characters per hub; dropdown inserts linked mention spans; collapsed mode shows trigger only
-- Component Insertion — ~ trigger to insert timeline, feedback, table, or visualization blocks
 - "Add Page" from Mentions — If no matches found, option to create a new page and auto-insert the mention
 - Keyboard Shortcuts — Extensive shortcut support
 
@@ -104,8 +102,10 @@ Data Model
 | `text` | Rich text editor | Formatting, mentions, links, checkboxes |
 | `timeline` | Timeline view | Pending tasks, today editor, date-grouped history, cross-refs |
 | `feedback` | Feedback list | Add/edit/delete, property-based categorization, time filtering |
-| `table` | Child page list | Sortable columns, drag-to-reorder, property badges |
+| `table` | Child page list | Hub pages only; sortable columns, drag-to-reorder, property badges |
 | `visualization` | Charts | Multiple configurable charts per block, 7 data sources |
+
+> Each tab contains exactly one block. Add blocks by adding tabs in Edit Page.
 
 ### Cross-Reference System
 
