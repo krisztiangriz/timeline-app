@@ -10,6 +10,7 @@ import radio from '../../styles/radio.module.css'
 
 const ALL_SOURCES: ChartDataSource[] = [
   'entry-count',
+  'entry-by-weekday',
   'page-count',
   'feedback-by-type',
   'feedback-by-dimension',

@@ -94,6 +94,7 @@ export interface Feedback {
 
 export type ChartDataSource =
   | 'entry-count'
+  | 'entry-by-weekday'
   | 'property-distribution'
   | 'page-count'
   | 'feedback-by-type'

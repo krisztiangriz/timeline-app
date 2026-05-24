@@ -6,6 +6,7 @@ import {
 import {
   filterEntriesByScopes,
   useEntryCount,
+  useEntryByWeekday,
   usePagesByProperty,
   usePageCount,
 } from '../../hooks/useChartData'
@@ -83,6 +84,7 @@ const legendStyle: React.CSSProperties = { fontSize: 10, color: 'var(--color-tex
 
 export const DATA_SOURCE_LABELS: Record<string, string> = {
   'entry-count': 'Entry count',
+  'entry-by-weekday': 'Entry by weekday',
   'property-distribution': 'Property distribution',
   'page-count': 'Page count',
   'feedback-by-type': 'Feedback by type',
@@ -93,6 +95,7 @@ export const DATA_SOURCE_LABELS: Record<string, string> = {
 
 export const VALID_CHART_TYPES: Record<ChartDataSource, ChartType[]> = {
   'entry-count': ['bar', 'line', 'area', 'pie'],
+  'entry-by-weekday': ['bar', 'line'],
   'property-distribution': ['bar', 'pie'],
   'page-count': ['bar', 'line', 'area'],
   'feedback-by-type': ['bar', 'pie'],
@@ -121,6 +124,7 @@ export interface ChartRendererProps {
 export function ChartRenderer(props: ChartRendererProps) {
   switch (props.config.dataSource) {
     case 'entry-count': return <EntryCountChart {...props} />
+    case 'entry-by-weekday': return <EntryByWeekdayChart {...props} />
     case 'property-distribution': return <PropertyDistributionChart {...props} />
     case 'page-count': return <PageCountChart {...props} />
     case 'feedback-by-type': return <FeedbackByTypeChart {...props} />
@@ -211,6 +215,34 @@ function EntryCountChart({ config, monthCount = 12, entries, pages, containerCla
         })()}
       </ResponsiveContainer>
       )}
+    </ChartContainer>
+  )
+}
+
+function EntryByWeekdayChart({ config, monthCount = 12, entries, pages, containerClass }: ChartRendererProps) {
+  const scopes = config.scopes ?? EMPTY_SCOPES
+  const scopedEntries = useScopedEntries(entries, pages, scopes)
+  const data = useEntryByWeekday(scopedEntries, scopes, monthCount)
+  const cls = useContainerClass(config, containerClass)
+  const { chartType } = config
+
+  return (
+    <ChartContainer className={cls}>
+      <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+        {(() => {
+          const ChartComp = chartType === 'line' ? LineChart : BarChart
+          return (
+            <ChartComp data={data.data}>
+              <XAxis dataKey="name" tick={tickStyle} stroke={axisStroke} interval={0} />
+              <Tooltip {...TP} />
+              {chartType === 'line'
+                ? <Line type="monotone" dataKey="Entries" stroke={FALLBACK_COLOR} strokeWidth={2} dot={false} />
+                : <Bar dataKey="Entries" fill={FALLBACK_COLOR} />
+              }
+            </ChartComp>
+          )
+        })()}
+      </ResponsiveContainer>
     </ChartContainer>
   )
 }

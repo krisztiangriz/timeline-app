@@ -216,6 +216,32 @@ export function useEntryCount(
   }, [entries, pages, scopes, monthCount])
 }
 
+// ---- Aggregation: entry count by weekday ----
+
+const WEEKDAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+
+export function useEntryByWeekday(
+  entries: TimelineEntry[],
+  scopes: ChartScope[],
+  monthCount = 12,
+) {
+  return useMemo(() => {
+    const cutoff = getCutoff(monthCount)
+    const counts = [0, 0, 0, 0, 0, 0, 0]
+
+    for (const e of entries) {
+      if (e.isPending) continue
+      if (new Date(e.date) < cutoff) continue
+      const jsDay = new Date(e.date).getDay() // 0=Sun, 1=Mon...6=Sat
+      const idx = jsDay === 0 ? 6 : jsDay - 1 // Mon=0...Sun=6
+      counts[idx]++
+    }
+
+    const data = WEEKDAY_LABELS.map((label, i) => ({ name: label, Entries: counts[i] }))
+    return { data, keys: ['Entries'] }
+  }, [entries, scopes, monthCount])
+}
+
 // ---- Aggregation: pages by hub property ----
 
 export function usePagesByProperty(
