@@ -17,11 +17,6 @@
   color: var(--color-text-primary);
 }
 
-.showHideRow {
-  display: flex;
-  align-items: center;
-  gap: var(--space-lg);
-}
 
 .checkbox {
   width: 16px;

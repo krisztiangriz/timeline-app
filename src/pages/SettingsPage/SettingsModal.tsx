@@ -236,6 +236,10 @@ export function SettingsModal({ open, onClose, onToast }: SettingsModalProps) {
       <div className={styles.section}>
         <div className={styles.listHeader}>
           <span className={styles.sectionTitle}>Chart colors</span>
+          <button className={styles.iconButton} onClick={resetPalette}>
+            <ResetIcon />
+            Reset
+          </button>
         </div>
         <div className={styles.paletteRow}>
           {palette.map((color, i) => (
@@ -266,17 +270,12 @@ export function SettingsModal({ open, onClose, onToast }: SettingsModalProps) {
             </div>
           ))}
         </div>
-        <button className={styles.iconButton} onClick={resetPalette}>
-          <ResetIcon />
-          Reset
-        </button>
       </div>
 
       {/* Onboarding */}
       <div className={styles.section}>
-        <span className={styles.sectionTitle}>Onboarding</span>
-        <span className={styles.backupStatus}>Status: {onboardingGuides.filter((g) => isGuideDismissed(g.id)).length}/{onboardingGuides.length}</span>
-        <div className={styles.showHideRow}>
+        <div className={styles.listHeader}>
+          <span className={styles.sectionTitle}>Onboarding</span>
           <button className={styles.iconButton} onClick={() => {
             safeRemoveItem('onboarding-completed')
             safeRemoveItem('user-created-page')
@@ -288,12 +287,13 @@ export function SettingsModal({ open, onClose, onToast }: SettingsModalProps) {
             Reset
           </button>
         </div>
+        <span className={styles.backupStatus}>Status: {onboardingGuides.filter((g) => isGuideDismissed(g.id)).length}/{onboardingGuides.length}</span>
       </div>
 
       {/* Archived pages */}
       <div className={styles.section}>
-        <span className={styles.sectionTitle}>Archived pages</span>
-        <div className={styles.showHideRow}>
+        <div className={styles.listHeader}>
+          <span className={styles.sectionTitle}>Archived pages</span>
           <button className={styles.checkboxRow} onClick={() => setShowArchived(!showArchived)}>
             <div className={styles.checkbox} data-checked={showArchived} />
             <span className={styles.checkboxLabel}>Show archived</span>
