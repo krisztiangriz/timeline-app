@@ -240,13 +240,18 @@ export function useEntryByWeekday(
     }
 
     if (hubIds.length > 0) {
-      const hubIdSet = new Set(hubIds)
-      const children = pages.filter((p) => p.parentId && hubIdSet.has(p.parentId))
-      const childIdSet = new Set(children.map((p) => p.id!))
+      const hubs = pages.filter((p) => p.id && hubIds.includes(p.id))
+      // Map each child page to its parent hub
+      const childToHub = new Map<number, string>()
+      for (const hub of hubs) {
+        for (const p of pages) {
+          if (p.parentId === hub.id) childToHub.set(p.id!, hub.name)
+        }
+      }
 
       const data = WEEKDAY_LABELS.map((label) => {
         const row: Record<string, string | number> = { name: label }
-        for (const c of children) row[c.name] = 0
+        for (const hub of hubs) row[hub.name] = 0
         return row
       })
 
@@ -255,24 +260,26 @@ export function useEntryByWeekday(
         if (new Date(e.date) < cutoff) continue
         const jsDay = new Date(e.date).getDay()
         const idx = jsDay === 0 ? 6 : jsDay - 1
-        const counted = new Set<number>()
-        if (childIdSet.has(e.pageId)) {
-          const child = children.find((c) => c.id === e.pageId)
-          if (child) { data[idx][child.name] = (Number(data[idx][child.name]) || 0) + 1; counted.add(child.id!) }
+        const counted = new Set<string>()
+        // Count by pageId
+        const hubName = childToHub.get(e.pageId)
+        if (hubName && !counted.has(hubName)) {
+          data[idx][hubName] = (Number(data[idx][hubName]) || 0) + 1
+          counted.add(hubName)
         }
+        // Count by tagRefs
         if (e.tagRefs) {
           for (const ref of e.tagRefs) {
-            const refId = Number(ref)
-            if (counted.has(refId)) continue
-            if (childIdSet.has(refId)) {
-              const child = children.find((c) => c.id === refId)
-              if (child) { data[idx][child.name] = (Number(data[idx][child.name]) || 0) + 1; counted.add(child.id!) }
+            const refHubName = childToHub.get(Number(ref))
+            if (refHubName && !counted.has(refHubName)) {
+              data[idx][refHubName] = (Number(data[idx][refHubName]) || 0) + 1
+              counted.add(refHubName)
             }
           }
         }
       }
 
-      const keys = children.map((c) => c.name).filter((k) => data.some((d) => Number(d[k]) > 0))
+      const keys = hubs.map((h) => h.name).filter((k) => data.some((d) => Number(d[k]) > 0))
       return { data, keys }
     }
 
