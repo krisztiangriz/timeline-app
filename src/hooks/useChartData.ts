@@ -222,11 +222,61 @@ const WEEKDAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
 export function useEntryByWeekday(
   entries: TimelineEntry[],
+  pages: Page[],
   scopes: ChartScope[],
   monthCount = 12,
 ) {
   return useMemo(() => {
     const cutoff = getCutoff(monthCount)
+
+    // Check for hub scopes
+    const hubIds: number[] = []
+    for (const s of scopes) {
+      if (s.type === 'hub') hubIds.push(s.hubId)
+      else if (s.type === 'page') {
+        const page = pages.find((p) => p.id === s.pageId)
+        if (page?.type === 'hub') hubIds.push(page.id!)
+      }
+    }
+
+    if (hubIds.length > 0) {
+      const hubIdSet = new Set(hubIds)
+      const children = pages.filter((p) => p.parentId && hubIdSet.has(p.parentId))
+      const childIdSet = new Set(children.map((p) => p.id!))
+
+      const data = WEEKDAY_LABELS.map((label) => {
+        const row: Record<string, string | number> = { name: label }
+        for (const c of children) row[c.name] = 0
+        return row
+      })
+
+      for (const e of entries) {
+        if (e.isPending) continue
+        if (new Date(e.date) < cutoff) continue
+        const jsDay = new Date(e.date).getDay()
+        const idx = jsDay === 0 ? 6 : jsDay - 1
+        const counted = new Set<number>()
+        if (childIdSet.has(e.pageId)) {
+          const child = children.find((c) => c.id === e.pageId)
+          if (child) { data[idx][child.name] = (Number(data[idx][child.name]) || 0) + 1; counted.add(child.id!) }
+        }
+        if (e.tagRefs) {
+          for (const ref of e.tagRefs) {
+            const refId = Number(ref)
+            if (counted.has(refId)) continue
+            if (childIdSet.has(refId)) {
+              const child = children.find((c) => c.id === refId)
+              if (child) { data[idx][child.name] = (Number(data[idx][child.name]) || 0) + 1; counted.add(child.id!) }
+            }
+          }
+        }
+      }
+
+      const keys = children.map((c) => c.name).filter((k) => data.some((d) => Number(d[k]) > 0))
+      return { data, keys }
+    }
+
+    // No hub scope: single series
     const counts = [0, 0, 0, 0, 0, 0, 0]
 
     for (const e of entries) {
@@ -239,7 +289,7 @@ export function useEntryByWeekday(
 
     const data = WEEKDAY_LABELS.map((label, i) => ({ name: label, Entries: counts[i] }))
     return { data, keys: ['Entries'] }
-  }, [entries, scopes, monthCount])
+  }, [entries, pages, scopes, monthCount])
 }
 
 // ---- Aggregation: pages by hub property ----

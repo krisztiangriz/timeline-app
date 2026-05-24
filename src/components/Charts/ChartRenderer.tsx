@@ -95,7 +95,7 @@ export const DATA_SOURCE_LABELS: Record<string, string> = {
 
 export const VALID_CHART_TYPES: Record<ChartDataSource, ChartType[]> = {
   'entry-count': ['bar', 'line', 'area', 'pie'],
-  'entry-by-weekday': ['bar', 'line'],
+  'entry-by-weekday': ['bar', 'area'],
   'property-distribution': ['bar', 'pie'],
   'page-count': ['bar', 'line', 'area'],
   'feedback-by-type': ['bar', 'pie'],
@@ -222,23 +222,27 @@ function EntryCountChart({ config, monthCount = 12, entries, pages, containerCla
 function EntryByWeekdayChart({ config, monthCount = 12, entries, pages, containerClass }: ChartRendererProps) {
   const scopes = config.scopes ?? EMPTY_SCOPES
   const scopedEntries = useScopedEntries(entries, pages, scopes)
-  const data = useEntryByWeekday(scopedEntries, scopes, monthCount)
+  const data = useEntryByWeekday(scopedEntries, pages, scopes, monthCount)
   const cls = useContainerClass(config, containerClass)
   const { chartType } = config
+  const { palette } = useChartPalette()
 
   return (
     <ChartContainer className={cls}>
       <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
         {(() => {
-          const ChartComp = chartType === 'line' ? LineChart : BarChart
+          const ChartComp = chartType === 'area' ? AreaChart : BarChart
+          const total = data.keys.length
           return (
             <ChartComp data={data.data}>
               <XAxis dataKey="name" tick={tickStyle} stroke={axisStroke} interval={0} />
               <Tooltip {...TP} />
-              {chartType === 'line'
-                ? <Line type="monotone" dataKey="Entries" stroke={FALLBACK_COLOR} strokeWidth={2} dot={false} />
-                : <Bar dataKey="Entries" fill={FALLBACK_COLOR} />
-              }
+              {total > 1 && <Legend iconType="circle" iconSize={8} wrapperStyle={legendStyle} />}
+              {data.keys.map((key, i) =>
+                chartType === 'area'
+                  ? <Area key={key} type="monotone" dataKey={key} stackId="s" fill={getSeriesColor(i, total, palette)} stroke={getSeriesColor(i, total, palette)} fillOpacity={0.6} />
+                  : <Bar key={key} dataKey={key} stackId="s" fill={getSeriesColor(i, total, palette)} />
+              )}
             </ChartComp>
           )
         })()}
