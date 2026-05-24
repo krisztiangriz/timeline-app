@@ -8,28 +8,16 @@ import type { BlockType } from '../../types'
 import styles from './PageForm.module.css'
 import radio from '../../styles/radio.module.css'
 
-export type PageTemplate = 'tabbed' | 'empty'
-
-export interface BlockItem {
-  id: number
-  type: BlockType
-  tabId?: number
-}
-
 export interface PageFormData {
   name: string
   tabs: { id?: number; name: string; type: BlockType }[]
   parentHubId?: number
-  template: PageTemplate
   isHub: boolean
-  existingPageId?: number  // for hub creation: hub already exists in DB
+  existingPageId?: number
   mentionTrigger?: string
   mentionCollapsed?: boolean
   inheritedTrigger?: string
   inheritedFrom?: string
-  blocks?: BlockItem[]
-  tabInfo?: { id: number; name: string }[]
-  deletedBlockIds?: number[]
 }
 
 export interface HubInfo {
@@ -79,14 +67,9 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
   const [newTabType, setNewTabType] = useState<BlockType>('text')
   const [parentHubId, setParentHubId] = useState<number | undefined>(undefined)
   const [isHubType, setIsHubType] = useState(false)
-  const [template] = useState<PageTemplate>('empty')
   const [trigger, setTrigger] = useState('')
   const [collapsed, setCollapsed] = useState(false)
-  const [blockList, setBlockList] = useState<BlockItem[]>([])
-  const [deletedBlockIds, setDeletedBlockIds] = useState<number[]>([])
-  const blocksModified = useRef(false)
   const [blockDragIdx, setBlockDragIdx] = useState<{ group: string; idx: number } | null>(null)
-  const [, setBlockDropIdx] = useState<{ group: string; idx: number } | null>(null)
   const prevOpen = useRef(false)
   const [createdHubId, setCreatedHubId] = useState<number | null>(null)
   const hubConfirmed = useRef(false)
@@ -148,11 +131,7 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
       setIsHubType(false)
       setTrigger(initial?.mentionTrigger ?? '')
       setCollapsed(initial?.mentionCollapsed ?? false)
-      setBlockList(initial?.blocks ?? [])
-      setDeletedBlockIds([])
-      blocksModified.current = false
       setBlockDragIdx(null)
-      setBlockDropIdx(null)
       setCreatedHubId(null)
       hubConfirmed.current = false
     }
@@ -179,10 +158,9 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
   }
 
   // Types already used (limited to 1 each except text)
-  const usedTypes = new Set<BlockType>([
-    ...tabs.map((t) => t.type),
-    ...(initial?.blocks?.map((b) => b.type) ?? []),
-  ])
+  const usedTypes = new Set<BlockType>(
+    tabs.map((t) => t.type)
+  )
 
   function handleTabTypeChange(type: BlockType) {
     setNewTabType(type)
@@ -229,7 +207,7 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
         }
         // Notify parent (for navigation/toast)
         onSubmit({
-          name, tabs, parentHubId: undefined, template, isHub: true,
+          name, tabs, parentHubId: undefined, isHub: true,
           existingPageId: createdHubId,
           mentionTrigger: trigger || undefined, mentionCollapsed: collapsed || undefined,
         })
@@ -241,10 +219,8 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
 
     // Normal submit (edit mode or non-hub creation)
     onSubmit({
-      name, tabs, parentHubId: isHubType ? undefined : parentHubId, template, isHub: isHubType,
+      name, tabs, parentHubId: isHubType ? undefined : parentHubId, isHub: isHubType,
       mentionTrigger: trigger || undefined, mentionCollapsed: collapsed || undefined,
-      blocks: blocksModified.current ? blockList : undefined,
-      deletedBlockIds: deletedBlockIds.length > 0 ? deletedBlockIds : undefined,
     })
   }
 
@@ -378,9 +354,9 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
           <div key={`tab-${i}`} className={styles.tabRow}
             draggable
             onDragStart={(e) => { e.dataTransfer.effectAllowed = 'move'; setBlockDragIdx({ group: 'tabs', idx: i }) }}
-            onDragOver={(e) => { e.preventDefault(); setBlockDropIdx({ group: 'tabs', idx: i }) }}
+            onDragOver={(e) => { e.preventDefault() }}
             onDrop={(e) => { e.preventDefault(); handleTabReorder(i) }}
-            onDragEnd={() => { setBlockDragIdx(null); setBlockDropIdx(null) }}
+            onDragEnd={() => { setBlockDragIdx(null) }}
           >
             <div className={styles.dragHandle}><DragHandleIcon /></div>
             <span className={styles.tabTypeLabel}>({tab.type === 'visualization' ? 'charts' : tab.type})</span>

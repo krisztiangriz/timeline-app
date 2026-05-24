@@ -6,8 +6,8 @@ import { PageHeader } from '../../components/PageHeader/PageHeader'
 import { PageForm, type PageFormData } from '../../components/PageForm/PageForm'
 import { BlockRenderer } from '../../components/BlockRenderer/BlockRenderer'
 import { PropertyRow } from '../../components/PropertyRow/PropertyRow'
-import { usePage, usePageActions, usePageTabs, getPagePath, persistBlockEdits } from '../../hooks/usePages'
-import { useBlocks, useBlockActions } from '../../hooks/useBlocks'
+import { usePage, usePageActions, usePageTabs, getPagePath } from '../../hooks/usePages'
+import { useBlocks } from '../../hooks/useBlocks'
 import { usePageMenus } from '../../hooks/usePageMenus'
 import { useAutocomplete } from '../../hooks/useAutocomplete'
 import { useToast } from '../../hooks/useToast'
@@ -32,7 +32,6 @@ export function DetailPage({ routePrefix }: DetailPageProps) {
   const [editPageOpen, setEditPageOpen] = useState(false)
   const [activeTabId, setActiveTabId] = useState<number | null>(null)
   const allBlocks = useBlocks(pageId)
-  const { deleteBlock } = useBlockActions()
 
   // Hub properties
   const parentHub = page?.parentId ? allPages.find((p) => p.id === page.parentId) : undefined
@@ -83,8 +82,6 @@ export function DetailPage({ routePrefix }: DetailPageProps) {
       mentionCollapsed: page?.mentionCollapsed,
       inheritedTrigger: parentHub?.mentionTrigger,
       inheritedFrom: parentHub?.name,
-      blocks: allBlocks.filter((b) => b.id).map((b) => ({ id: b.id!, type: b.type, tabId: b.tabId })),
-      tabInfo: tabs.map((t) => ({ id: t.id!, name: t.name })),
     }
   }, [page, tabs, allPages, allBlocks])
 
@@ -93,7 +90,6 @@ export function DetailPage({ routePrefix }: DetailPageProps) {
     try {
       await updatePage(pageId, { name: data.name, mentionTrigger: data.mentionTrigger, mentionCollapsed: data.mentionCollapsed })
       await updateTabs(pageId, data.tabs)
-      await persistBlockEdits(data.blocks, data.deletedBlockIds, deleteBlock)
       setEditPageOpen(false); showToast('Page updated')
     } catch {
       showToast('Failed to update page')

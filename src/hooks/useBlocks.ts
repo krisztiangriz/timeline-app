@@ -57,11 +57,6 @@ async function getRequiredBlockTypes(pageId: number): Promise<Set<BlockType>> {
  * CRUD operations for blocks.
  */
 export function useBlockActions() {
-  async function addBlock(pageId: number, type: BlockType, tabId?: number, content?: string): Promise<number> {
-    const id = await db.blocks.add({ pageId, tabId, type, content })
-    return id as number
-  }
-
   async function updateBlock(id: number, data: Partial<Omit<Block, 'id'>>) {
     await db.blocks.update(id, data)
   }
@@ -99,5 +94,5 @@ export function useBlockActions() {
     await db.blocks.delete(id)
   }
 
-  return { addBlock, updateBlock, deleteBlock }
+  return { updateBlock, deleteBlock }
 }

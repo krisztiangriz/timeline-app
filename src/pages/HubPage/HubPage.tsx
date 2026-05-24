@@ -4,8 +4,8 @@ import { BreadcrumbNav } from '../../components/Breadcrumb/Breadcrumb'
 import { PageHeader } from '../../components/PageHeader/PageHeader'
 import { PageForm, type PageFormData } from '../../components/PageForm/PageForm'
 import { BlockRenderer } from '../../components/BlockRenderer/BlockRenderer'
-import { usePageByRole, usePageActions, usePageTabs, getPagePath, persistBlockEdits } from '../../hooks/usePages'
-import { useBlocks, useBlockActions } from '../../hooks/useBlocks'
+import { usePageByRole, usePageActions, usePageTabs, getPagePath } from '../../hooks/usePages'
+import { useBlocks } from '../../hooks/useBlocks'
 import { usePageMenus } from '../../hooks/usePageMenus'
 import { useAutocomplete } from '../../hooks/useAutocomplete'
 import { useToast } from '../../hooks/useToast'
@@ -25,7 +25,6 @@ export function HubPage({ role }: HubPageProps) {
   const { sentinelRef, isScrolled } = useStickyScroll()
   const [editPageOpen, setEditPageOpen] = useState(false)
   const allBlocks = useBlocks(hub?.id)
-  const { deleteBlock } = useBlockActions()
 
   const hubPath = hub ? getPagePath(hub, allPages) : '/'
 
@@ -57,8 +56,6 @@ export function HubPage({ role }: HubPageProps) {
     }),
     mentionTrigger: hub?.mentionTrigger,
     mentionCollapsed: hub?.mentionCollapsed,
-    blocks: allBlocks.filter((b) => b.id).map((b) => ({ id: b.id!, type: b.type, tabId: b.tabId })),
-    tabInfo: tabs.map((t) => ({ id: t.id!, name: t.name })),
   }), [hub, tabs, allBlocks])
 
   async function handleEditSubmit(data: PageFormData) {
@@ -66,7 +63,6 @@ export function HubPage({ role }: HubPageProps) {
     try {
       await updatePage(hub.id, { name: data.name, mentionTrigger: data.mentionTrigger, mentionCollapsed: data.mentionCollapsed })
       await updateTabs(hub.id, data.tabs)
-      await persistBlockEdits(data.blocks, data.deletedBlockIds, deleteBlock)
       setEditPageOpen(false); showToast('Page updated')
     } catch {
       showToast('Failed to update page')

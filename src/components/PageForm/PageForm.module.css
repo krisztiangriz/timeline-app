@@ -19,11 +19,6 @@
   align-items: center;
 }
 
-.radioRowItem {
-  display: flex;
-  align-items: center;
-}
-
 .triggerBadge {
   margin-left: auto;
   font-size: 11px;
@@ -193,29 +188,6 @@
   width: 100%;
 }
 
-.selectInput {
-  padding: var(--space-sm) var(--space-md);
-  border: 1px solid var(--color-border-light);
-  border-radius: var(--radius-md);
-  font-size: var(--font-size-base);
-  line-height: var(--line-height-base);
-  height: 32px;
-  background: var(--color-input-bg);
-  font-family: var(--font-family);
-  color: var(--color-text-primary);
-  width: 100%;
-  cursor: pointer;
-  appearance: none;
-  padding-right: var(--space-xl);
-  background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%235E6E8C' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right var(--space-md) center;
-}
-
-.selectInput:focus {
-  border-color: var(--color-input-border);
-}
-
 .tabHeader {
   display: flex;
   align-items: center;
@@ -261,23 +233,11 @@
   cursor: grabbing;
 }
 
-.tabRowName {
-  flex: 1;
-  font-size: var(--font-size-base);
-  line-height: var(--line-height-base);
-}
-
 .tabTypeLabel {
   font-size: var(--font-size-sm);
   color: var(--color-text-placeholder);
   font-weight: var(--font-weight-regular);
   flex: 1;
-}
-
-.tabRequired {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-tertiary);
-  margin-left: auto;
 }
 
 .deleteButton {
@@ -312,53 +272,3 @@
 }
 
 /* ---- Block list editor ---- */
-
-.blockListEditor {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
-}
-
-.blockGroupTitle {
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-text-placeholder);
-}
-
-.blockGroupHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--space-xs) 0;
-}
-
-.blockRow {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  height: 32px;
-  padding: 0 var(--space-xs);
-  border-radius: var(--radius-sm);
-  cursor: grab;
-}
-
-.blockRow:active {
-  cursor: grabbing;
-}
-
-.blockRowDragging {
-  opacity: 0.4;
-}
-
-.blockRowDropTarget {
-  outline: 1.5px dashed var(--color-text-body);
-  outline-offset: -1.5px;
-  border-radius: var(--radius-sm);
-}
-
-.blockRowLabel {
-  flex: 1;
-  font-size: var(--font-size-base);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-text-primary);
-}
