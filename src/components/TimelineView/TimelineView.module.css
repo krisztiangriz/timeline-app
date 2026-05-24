@@ -50,13 +50,13 @@
   color: var(--color-negative);
 }
 
-.sectionDateContainer:hover .sectionDate,
-.sectionDateContainer:focus-within .sectionDate {
+.sectionDateContainer:has(.sectionDeleteLabel):hover .sectionDate,
+.sectionDateContainer:has(.sectionDeleteLabel):focus-within .sectionDate {
   opacity: 0;
 }
 
-.sectionDateContainer:hover .sectionDeleteLabel,
-.sectionDateContainer:focus-within .sectionDeleteLabel {
+.sectionDateContainer:has(.sectionDeleteLabel):hover .sectionDeleteLabel,
+.sectionDateContainer:has(.sectionDeleteLabel):focus-within .sectionDeleteLabel {
   opacity: 1;
   pointer-events: auto;
 }
