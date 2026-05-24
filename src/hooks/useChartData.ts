@@ -47,7 +47,6 @@ function getCutoff(monthCount: number): Date {
   return new Date(now.getFullYear(), now.getMonth() - (monthCount - 1), 1)
 }
 
-// Re-export from constants for backward compatibility
 import { CHART_COLORS } from '../constants/colors'
 
 // ---- Scope filtering ----

@@ -27,7 +27,7 @@ export const onboardingGuides: GuideDefinition[] = [
     id: 'editor-walkthrough',
     steps: [
       {
-        description: 'Format with shortcuts, customize page mention triggers, and use ~ to insert blocks.',
+        description: 'Format with shortcuts and customize page mention triggers.',
         video: '/timeline-app/editor-walkthrough.mp4',
       },
     ],

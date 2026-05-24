@@ -4,7 +4,7 @@ import { RichTextEditor } from '../RichTextEditor/RichTextEditor'
 import { TimelineView } from '../TimelineView/TimelineView'
 import { FeedbackList } from '../PageDetail/FeedbackList'
 import { EmptyState } from '../EmptyState/EmptyState'
-import { useBlocks, useBlockActions } from '../../hooks/useBlocks'
+import { useBlocks, updateBlock } from '../../hooks/useBlocks'
 import { useChildPages, getPagePath } from '../../hooks/usePages'
 import { useNavigateToPage } from '../../hooks/useNavigateToPage'
 import { useAutocomplete } from '../../hooks/useAutocomplete'
@@ -42,7 +42,6 @@ export function BlockRenderer({ page, activeTabId }: BlockRendererProps) {
 const BlockList = memo(function BlockList({ pageId, page, blocks, tabId }: {
   pageId: number; page: Page; blocks: Block[]; tabId?: number
 }) {
-  const { updateBlock } = useBlockActions()
   const handleMentionClick = useNavigateToPage()
 
   // Onboarding: editor-walkthrough trigger
