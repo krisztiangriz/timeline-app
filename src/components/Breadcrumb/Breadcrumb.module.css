@@ -19,7 +19,7 @@
   font-size: var(--font-size-sm);
   line-height: var(--line-height-sm);
   font-weight: var(--font-weight-medium);
-  color: var(--color-text-tertiary);
+  color: var(--color-text-secondary);
   white-space: nowrap;
   text-overflow: ellipsis;
   overflow: hidden;
@@ -56,7 +56,7 @@
 
 .separator {
   font-size: var(--font-size-sm);
-  color: var(--color-text-tertiary);
+  color: var(--color-text-secondary);
   padding: 0 var(--space-xs);
   flex-shrink: 0;
   user-select: none;

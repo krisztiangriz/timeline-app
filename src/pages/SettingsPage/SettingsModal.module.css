@@ -121,7 +121,7 @@
 }
 
 .colorSwatch:hover {
-  border-color: var(--color-text-tertiary);
+  border-color: var(--color-text-secondary);
 }
 
 .listItem {
@@ -142,7 +142,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--color-text-tertiary);
+  color: var(--color-text-secondary);
   border-radius: var(--radius-sm);
   flex-shrink: 0;
 }
@@ -256,7 +256,7 @@
 
 .clearTriggerSearch {
   margin-left: var(--space-xs);
-  color: var(--color-text-tertiary);
+  color: var(--color-text-secondary);
   vertical-align: middle;
 }
 
@@ -290,7 +290,7 @@
 .backupStatus {
   font-size: 12px;
   line-height: var(--line-height-sm);
-  color: var(--color-text-tertiary);
+  color: var(--color-text-secondary);
   font-style: italic;
 }
 
@@ -333,7 +333,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--color-text-tertiary);
+  color: var(--color-text-secondary);
   flex-shrink: 0;
   border-radius: var(--radius-sm);
   cursor: pointer;

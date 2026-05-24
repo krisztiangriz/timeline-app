@@ -78,7 +78,7 @@
 .entryRowTextDisabled {
   flex: 1;
   min-width: 0;
-  color: var(--color-text-tertiary);
+  color: var(--color-text-secondary);
 }
 
 .entryRowTextDisabled * {

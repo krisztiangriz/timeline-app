@@ -104,7 +104,7 @@
 }
 
 .colorDot:hover {
-  border-color: var(--color-text-tertiary);
+  border-color: var(--color-text-secondary);
 }
 
 .optionLabel {
@@ -125,7 +125,7 @@
   align-items: center;
   gap: var(--space-xs);
   font-size: var(--font-size-sm);
-  color: var(--color-text-tertiary);
+  color: var(--color-text-secondary);
   cursor: pointer;
   height: 32px;
 }
@@ -166,7 +166,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--color-text-tertiary);
+  color: var(--color-text-secondary);
   border-radius: var(--radius-sm);
   flex-shrink: 0;
   cursor: pointer;

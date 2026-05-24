@@ -20,7 +20,7 @@
 }
 
 .swatch:hover {
-  border-color: var(--color-text-tertiary);
+  border-color: var(--color-text-secondary);
 }
 
 .swatchActive {

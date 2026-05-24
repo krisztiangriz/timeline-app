@@ -61,7 +61,7 @@
 
 .tabInactive {
   composes: tab;
-  color: var(--color-text-tertiary);
+  color: var(--color-text-secondary);
   text-decoration: none;
 }
 .tabInactive:hover {

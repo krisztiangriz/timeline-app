@@ -102,7 +102,7 @@
 }
 
 .editor a:hover {
-  color: var(--color-text-tertiary);
+  color: var(--color-text-secondary);
 }
 
 /* Bullet lists */
@@ -140,7 +140,7 @@
   display: inline-block;
   width: 1em;
   margin-left: -1em;
-  color: var(--color-text-tertiary);
+  color: var(--color-text-secondary);
 }
 
 /* Ordered (numbered) lists (Cmd+9) */
@@ -194,7 +194,7 @@
 
 .editor [data-checkbox="true"] {
   text-decoration: line-through;
-  color: var(--color-text-tertiary);
+  color: var(--color-text-secondary);
 }
 
 /* ---- Link input popover ---- */
@@ -289,7 +289,7 @@
 }
 
 .mentionPrefix {
-  color: var(--color-text-tertiary);
+  color: var(--color-text-secondary);
   font-weight: var(--font-weight-medium);
   font-family: ui-monospace, 'SF Mono', Monaco, 'Cascadia Mono', monospace;
 }
@@ -304,7 +304,7 @@
 }
 
 .editor [data-mention]:hover {
-  color: var(--color-text-tertiary);
+  color: var(--color-text-secondary);
 }
 
 /* Collapsed mentions: show only trigger character, full name on hover via title */

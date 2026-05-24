@@ -5,7 +5,6 @@
   --color-text-primary: #334055;       /* N900 */
   --color-text-secondary: #5E6E8C;     /* N600 */
   --color-text-body: #485670;          /* N700 */
-  --color-text-tertiary: #5E6E8C;      /* N600 — same as secondary */
   --color-text-placeholder: #8B9BB5;   /* N400 — meets 4.5:1 on white */
   --color-border: #B8C5DB;             /* N300 */
   --color-border-light: #ECF1F9;       /* N100 */
@@ -81,7 +80,6 @@
   --color-text-primary: #E8ECF2;
   --color-text-secondary: #A3B1C6;
   --color-text-body: #C5D0E0;
-  --color-text-tertiary: #8B9BB5;
   --color-text-placeholder: #7B8FA6;
   --color-border: #3A4250;
   --color-border-light: #2C3240;

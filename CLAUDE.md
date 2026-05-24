@@ -21,12 +21,23 @@ git push         # triggers GitHub Actions deploy
 ## Key Architecture Decisions
 
 ### Data Model
-- DB schema version: **12** (Dexie, IndexedDB)
+- DB schema version: **18** (Dexie, IndexedDB)
 - All data is local — no server, no auth
 - Pages have `role` field for special pages: `main-timeline`, `colleague-hub`,
   `candidate-hub`, `project-hub`
 - Pending tasks live ONLY on the main-timeline page (`isPending: true`)
 - Filtered pending shown on other pages via cross-ref (read-only)
+
+### Block Model — One Block Per Tab
+- **Each tab contains exactly one block** — enforced at DB level
+- Block types: `text`, `timeline`, `feedback`, `visualization` (user-facing: "Charts")
+- `table` blocks are hub-only (page-level, no tabs)
+- Hub pages are hardcoded to `visualization` + `table` — no tabs, no Layout editing
+- Main timeline page is special — page-level `timeline` block, no tabs
+- Add/remove blocks by adding/removing tabs in the Edit Page modal
+- **No `~` insertion menu** — blocks are only created via tab creation
+- **No page templates** — tabs are configured directly in the Layout section
+- Block `order` field removed — one block per tab, ordering not needed
 
 ### State Management
 - No Redux/Zustand — Dexie `useLiveQuery` for reactive DB state
@@ -60,11 +71,11 @@ git push         # triggers GitHub Actions deploy
 - `:focus-visible` for keyboard focus indicators (not `:focus`)
 
 ### Typography Scale
-- Page title: 22px / 28px / bold / `--color-text-primary`
-- h1 (Title): 20px / 28px / bold / `--color-text-primary`
-- h2 (Heading): 18px / 24px / bold / `--color-text-primary`
+- Page title:      22px / 28px / bold / `--color-text-primary`
+- h1 (Title):      20px / 28px / bold / `--color-text-primary`
+- h2 (Heading):    18px / 24px / bold / `--color-text-primary`
 - h3 (Sub heading): 16px / 20px / semibold (600) / `--color-text-primary`
-- Body: 14px / 24px / regular
+- Body:            14px / 24px / regular
 
 ### Colors
 - All design tokens in `src/styles/tokens.css` (light + dark theme)
@@ -89,6 +100,7 @@ git push         # triggers GitHub Actions deploy
 - `emitChange()` MUST update `lastSetValue.current` before calling `onChange`
 - `blurTimer` stored in ref and cleaned up on unmount
 - DOMPurify is lazy-loaded (not in initial bundle)
+- No `~` component insertion — blocks only added via tabs in Edit Page modal
 
 ### Mentions
 - `enrichMentionHtml` uses a module-level cache keyed by `allPages` reference
@@ -108,6 +120,7 @@ git push         # triggers GitHub Actions deploy
 - Feedbacks scoped by date range in `ConfigurableViz`
 - Pie charts: donut style (55%/85% inner/outer radius) with right-side labels
 - Single-series charts use `FALLBACK_COLOR` (#B8C5DB grey)
+- "Visualization" block type is labeled "Charts" in the UI
 
 ### Modal System
 - `Modal.tsx` has focus trap (Tab/Shift+Tab cycling), auto-focus on open
@@ -123,8 +136,7 @@ git push         # triggers GitHub Actions deploy
 - Timer uses `[]` deps with ref pattern — do NOT add `showToast` to deps
 
 ### Service Worker
-- `defaultsInitialized` flag was REMOVED — seeding now uses DB-based idempotent
-  check inside a Dexie transaction
+- Seeding uses DB-based idempotent check inside a Dexie transaction
 - SW cache name includes content hash — changes on every build
 
 ## Accessibility Standards
@@ -141,6 +153,7 @@ git push         # triggers GitHub Actions deploy
 
 ## File Structure Notes
 - `src/hooks/useNavigateToPage.ts` — shared mention navigation
+- `src/hooks/useBlocks.ts` — `useBlocks` query hook + `updateBlock` plain export
 - `src/utils/safeStorage.ts` — safe localStorage wrapper
 - `src/utils/mentionEnricher.ts` — HTML enrichment with module-level cache
 - `src/components/DropdownPortal/DropdownPortal.tsx` — portal for modal dropdowns

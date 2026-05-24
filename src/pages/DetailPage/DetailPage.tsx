@@ -138,6 +138,11 @@ export function DetailPage({ routePrefix }: DetailPageProps) {
           )}
         </div>
         <BlockRenderer page={page} activeTabId={activeTabId} />
+        {tabs.length === 0 && (
+          <div className={pd.emptyTabsHint}>
+            No tabs yet — <button className={pd.emptyTabsAction} onClick={() => setEditPageOpen(true)}>add a tab</button> to get started.
+          </div>
+        )}
       </div>
       <PageForm open={editPageOpen} onClose={() => setEditPageOpen(false)} onSubmit={handleEditSubmit} initial={editInitial} isEdit isHub={page.type === 'hub' || undefined} hubId={page.type === 'hub' ? page.id : undefined} />
     </div>
