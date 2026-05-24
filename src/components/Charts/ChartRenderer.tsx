@@ -495,28 +495,66 @@ function FeedbackOverTimeChart({ config, monthCount = 12, pages, hubProperties, 
 
 // ---- Feedback per page ----
 
-function FeedbackPerPageChart({ config, pages, feedbacks, containerClass }: ChartRendererProps) {
+function FeedbackPerPageChart({ config, pages, hubProperties, feedbacks, containerClass }: ChartRendererProps) {
   const scopes = config.scopes ?? EMPTY_SCOPES
   const scopedFeedbacks = useScopedFeedbacks(feedbacks, pages, scopes)
+  const hub = useHubFromScopes(pages, scopes)
+  const typeProp = hubProperties.find((p) => p.hubId === hub?.id && p.scope === 'feedback')
   const cls = useContainerClass(config, containerClass)
   const { palette } = useChartPalette()
 
-  const data = useMemo(() => {
-    const counts = new Map<number, number>()
-    for (const f of scopedFeedbacks) counts.set(f.subjectId, (counts.get(f.subjectId) || 0) + 1)
-    return [...counts.entries()]
-      .map(([pageId, count]) => {
+  const { data, keys, colorMap } = useMemo(() => {
+    if (!typeProp) {
+      // Fallback: no feedback property, single total per page
+      const counts = new Map<number, number>()
+      for (const f of scopedFeedbacks) counts.set(f.subjectId, (counts.get(f.subjectId) || 0) + 1)
+      const data: Record<string, string | number>[] = [...counts.entries()]
+        .map(([pageId, count]) => {
+          const page = pages.find((p) => p.id === pageId)
+          return { name: page?.name ?? `Page ${pageId}`, Total: count } as Record<string, string | number>
+        })
+        .filter((d) => (d.Total as number) > 0)
+        .sort((a, b) => (b.Total as number) - (a.Total as number))
+      return { data, keys: ['Total'], colorMap: new Map<string, string>() }
+    }
+
+    const valueToLabel = new Map(typeProp.options.map((o) => [o.value, o.label]))
+    const colorMap = new Map(typeProp.options.map((o, i) => [o.label, o.color ?? getColor(i, palette)]))
+    const keys = typeProp.options.map((o) => o.label)
+
+    const pageMap = new Map<number, Record<string, number>>()
+    for (const f of scopedFeedbacks) {
+      if (!pageMap.has(f.subjectId)) {
+        const row: Record<string, number> = {}
+        for (const k of keys) row[k] = 0
+        pageMap.set(f.subjectId, row)
+      }
+      const label = valueToLabel.get(f.type)
+      if (label) pageMap.get(f.subjectId)![label]++
+    }
+
+    const data: Record<string, string | number>[] = [...pageMap.entries()]
+      .map(([pageId, counts]) => {
         const page = pages.find((p) => p.id === pageId)
-        return { name: page?.name ?? `Page ${pageId}`, value: count }
+        return { name: page?.name ?? `Page ${pageId}`, ...counts } as Record<string, string | number>
       })
-      .filter((d) => d.value > 0)
-      .sort((a, b) => b.value - a.value)
-  }, [scopedFeedbacks, pages])
+      .sort((a, b) => {
+        const totalA = keys.reduce((s, k) => s + (Number(a[k]) || 0), 0)
+        const totalB = keys.reduce((s, k) => s + (Number(b[k]) || 0), 0)
+        return totalB - totalA
+      })
+
+    return { data, keys, colorMap }
+  }, [scopedFeedbacks, pages, typeProp, palette])
 
   if (data.length === 0) return <ChartContainer className={cls}><EmptyState compact message="No feedback data" /></ChartContainer>
 
   if (config.chartType === 'pie') {
-    return <DonutWithLabels data={data} colorFn={(i) => getColor(i, palette)} containerClass={cls} tooltipProps={TP} />
+    const pieData = data.map((d) => ({
+      name: String(d.name),
+      value: keys.reduce((s, k) => s + (Number(d[k]) || 0), 0),
+    }))
+    return <DonutWithLabels data={pieData} colorFn={(i) => getColor(i, palette)} containerClass={cls} tooltipProps={TP} />
   }
 
   return (
@@ -525,9 +563,8 @@ function FeedbackPerPageChart({ config, pages, feedbacks, containerClass }: Char
         <BarChart data={data}>
           <XAxis dataKey="name" tick={tickStyle} stroke={axisStroke} interval={0} />
           <Tooltip {...TP} />
-          <Bar dataKey="value" name="Feedback">
-            {data.map((_, i) => <Cell key={i} fill={getColor(i, palette)} />)}
-          </Bar>
+          {keys.length > 1 && <Legend iconType="circle" iconSize={8} wrapperStyle={legendStyle} />}
+          {keys.map((key) => <Bar key={key} dataKey={key} stackId="fp" fill={colorMap.get(key) ?? FALLBACK_COLOR} />)}
         </BarChart>
       </ResponsiveContainer>
     </ChartContainer>
