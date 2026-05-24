@@ -44,13 +44,10 @@ export function HubPage({ role }: HubPageProps) {
   }, [hub, archivePage, unarchivePage, showToast])
 
   const { moreMenuItems } = usePageMenus({
-    pageId: hub?.id,
     onEditPage: () => setEditPageOpen(true),
     canDelete: true, canArchive: true, isArchived: !!hub?.archived,
-    deleteRedirect: '/',
     onArchive: handleArchive,
     onRequestDelete: () => setDeleteConfirm(true),
-    deletePage, pageName: hub?.name, showToast,
   })
 
   const editInitial = useMemo(() => ({

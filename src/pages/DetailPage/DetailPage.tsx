@@ -66,12 +66,10 @@ export function DetailPage({ routePrefix }: DetailPageProps) {
   }, [pageId, page, archivePage, unarchivePage, showToast])
 
   const { moreMenuItems } = usePageMenus({
-    pageId, canDelete, canArchive, isArchived: !!page?.archived,
-    deleteRedirect: hubPath,
+    canDelete, canArchive, isArchived: !!page?.archived,
     onEditPage: isMainTimeline ? undefined : () => setEditPageOpen(true),
     onArchive: handleArchive,
     onRequestDelete: () => setDeleteConfirm(true),
-    deletePage, pageName: page?.name, showToast,
   })
 
   const editInitial = useMemo(() => {

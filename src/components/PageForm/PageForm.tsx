@@ -85,7 +85,7 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
     if (!hubSelectOpen && !blockTypeSelectOpen) return
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        e.stopPropagation()
+        e.preventDefault()
         setHubSelectOpen(false)
         setBlockTypeSelectOpen(false)
       }

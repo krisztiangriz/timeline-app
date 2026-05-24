@@ -1,44 +1,25 @@
-import { useCallback, useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useMemo } from 'react'
 import { useModalContext } from './useAppContext'
 import type { MenuEntry } from '../components/ContextMenu/ContextMenu'
 
 interface UsePageMenusOptions {
-  pageId?: number
   canDelete?: boolean
   canArchive?: boolean
   isArchived?: boolean
-  deleteRedirect?: string
   onEditPage?: () => void
   onArchive?: () => void
   onRequestDelete?: () => void
-  deletePage?: (id: number) => Promise<void>
-  pageName?: string
-  showToast?: (msg: string) => void
 }
 
 export function usePageMenus({
-  pageId,
   canDelete = false,
   canArchive = false,
   isArchived = false,
-  deleteRedirect = '/',
   onEditPage,
   onArchive,
   onRequestDelete,
-  deletePage,
-  pageName,
-  showToast,
 }: UsePageMenusOptions) {
   const { setSettingsOpen, setHelpOpen } = useModalContext()
-  const navigate = useNavigate()
-
-  const handleDelete = useCallback(async () => {
-    if (!pageId || !deletePage || !pageName) return
-    await deletePage(pageId)
-    showToast?.('Page deleted')
-    navigate(deleteRedirect)
-  }, [pageId, deletePage, pageName, showToast, navigate, deleteRedirect])
 
   const moreMenuItems = useMemo<MenuEntry[]>(() => {
     const items: MenuEntry[] = []
@@ -55,13 +36,13 @@ export function usePageMenus({
       items.push({ type: 'item', label: isArchived ? 'Unarchive' : 'Archive', onClick: onArchive })
     }
 
-    if (canDelete && pageId && deletePage) {
+    if (canDelete && onRequestDelete) {
       if (!canArchive) items.push({ type: 'separator' })
-      items.push({ type: 'item', label: 'Delete', onClick: onRequestDelete ?? handleDelete })
+      items.push({ type: 'item', label: 'Delete', onClick: onRequestDelete })
     }
 
     return items
-  }, [onEditPage, canArchive, onArchive, isArchived, canDelete, pageId, deletePage, onRequestDelete, handleDelete, setSettingsOpen, setHelpOpen])
+  }, [onEditPage, canArchive, onArchive, isArchived, canDelete, onRequestDelete, setSettingsOpen, setHelpOpen])
 
   return { moreMenuItems }
 }

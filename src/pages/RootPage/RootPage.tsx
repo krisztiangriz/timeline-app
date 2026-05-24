@@ -58,7 +58,7 @@ export function RootPage() {
     if (hasPages && onboardingDone && userCreatedPage) triggerGuide('home-intro')
   }, [hasPages, onboardingDone, userCreatedPage, triggerGuide])
 
-  const { moreMenuItems } = usePageMenus({ showToast })
+  const { moreMenuItems } = usePageMenus({})
 
   function handleDragStart(e: React.DragEvent, pageId: number) {
     setDraggedId(pageId)
