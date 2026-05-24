@@ -138,7 +138,7 @@ export function DetailPage({ routePrefix }: DetailPageProps) {
           )}
         </div>
         <BlockRenderer page={page} activeTabId={activeTabId} />
-        {tabs.length === 0 && (
+        {tabs.length === 0 && page.type !== 'hub' && page.role !== 'main-timeline' && (
           <div className={pd.emptyTabsHint}>
             No tabs yet — <button className={pd.emptyTabsAction} onClick={() => setEditPageOpen(true)}>add a tab</button> to get started.
           </div>
