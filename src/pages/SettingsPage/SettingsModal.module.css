@@ -77,27 +77,6 @@
   height: 32px;
 }
 
-.addButton {
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--color-text-secondary);
-  border-radius: var(--radius-sm);
-}
-
-.addButton:hover {
-  background: var(--color-border-light);
-}
-
-.emptyHint {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-placeholder);
-  font-style: italic;
-  padding: var(--space-xs) 0;
-}
-
 .colorSwatchWrapper {
   position: relative;
   flex-shrink: 0;
@@ -122,18 +101,6 @@
 
 .colorSwatch:hover {
   border-color: var(--color-text-secondary);
-}
-
-.listItem {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-}
-
-.itemName {
-  flex: 1;
-  font-size: var(--font-size-base);
-  line-height: var(--line-height-base);
 }
 
 .deleteButton {
@@ -164,103 +131,6 @@
 
 .confirmButton:hover {
   background: var(--color-surface-hover);
-  color: var(--color-text-primary);
-}
-
-.inlineInput {
-  flex: 1;
-  font-size: var(--font-size-base);
-  line-height: var(--line-height-base);
-  padding: var(--space-2xs) var(--space-sm);
-  border: 1px solid var(--color-border-light);
-  border-radius: var(--radius-sm);
-  height: 32px;
-  background: var(--color-input-bg);
-}
-
-.inlineInput:focus {
-  border-color: var(--color-input-border);
-}
-
-.colorInput {
-  width: 72px;
-  padding: var(--space-2xs) var(--space-sm);
-  border: 1px solid var(--color-border-light);
-  border-radius: var(--radius-sm);
-  font-size: 11px;
-  line-height: var(--line-height-base);
-  height: 32px;
-  font-family: ui-monospace, 'SF Mono', Monaco, 'Cascadia Mono', monospace;
-  color: var(--color-text-primary);
-  background: var(--color-input-bg);
-  flex-shrink: 0;
-}
-
-.colorInput:focus {
-  border-color: var(--color-input-border);
-  outline: none;
-}
-
-/* ---- Trigger search ---- */
-
-.triggerSearchWrapper {
-  position: relative;
-}
-
-.triggerInputGroup {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.triggerButtonGroup {
-  display: flex;
-  align-items: center;
-  gap: var(--space-xs);
-  margin-left: auto;
-}
-
-.triggerSearchResults {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  z-index: 10;
-  max-height: 150px;
-  overflow-y: auto;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border-light);
-  border-radius: var(--radius-sm);
-  box-shadow: 0px 2px 8px var(--color-shadow);
-  margin-top: 4px;
-}
-
-.triggerSearchResult {
-  display: block;
-  width: 100%;
-  text-align: left;
-  padding: var(--space-xs) var(--space-sm);
-  font-size: var(--font-size-sm);
-  line-height: var(--line-height-base);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-text-primary);
-  cursor: pointer;
-  background: none;
-  border: none;
-}
-
-.triggerSearchResultActive {
-  composes: triggerSearchResult;
-  background: var(--color-surface-hover);
-}
-
-.clearTriggerSearch {
-  margin-left: var(--space-xs);
-  color: var(--color-text-secondary);
-  vertical-align: middle;
-}
-
-.clearTriggerSearch:hover {
   color: var(--color-text-primary);
 }
 
