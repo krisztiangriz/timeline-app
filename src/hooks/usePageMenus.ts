@@ -11,6 +11,7 @@ interface UsePageMenusOptions {
   deleteRedirect?: string
   onEditPage?: () => void
   onArchive?: () => void
+  onRequestDelete?: () => void
   deletePage?: (id: number) => Promise<void>
   pageName?: string
   showToast?: (msg: string) => void
@@ -24,6 +25,7 @@ export function usePageMenus({
   deleteRedirect = '/',
   onEditPage,
   onArchive,
+  onRequestDelete,
   deletePage,
   pageName,
   showToast,
@@ -33,7 +35,6 @@ export function usePageMenus({
 
   const handleDelete = useCallback(async () => {
     if (!pageId || !deletePage || !pageName) return
-    if (!window.confirm(`Delete "${pageName}"? This will delete all associated entries, feedback, and layouts.`)) return
     await deletePage(pageId)
     showToast?.('Page deleted')
     navigate(deleteRedirect)
@@ -56,11 +57,11 @@ export function usePageMenus({
 
     if (canDelete && pageId && deletePage) {
       if (!canArchive) items.push({ type: 'separator' })
-      items.push({ type: 'item', label: 'Delete', onClick: handleDelete })
+      items.push({ type: 'item', label: 'Delete', onClick: onRequestDelete ?? handleDelete })
     }
 
     return items
-  }, [onEditPage, canArchive, onArchive, isArchived, canDelete, pageId, deletePage, handleDelete, setSettingsOpen, setHelpOpen])
+  }, [onEditPage, canArchive, onArchive, isArchived, canDelete, pageId, deletePage, onRequestDelete, handleDelete, setSettingsOpen, setHelpOpen])
 
   return { moreMenuItems }
 }

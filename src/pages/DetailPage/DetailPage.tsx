@@ -1,9 +1,10 @@
 import { useStickyScroll } from '../../hooks/useStickyScroll'
 import { useState, useMemo, useEffect, useCallback } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { BreadcrumbNav } from '../../components/Breadcrumb/Breadcrumb'
 import { PageHeader } from '../../components/PageHeader/PageHeader'
 import { PageForm, type PageFormData } from '../../components/PageForm/PageForm'
+import { ConfirmModal } from '../../components/ConfirmModal/ConfirmModal'
 import { BlockRenderer } from '../../components/BlockRenderer/BlockRenderer'
 import { PropertyRow } from '../../components/PropertyRow/PropertyRow'
 import { usePage, usePageActions, usePageTabs, getPagePath } from '../../hooks/usePages'
@@ -22,6 +23,7 @@ interface DetailPageProps {
 
 export function DetailPage({ routePrefix }: DetailPageProps) {
   const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
   const pageId = id ? Number(id) : undefined
   const page = usePage(pageId)
   const tabs = usePageTabs(pageId)
@@ -30,6 +32,7 @@ export function DetailPage({ routePrefix }: DetailPageProps) {
   const { show: showToast } = useToast()
   const { sentinelRef, isScrolled } = useStickyScroll()
   const [editPageOpen, setEditPageOpen] = useState(false)
+  const [deleteConfirm, setDeleteConfirm] = useState(false)
   const [activeTabId, setActiveTabId] = useState<number | null>(null)
   const allBlocks = useBlocks(pageId)
 
@@ -67,6 +70,7 @@ export function DetailPage({ routePrefix }: DetailPageProps) {
     deleteRedirect: hubPath,
     onEditPage: isMainTimeline ? undefined : () => setEditPageOpen(true),
     onArchive: handleArchive,
+    onRequestDelete: () => setDeleteConfirm(true),
     deletePage, pageName: page?.name, showToast,
   })
 
@@ -145,6 +149,15 @@ export function DetailPage({ routePrefix }: DetailPageProps) {
         )}
       </div>
       <PageForm open={editPageOpen} onClose={() => setEditPageOpen(false)} onSubmit={handleEditSubmit} initial={editInitial} isEdit isHub={page.type === 'hub' || undefined} hubId={page.type === 'hub' ? page.id : undefined} />
+      <ConfirmModal
+        open={deleteConfirm}
+        title={page.type === 'hub' ? 'Delete hub' : 'Delete page'}
+        message={page.type === 'hub'
+          ? `Are you sure you want to delete "${page.name}"? This will also delete all child pages.`
+          : `Are you sure you want to delete "${page.name}"? This cannot be undone.`}
+        onClose={() => setDeleteConfirm(false)}
+        onConfirm={async () => { await deletePage(page.id!); navigate(hubPath); setDeleteConfirm(false) }}
+      />
     </div>
   )
 }

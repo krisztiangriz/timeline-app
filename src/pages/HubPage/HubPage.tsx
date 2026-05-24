@@ -1,8 +1,10 @@
 import { useStickyScroll } from '../../hooks/useStickyScroll'
 import { useState, useMemo, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { BreadcrumbNav } from '../../components/Breadcrumb/Breadcrumb'
 import { PageHeader } from '../../components/PageHeader/PageHeader'
 import { PageForm, type PageFormData } from '../../components/PageForm/PageForm'
+import { ConfirmModal } from '../../components/ConfirmModal/ConfirmModal'
 import { BlockRenderer } from '../../components/BlockRenderer/BlockRenderer'
 import { usePageByRole, usePageActions, usePageTabs, getPagePath } from '../../hooks/usePages'
 import { useBlocks } from '../../hooks/useBlocks'
@@ -19,11 +21,13 @@ interface HubPageProps {
 export function HubPage({ role }: HubPageProps) {
   const hub = usePageByRole(role)
   const tabs = usePageTabs(hub?.id)
+  const navigate = useNavigate()
   const { updatePage, deletePage, updateTabs, archivePage, unarchivePage } = usePageActions()
   const { allPages } = useAutocomplete()
   const { show: showToast } = useToast()
   const { sentinelRef, isScrolled } = useStickyScroll()
   const [editPageOpen, setEditPageOpen] = useState(false)
+  const [deleteConfirm, setDeleteConfirm] = useState(false)
   const allBlocks = useBlocks(hub?.id)
 
   const hubPath = hub ? getPagePath(hub, allPages) : '/'
@@ -45,6 +49,7 @@ export function HubPage({ role }: HubPageProps) {
     canDelete: true, canArchive: true, isArchived: !!hub?.archived,
     deleteRedirect: '/',
     onArchive: handleArchive,
+    onRequestDelete: () => setDeleteConfirm(true),
     deletePage, pageName: hub?.name, showToast,
   })
 
@@ -82,6 +87,13 @@ export function HubPage({ role }: HubPageProps) {
         <BlockRenderer page={hub} />
       </div>
       <PageForm open={editPageOpen} onClose={() => setEditPageOpen(false)} onSubmit={handleEditSubmit} initial={editInitial} isEdit isHub hubId={hub.id!} />
+      <ConfirmModal
+        open={deleteConfirm}
+        title="Delete hub"
+        message={`Are you sure you want to delete "${hub.name}"? This will also delete all child pages.`}
+        onClose={() => setDeleteConfirm(false)}
+        onConfirm={async () => { await deletePage(hub.id!); navigate('/'); setDeleteConfirm(false) }}
+      />
     </div>
   )
 }

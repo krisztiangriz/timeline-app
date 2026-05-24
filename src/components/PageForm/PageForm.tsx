@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { Modal } from '../Modal/Modal'
+import { ConfirmModal } from '../ConfirmModal/ConfirmModal'
 import { PropertyEditorContent } from '../PropertyEditor/PropertyEditor'
 import { DragHandleIcon, TrashIcon, CheckIcon, PlusIcon, CloseIcon } from '../Icons/Icons'
 import { DropdownPortal } from '../DropdownPortal/DropdownPortal'
@@ -77,6 +78,7 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
   const hubSelectAnchorRef = useRef<HTMLDivElement>(null)
   const [blockTypeSelectOpen, setBlockTypeSelectOpen] = useState(false)
   const blockTypeAnchorRef = useRef<HTMLDivElement>(null)
+  const [tabDeleteConfirm, setTabDeleteConfirm] = useState<number | null>(null)
 
   // Close dropdown portals on Escape
   useEffect(() => {
@@ -244,6 +246,7 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
   const effectiveHubId = hubId ?? createdHubId ?? undefined
 
   return (
+    <>
     <Modal
       title={isEdit ? 'Edit page' : 'Add page'}
       open={open}
@@ -382,7 +385,7 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
               value={tab.name}
               onChange={(e) => setTabs((t) => t.map((tt, j) => j === i ? { ...tt, name: e.target.value } : tt))}
             />
-            <button className={styles.deleteButton} onClick={() => setTabs((t) => t.filter((_, j) => j !== i))} aria-label={`Delete ${tab.name}`}>
+            <button className={styles.deleteButton} onClick={() => setTabDeleteConfirm(i)} aria-label={`Delete ${tab.name}`}>
               <TrashIcon />
             </button>
           </div>
@@ -435,5 +438,13 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
         <PropertyEditorContent hubId={effectiveHubId} />
       )}
     </Modal>
+    <ConfirmModal
+      open={tabDeleteConfirm !== null}
+      title="Delete tab"
+      message={tabDeleteConfirm !== null ? `Are you sure you want to delete the "${tabs[tabDeleteConfirm]?.name}" tab? Its content will be permanently removed.` : ''}
+      onClose={() => setTabDeleteConfirm(null)}
+      onConfirm={() => { setTabs((t) => t.filter((_, j) => j !== tabDeleteConfirm!)); setTabDeleteConfirm(null) }}
+    />
+    </>
   )
 }
