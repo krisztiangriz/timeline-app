@@ -73,6 +73,9 @@ export function TimelineView({ pageId, title, readOnly = false, page }: Timeline
     return merged
   }, [directEntries, crossRefEntries])
 
+  // Compute today's key outside useMemo so it updates at midnight on next render
+  const todayKey = startOfDay(new Date()).toISOString()
+
   // Split entries into pending, today (direct + cross-ref), and history groups
   const { pendingEntry, todayEntry, todayCrossRefs, historyGroups } = useMemo(() => {
     const pendingEntries: TimelineEntry[] = []
@@ -93,7 +96,6 @@ export function TimelineView({ pageId, title, readOnly = false, page }: Timeline
       (a, b) => new Date(b[0]).getTime() - new Date(a[0]).getTime()
     )
 
-    const todayKey = startOfDay(new Date()).toISOString()
     const todayAll = dated.get(todayKey) ?? []
     // Direct today entry = the one owned by this page
     const todayDirect = todayAll.find((e) => directIds.has(e.id!))
@@ -105,7 +107,7 @@ export function TimelineView({ pageId, title, readOnly = false, page }: Timeline
     const singlePending = pendingEntries[0] ?? undefined
 
     return { pendingEntry: singlePending, todayEntry: todayDirect, todayCrossRefs: todayCrossRefEntries, historyGroups: history }
-  }, [allEntries, directIds])
+  }, [allEntries, directIds, todayKey])
 
   // ---- Migration: merge multiple pending entries into one ----
   const migrationDone = useRef(false)
