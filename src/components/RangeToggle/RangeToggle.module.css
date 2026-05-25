@@ -1,0 +1,34 @@
+.rangeToggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.rangeSeparator {
+  width: 1px;
+  height: 12px;
+  background: var(--color-text-placeholder);
+  flex-shrink: 0;
+}
+
+.rangeButton {
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-base);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+}
+
+.rangeButton:hover {
+  color: var(--color-text-primary);
+}
+
+.rangeButtonActive {
+  composes: rangeButton;
+  color: var(--color-text-primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}

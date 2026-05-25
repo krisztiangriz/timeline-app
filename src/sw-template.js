@@ -63,16 +63,25 @@ self.addEventListener('fetch', (event) => {
     return
   }
 
-  // Hashed assets (Vite output) → cache-first (immutable content-hashed files)
+  // Skip large media files — don't cache videos
+  if (url.pathname.match(/\.(mp4|webm|ogg|mov)$/)) return
+
+  // Hashed assets (Vite output) → cache-first, cache on first fetch for lazy chunks
   if (url.pathname.startsWith(BASE + 'assets/')) {
     event.respondWith(
-      caches.match(event.request).then((cached) => cached || fetch(event.request))
+      caches.match(event.request).then((cached) => {
+        if (cached) return cached
+        return fetch(event.request).then((response) => {
+          if (response && response.ok) {
+            const clone = response.clone()
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone))
+          }
+          return response
+        })
+      })
     )
     return
   }
-
-  // Skip large media files — don't cache videos
-  if (url.pathname.match(/\.(mp4|webm|ogg|mov)$/)) return
 
   // Everything else → network-first with cache fallback
   event.respondWith(

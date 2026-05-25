@@ -1,5 +1,5 @@
 import { Fragment } from 'react'
-import styles from '../Charts/Charts.module.css'
+import styles from './RangeToggle.module.css'
 
 export type RangeMonths = 0 | 3 | 6 | 12
 

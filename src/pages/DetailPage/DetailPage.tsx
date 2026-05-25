@@ -7,7 +7,7 @@ import { PageForm, type PageFormData } from '../../components/PageForm/PageForm'
 import { ConfirmModal } from '../../components/ConfirmModal/ConfirmModal'
 import { BlockRenderer } from '../../components/BlockRenderer/BlockRenderer'
 import { PropertyRow } from '../../components/PropertyRow/PropertyRow'
-import { usePage, usePageActions, usePageTabs, getPagePath } from '../../hooks/usePages'
+import { usePage, updatePage, deletePage, updateTabs, archivePage, unarchivePage, usePageTabs, getPagePath } from '../../hooks/usePages'
 import { useBlocks } from '../../hooks/useBlocks'
 import { usePageMenus } from '../../hooks/usePageMenus'
 import { useAutocomplete } from '../../hooks/useAutocomplete'
@@ -27,7 +27,6 @@ export function DetailPage({ routePrefix }: DetailPageProps) {
   const pageId = id ? Number(id) : undefined
   const page = usePage(pageId)
   const tabs = usePageTabs(pageId)
-  const { updatePage, deletePage, updateTabs, archivePage, unarchivePage } = usePageActions()
   const { allPages } = useAutocomplete()
   const { show: showToast } = useToast()
   const { sentinelRef, isScrolled } = useStickyScroll()

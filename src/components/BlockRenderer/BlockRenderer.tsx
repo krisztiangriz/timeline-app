@@ -129,7 +129,7 @@ const TextBlock = memo(function TextBlock({ block, onUpdate, onMentionClick, pla
 
 // ---- Component block content ----
 
-function ComponentBlockContent({ block, page }: { block: Block; page: Page }) {
+const ComponentBlockContent = memo(function ComponentBlockContent({ block, page }: { block: Block; page: Page }) {
   switch (block.type) {
     case 'timeline': return <TimelineView pageId={page.id!} page={page} />
     case 'feedback': return <FeedbackList subjectId={page.id!} />
@@ -137,7 +137,7 @@ function ComponentBlockContent({ block, page }: { block: Block; page: Page }) {
     case 'table': return <TableBlock page={page} />
     default: return null
   }
-}
+})
 
 // ---- Table block ----
 

@@ -11,6 +11,7 @@ import {
   renamePropertyOption,
   updatePropertyOptionColor,
 } from '../../hooks/useHubProperties'
+import { useToast } from '../../hooks/useToast'
 import { CHART_COLORS } from '../../constants/colors'
 import { PALETTE_OPTIONS } from '../../hooks/useChartPalette'
 import styles from './PropertyEditor.module.css'
@@ -18,7 +19,7 @@ import styles from './PropertyEditor.module.css'
 import type { HubProperty } from '../../types'
 
 /** Reusable property block — renders a single property with its options */
-function PropertyBlock({ prop, renamingPropertyId, renamingPropertyName, setRenamingPropertyId, setRenamingPropertyName, handleRenameProperty, addingOptionForId, setAddingOptionForId, newOptionLabel, setNewOptionLabel, handleAddOption, renamingOption, setRenamingOption, renamingOptionLabel, setRenamingOptionLabel, handleRenameOption, colorPickerFor, setColorPickerFor, colorAnchorRef }: {
+function PropertyBlock({ prop, renamingPropertyId, renamingPropertyName, setRenamingPropertyId, setRenamingPropertyName, handleRenameProperty, addingOptionForId, setAddingOptionForId, newOptionLabel, setNewOptionLabel, handleAddOption, renamingOption, setRenamingOption, renamingOptionLabel, setRenamingOptionLabel, handleRenameOption, colorPickerFor, setColorPickerFor, colorAnchorRef, onError }: {
   prop: HubProperty
   renamingPropertyId: number | null
   renamingPropertyName: string
@@ -38,6 +39,7 @@ function PropertyBlock({ prop, renamingPropertyId, renamingPropertyName, setRena
   colorPickerFor: { propertyId: number; value: string } | null
   setColorPickerFor: (v: { propertyId: number; value: string } | null) => void
   colorAnchorRef: React.RefObject<HTMLButtonElement | null>
+  onError: (msg: string) => void
 }) {
   return (
     <div className={styles.propertyBlock}>
@@ -62,7 +64,7 @@ function PropertyBlock({ prop, renamingPropertyId, renamingPropertyName, setRena
             {prop.name}
           </span>
         )}
-        <button className={styles.deleteBtn} onClick={() => deleteHubProperty(prop.id!)} aria-label={`Delete ${prop.name}`}>
+        <button className={styles.deleteBtn} onClick={() => deleteHubProperty(prop.id!).catch(() => onError('Failed to delete property'))} aria-label={`Delete ${prop.name}`}>
           <TrashIcon />
         </button>
       </div>
@@ -88,7 +90,7 @@ function PropertyBlock({ prop, renamingPropertyId, renamingPropertyName, setRena
                 <ColorPicker
                   colors={PALETTE_OPTIONS}
                   value={opt.color}
-                  onChange={(color) => updatePropertyOptionColor(prop.id!, opt.value, color)}
+                  onChange={(color) => updatePropertyOptionColor(prop.id!, opt.value, color).catch(() => onError('Failed to update color'))}
                   onClose={() => setColorPickerFor(null)}
                   anchorRef={colorAnchorRef}
                 />
@@ -114,7 +116,7 @@ function PropertyBlock({ prop, renamingPropertyId, renamingPropertyName, setRena
                 {opt.label}
               </span>
             )}
-            <button className={styles.deleteBtn} onClick={() => deletePropertyOption(prop.id!, opt.value)} aria-label={`Delete ${opt.label}`}>
+            <button className={styles.deleteBtn} onClick={() => deletePropertyOption(prop.id!, opt.value).catch(() => onError('Failed to delete option'))} aria-label={`Delete ${opt.label}`}>
               <TrashIcon />
             </button>
           </div>
@@ -150,6 +152,7 @@ export function PropertyEditorContent({ hubId }: { hubId: number }) {
   const allProperties = useHubProperties(hubId)
   const pageProperties = allProperties.filter((p) => !p.scope || p.scope === 'page')
   const feedbackProperties = allProperties.filter((p) => p.scope === 'feedback')
+  const { show: showToast } = useToast()
 
   // Editing state
   const [renamingPropertyId, setRenamingPropertyId] = useState<number | null>(null)
@@ -165,30 +168,38 @@ export function PropertyEditorContent({ hubId }: { hubId: number }) {
 
   async function handleAddProperty() {
     if (!addingPropertyName.trim() || !addingPropertyScope) return
-    await addHubProperty(hubId, addingPropertyName.trim(), addingPropertyScope)
-    setAddingPropertyName('')
-    setAddingPropertyScope(null)
+    try {
+      await addHubProperty(hubId, addingPropertyName.trim(), addingPropertyScope)
+      setAddingPropertyName('')
+      setAddingPropertyScope(null)
+    } catch { showToast('Failed to add property') }
   }
 
   async function handleRenameProperty(id: number) {
     if (!renamingPropertyName.trim()) { setRenamingPropertyId(null); return }
-    await renameHubProperty(id, renamingPropertyName.trim())
-    setRenamingPropertyId(null)
-    setRenamingPropertyName('')
+    try {
+      await renameHubProperty(id, renamingPropertyName.trim())
+      setRenamingPropertyId(null)
+      setRenamingPropertyName('')
+    } catch { showToast('Failed to rename property') }
   }
 
   async function handleAddOption(propertyId: number) {
     if (!newOptionLabel.trim()) return
-    await addPropertyOption(propertyId, newOptionLabel.trim())
-    setNewOptionLabel('')
-    setAddingOptionForId(null)
+    try {
+      await addPropertyOption(propertyId, newOptionLabel.trim())
+      setNewOptionLabel('')
+      setAddingOptionForId(null)
+    } catch { showToast('Failed to add option') }
   }
 
   async function handleRenameOption() {
     if (!renamingOption || !renamingOptionLabel.trim()) { setRenamingOption(null); return }
-    await renamePropertyOption(renamingOption.propertyId, renamingOption.value, renamingOptionLabel.trim())
-    setRenamingOption(null)
-    setRenamingOptionLabel('')
+    try {
+      await renamePropertyOption(renamingOption.propertyId, renamingOption.value, renamingOptionLabel.trim())
+      setRenamingOption(null)
+      setRenamingOptionLabel('')
+    } catch { showToast('Failed to rename option') }
   }
 
   return (
@@ -224,6 +235,7 @@ export function PropertyEditorContent({ hubId }: { hubId: number }) {
             colorPickerFor={colorPickerFor}
             setColorPickerFor={setColorPickerFor}
             colorAnchorRef={colorAnchorRef}
+            onError={showToast}
           />
         ))}
 
@@ -276,6 +288,7 @@ export function PropertyEditorContent({ hubId }: { hubId: number }) {
             colorPickerFor={colorPickerFor}
             setColorPickerFor={setColorPickerFor}
             colorAnchorRef={colorAnchorRef}
+            onError={showToast}
           />
         ))}
 

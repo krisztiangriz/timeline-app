@@ -6,7 +6,7 @@ import { OnboardingGuidesProvider, useOnboardingGuides } from './hooks/useOnboar
 import { ToastContainer } from './components/Toast/Toast'
 import { ToastProvider, useToast } from './hooks/useToast'
 import { useAutoBackup } from './hooks/useAutoBackup'
-import { usePageActions, usePageByRole, getPagePath } from './hooks/usePages'
+import { addPage, usePageByRole, getPagePath } from './hooks/usePages'
 import { seedDefaultPropertyValues } from './hooks/useHubProperties'
 import { initializeTheme } from './hooks/useTheme'
 import { safeSetItem } from './utils/safeStorage'
@@ -43,7 +43,6 @@ function GlobalOverlays() {
   } = useModalContext()
   const { toasts, show: showToast } = useToast()
   const { allPages } = useAutocomplete()
-  const { addPage } = usePageActions()
   const navigate = useNavigate()
   const location = useLocation()
 

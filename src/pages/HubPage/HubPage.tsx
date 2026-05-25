@@ -6,7 +6,7 @@ import { PageHeader } from '../../components/PageHeader/PageHeader'
 import { PageForm, type PageFormData } from '../../components/PageForm/PageForm'
 import { ConfirmModal } from '../../components/ConfirmModal/ConfirmModal'
 import { BlockRenderer } from '../../components/BlockRenderer/BlockRenderer'
-import { usePageByRole, usePageActions, usePageTabs, getPagePath } from '../../hooks/usePages'
+import { usePageByRole, updatePage, deletePage, updateTabs, archivePage, unarchivePage, usePageTabs, getPagePath } from '../../hooks/usePages'
 import { useBlocks } from '../../hooks/useBlocks'
 import { usePageMenus } from '../../hooks/usePageMenus'
 import { useAutocomplete } from '../../hooks/useAutocomplete'
@@ -22,7 +22,6 @@ export function HubPage({ role }: HubPageProps) {
   const hub = usePageByRole(role)
   const tabs = usePageTabs(hub?.id)
   const navigate = useNavigate()
-  const { updatePage, deletePage, updateTabs, archivePage, unarchivePage } = usePageActions()
   const { allPages } = useAutocomplete()
   const { show: showToast } = useToast()
   const { sentinelRef, isScrolled } = useStickyScroll()

@@ -6,7 +6,7 @@ import { PageHeader } from '../../components/PageHeader/PageHeader'
 import { EmptyState } from '../../components/EmptyState/EmptyState'
 import { usePreferences } from '../../hooks/useAppContext'
 import {
-  usePageActions,
+  updatePage,
   buildFlatPageList,
   getPagePath,
 } from '../../hooks/usePages'
@@ -31,7 +31,6 @@ function isHubPage(type: string): boolean {
 
 export function RootPage() {
   const { allPages } = useAutocomplete()
-  const { updatePage } = usePageActions()
   const { showArchived } = usePreferences()
   const navigate = useNavigate()
   const { show: showToast } = useToast()
