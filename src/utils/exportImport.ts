@@ -1,130 +1,217 @@
 import { db } from '../db/database'
-import DOMPurify from 'dompurify'
-import type { Page } from '../types'
+import type {
+  Page,
+  Tab,
+  Block,
+  TimelineEntry,
+  Feedback,
+  PageSetting,
+  ChartConfig,
+  HubProperty,
+  PagePropertyValue,
+} from '../types'
 
-// ---- Import validation helpers ----
+// ---- Export Format ----
 
-function isValidPage(p: unknown): boolean {
-  if (!p || typeof p !== 'object') return false
-  const pg = p as Record<string, unknown>
-  return typeof pg.name === 'string' && typeof pg.type === 'string'
-}
-
-function isValidEntry(e: unknown): boolean {
-  if (!e || typeof e !== 'object') return false
-  const en = e as Record<string, unknown>
-  return typeof en.pageId === 'number' && typeof en.text === 'string'
-}
-
-function isValidFeedback(f: unknown): boolean {
-  if (!f || typeof f !== 'object') return false
-  const fb = f as Record<string, unknown>
-  return typeof fb.subjectId === 'number' && typeof fb.type === 'string'
-}
-
-function isValidBlock(b: unknown): boolean {
-  if (!b || typeof b !== 'object') return false
-  const bl = b as Record<string, unknown>
-  return typeof bl.pageId === 'number' && typeof bl.type === 'string'
-}
+const CURRENT_VERSION = 13
 
 interface ExportData {
-  version: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12
+  version: typeof CURRENT_VERSION
   exportedAt: string
-  tags: unknown[]
-  pages: unknown[]
-  layouts: unknown[]
-  timelineEntries: unknown[]
-  feedbacks: unknown[]
-  categories: unknown[]
-  shortcuts?: unknown[]
-  dimensions: unknown[]
-  pageSettings: unknown[]
-  blocks: unknown[]
-  chartConfigs: unknown[]
-  abbreviationGroups?: unknown[]
-  candidateStatuses?: unknown[]
-  hubProperties?: unknown[]
-  pagePropertyValues?: unknown[]
+  pages: Page[]
+  tabs: Tab[]
+  blocks: Block[]
+  timelineEntries: TimelineEntry[]
+  feedbacks: Feedback[]
+  pageSettings: PageSetting[]
+  chartConfigs: ChartConfig[]
+  hubProperties: HubProperty[]
+  pagePropertyValues: PagePropertyValue[]
 }
 
-/**
- * After importing data, ensure all structural pages have role fields.
- * Uses the same heuristics as the v6 migration.
- */
-async function ensurePageRoles(): Promise<void> {
-  const allPages = await db.pages.toArray()
+// ---- Validation ----
 
-  // Check if roles and triggers already exist
-  const hasRoles = allPages.some((p) => p.role)
-  const hasTriggers = allPages.some((p) => p.mentionTrigger)
-  if (hasRoles && hasTriggers) return
+function isObject(v: unknown): v is Record<string, unknown> {
+  return v !== null && typeof v === 'object' && !Array.isArray(v)
+}
 
-  // Backfill triggers on existing hubs that have roles but no triggers
-  if (hasRoles && !hasTriggers) {
-    for (const p of allPages) {
-      if (p.role === 'colleague-hub' && !p.mentionTrigger) {
-        await db.pages.update(p.id!, { mentionTrigger: '@' })
-      } else if (p.role === 'project-hub' && !p.mentionTrigger) {
-        await db.pages.update(p.id!, { mentionTrigger: '#' })
-      }
-    }
-    return
-  }
+function isString(v: unknown): v is string {
+  return typeof v === 'string'
+}
 
-  // Assign roles to hubs by children types
-  const hubs = allPages.filter((p) => p.type === 'hub' && !p.parentId)
-  let peopleHubId: number | undefined
-  let projectHubId: number | undefined
+function isNumber(v: unknown): v is number {
+  return typeof v === 'number' && !Number.isNaN(v)
+}
 
-  for (const hub of hubs) {
-    const children = allPages.filter((p) => p.parentId === hub.id)
-    const hasPeople = children.some((c) => c.type === 'colleague')
-    const hasCandidates = children.some((c) => c.type === 'candidate')
-    const hasProjects = children.some((c) => c.type === 'project')
+function isArray(v: unknown): v is unknown[] {
+  return Array.isArray(v)
+}
 
-    if ((hasPeople || /people|colleague/i.test(hub.name)) && !peopleHubId) {
-      await db.pages.update(hub.id!, { role: 'colleague-hub', mentionTrigger: '@' })
-      peopleHubId = hub.id
-    } else if (hasCandidates || /candidate/i.test(hub.name)) {
-      await db.pages.update(hub.id!, { role: 'candidate-hub' })
-    } else if ((hasProjects || /project/i.test(hub.name)) && !projectHubId) {
-      await db.pages.update(hub.id!, { role: 'project-hub', mentionTrigger: '#' })
-      projectHubId = hub.id
-    }
-  }
+function toDate(v: unknown): Date {
+  if (v instanceof Date) return v
+  if (isString(v) || isNumber(v)) return new Date(v)
+  return new Date()
+}
 
-  // If no candidate hub exists, create one and move candidates
-  const candidateHub = await db.pages.where('role').equals('candidate-hub').first()
-  if (!candidateHub) {
-    const now = new Date()
-    const candidateHubId = await db.pages.add({
-      name: 'Candidate hub',
-      type: 'hub',
-      role: 'candidate-hub',
-      description: '',
-      createdAt: now,
-      updatedAt: now,
-      editCount: 0,
-    } as Page)
-    await db.blocks.add({ pageId: candidateHubId as number, type: 'table' })
-    await db.blocks.add({ pageId: candidateHubId as number, type: 'text', content: '' })
-
-    // Move orphaned candidates
-    const candidates = allPages.filter((p) => p.type === 'candidate')
-    for (const c of candidates) {
-      await db.pages.update(c.id!, { parentId: candidateHubId as number })
-    }
+function validatePage(raw: unknown): Page | null {
+  if (!isObject(raw)) return null
+  if (!isString(raw.name) || !isString(raw.type)) return null
+  return {
+    ...(isNumber(raw.id) ? { id: raw.id } : {}),
+    name: raw.name,
+    type: raw.type as Page['type'],
+    role: isString(raw.role) ? raw.role as Page['role'] : undefined,
+    mentionTrigger: isString(raw.mentionTrigger) ? raw.mentionTrigger.slice(0, 1) : undefined,
+    mentionCollapsed: raw.mentionCollapsed === true ? true : undefined,
+    parentId: isNumber(raw.parentId) ? raw.parentId : undefined,
+    archived: raw.archived === true ? true : undefined,
+    description: isString(raw.description) ? raw.description : '',
+    createdAt: toDate(raw.createdAt),
+    updatedAt: toDate(raw.updatedAt),
+    editCount: isNumber(raw.editCount) ? raw.editCount : 0,
   }
 }
 
-/**
- * Export all data from IndexedDB as a JSON string.
- */
+function validateTab(raw: unknown): Tab | null {
+  if (!isObject(raw)) return null
+  if (!isNumber(raw.pageId)) return null
+  return {
+    ...(isNumber(raw.id) ? { id: raw.id } : {}),
+    pageId: raw.pageId,
+    type: 'tab',
+    name: isString(raw.name) ? raw.name : 'Untitled',
+    order: isNumber(raw.order) ? raw.order : 0,
+  }
+}
+
+function validateBlock(raw: unknown): Block | null {
+  if (!isObject(raw)) return null
+  if (!isNumber(raw.pageId) || !isString(raw.type)) return null
+  return {
+    ...(isNumber(raw.id) ? { id: raw.id } : {}),
+    pageId: raw.pageId,
+    tabId: isNumber(raw.tabId) ? raw.tabId : undefined,
+    type: raw.type as Block['type'],
+    content: isString(raw.content) ? raw.content : undefined,
+  }
+}
+
+function validateTimelineEntry(raw: unknown): TimelineEntry | null {
+  if (!isObject(raw)) return null
+  if (!isNumber(raw.pageId) || !isString(raw.text)) return null
+  return {
+    ...(isNumber(raw.id) ? { id: raw.id } : {}),
+    pageId: raw.pageId,
+    date: toDate(raw.date),
+    text: raw.text,
+    tagRefs: isArray(raw.tagRefs) ? raw.tagRefs.filter(isString) : [],
+    isPending: raw.isPending === true,
+    createdAt: toDate(raw.createdAt),
+    updatedAt: toDate(raw.updatedAt),
+  }
+}
+
+function validateFeedback(raw: unknown): Feedback | null {
+  if (!isObject(raw)) return null
+  if (!isNumber(raw.subjectId) || !isString(raw.type)) return null
+  return {
+    ...(isNumber(raw.id) ? { id: raw.id } : {}),
+    subjectId: raw.subjectId,
+    type: raw.type,
+    description: isString(raw.description) ? raw.description : '',
+    dimensionId: isString(raw.dimensionId) ? raw.dimensionId : undefined,
+    createdAt: toDate(raw.createdAt),
+  }
+}
+
+function validatePageSetting(raw: unknown): PageSetting | null {
+  if (!isObject(raw)) return null
+  if (!isString(raw.pageKey) || !isString(raw.sortKey) || !isString(raw.sortDir)) return null
+  return {
+    ...(isNumber(raw.id) ? { id: raw.id } : {}),
+    pageKey: raw.pageKey,
+    sortKey: raw.sortKey,
+    sortDir: raw.sortDir,
+  }
+}
+
+function validateChartConfig(raw: unknown): ChartConfig | null {
+  if (!isObject(raw)) return null
+  if (!isNumber(raw.blockId) || !isString(raw.dataSource) || !isString(raw.chartType)) return null
+  return {
+    ...(isNumber(raw.id) ? { id: raw.id } : {}),
+    blockId: raw.blockId,
+    name: isString(raw.name) ? raw.name : undefined,
+    dataSource: raw.dataSource as ChartConfig['dataSource'],
+    chartType: raw.chartType as ChartConfig['chartType'],
+    scopes: isArray(raw.scopes) ? raw.scopes as ChartConfig['scopes'] : undefined,
+    propertyId: isNumber(raw.propertyId) ? raw.propertyId : undefined,
+    order: isNumber(raw.order) ? raw.order : 0,
+  }
+}
+
+function validateHubProperty(raw: unknown): HubProperty | null {
+  if (!isObject(raw)) return null
+  if (!isNumber(raw.hubId) || !isString(raw.name)) return null
+  return {
+    ...(isNumber(raw.id) ? { id: raw.id } : {}),
+    hubId: raw.hubId,
+    name: raw.name,
+    type: 'select',
+    options: isArray(raw.options) ? raw.options as HubProperty['options'] : [],
+    order: isNumber(raw.order) ? raw.order : 0,
+    scope: raw.scope === 'feedback' ? 'feedback' : raw.scope === 'page' ? 'page' : undefined,
+  }
+}
+
+function validatePagePropertyValue(raw: unknown): PagePropertyValue | null {
+  if (!isObject(raw)) return null
+  if (!isNumber(raw.pageId) || !isNumber(raw.propertyId) || !isString(raw.value)) return null
+  return {
+    ...(isNumber(raw.id) ? { id: raw.id } : {}),
+    pageId: raw.pageId,
+    propertyId: raw.propertyId,
+    value: raw.value,
+  }
+}
+
+/** Validate and filter an array with a per-item validator */
+function validateArray<T>(arr: unknown, validator: (raw: unknown) => T | null): T[] {
+  if (!isArray(arr)) return []
+  const results: T[] = []
+  for (const item of arr) {
+    const validated = validator(item)
+    if (validated) results.push(validated)
+  }
+  return results
+}
+
+// ---- Sanitization (lazy-loaded DOMPurify) ----
+
+let purify: { sanitize: (html: string) => string } | null = null
+
+async function loadPurify() {
+  if (!purify) {
+    const mod = await import('dompurify')
+    purify = mod.default
+  }
+  return purify
+}
+
+function sanitizeHtml(records: { text?: string; content?: string; description?: string }[]): void {
+  if (!purify) return
+  for (const r of records) {
+    if (typeof r.text === 'string') r.text = purify.sanitize(r.text)
+    if (typeof r.content === 'string') r.content = purify.sanitize(r.content)
+    if (typeof r.description === 'string') r.description = purify.sanitize(r.description)
+  }
+}
+
+// ---- Export ----
+
 async function exportAllData(): Promise<string> {
-  const [tags, pages, layouts, blocks, timelineEntries, feedbacks, pageSettings, chartConfigs, hubProperties, pagePropertyValues] =
+  const [pages, tabs, blocks, timelineEntries, feedbacks, pageSettings, chartConfigs, hubProperties, pagePropertyValues] =
     await Promise.all([
-      db.tags.toArray(),
       db.pages.toArray(),
       db.layouts.toArray(),
       db.blocks.toArray(),
@@ -137,17 +224,14 @@ async function exportAllData(): Promise<string> {
     ])
 
   const data: ExportData = {
-    version: 12,
+    version: CURRENT_VERSION,
     exportedAt: new Date().toISOString(),
-    tags,
     pages,
-    layouts,
+    tabs,
+    blocks,
     timelineEntries,
     feedbacks,
-    categories: [],
-    dimensions: [],
     pageSettings,
-    blocks,
     chartConfigs,
     hubProperties,
     pagePropertyValues,
@@ -167,208 +251,132 @@ async function downloadJson(prefix: string) {
   URL.revokeObjectURL(url)
 }
 
-/**
- * Download the exported data as a JSON file.
- */
 export async function downloadExport() {
   await downloadJson('timeline-export')
 }
 
-/**
- * Download an automatic backup as a JSON file.
- * Uses a distinct filename prefix so users can tell backups from manual exports.
- */
 export async function downloadBackup() {
   await downloadJson('timeline-backup')
 }
 
-/**
- * Import data from a JSON file, replacing all existing data.
- */
+// ---- Import ----
+
 async function importData(jsonString: string): Promise<void> {
-  const data: ExportData = JSON.parse(jsonString)
+  const raw: unknown = JSON.parse(jsonString)
+  if (!isObject(raw)) throw new Error('Invalid export file: expected JSON object')
 
-  if (data.version < 1 || data.version > 12) {
-    throw new Error(`Unsupported export version: ${data.version}`)
+  // Accept version 12 (old format with 'layouts' key) or 13 (new format with 'tabs' key)
+  const version = raw.version
+  if (!isNumber(version) || version < 12) {
+    throw new Error(`Unsupported export version: ${version}. Re-export from the app.`)
   }
 
-  // Validate required arrays exist before touching the DB
-  if (!Array.isArray(data.tags) || !Array.isArray(data.pages) ||
-      !Array.isArray(data.layouts) || !Array.isArray(data.timelineEntries) ||
-      !Array.isArray(data.feedbacks)) {
-    throw new Error('Invalid export file: missing required data tables')
+  // Parse and validate all tables — old format uses 'layouts', new uses 'tabs'
+  const tabsRaw = raw.tabs ?? raw.layouts
+  const pages = validateArray(raw.pages, validatePage)
+  const tabs = validateArray(tabsRaw, validateTab)
+  const blocks = validateArray(raw.blocks, validateBlock)
+  const timelineEntries = validateArray(raw.timelineEntries, validateTimelineEntry)
+  const feedbacks = validateArray(raw.feedbacks, validateFeedback)
+  const pageSettings = validateArray(raw.pageSettings, validatePageSetting)
+  const chartConfigs = validateArray(raw.chartConfigs, validateChartConfig)
+  const hubProperties = validateArray(raw.hubProperties, validateHubProperty)
+  const pagePropertyValues = validateArray(raw.pagePropertyValues, validatePagePropertyValue)
+
+  if (pages.length === 0) {
+    throw new Error('Invalid export file: no valid pages found')
   }
 
-  // Rehydrate date fields (JSON.parse returns strings, not Date objects)
-  const pages = (data.pages as Record<string, unknown>[])
-    .filter(isValidPage)
-    .map((p) => ({
-      ...p,
-      createdAt: new Date(p.createdAt as string),
-      updatedAt: new Date(p.updatedAt as string),
-      // Validate mentionTrigger is at most 1 character
-      ...(p.mentionTrigger && typeof p.mentionTrigger === 'string' && p.mentionTrigger.length > 1
-        ? { mentionTrigger: p.mentionTrigger[0] }
-        : {}),
-    }))
-  const entries = (data.timelineEntries as Record<string, unknown>[])
-    .filter(isValidEntry)
-    .map((e) => ({
-      ...e,
-      text: typeof e.text === 'string' ? DOMPurify.sanitize(e.text) : e.text,
-      date: new Date(e.date as string),
-      createdAt: new Date(e.createdAt as string),
-      updatedAt: new Date(e.updatedAt as string),
-    }))
-  const feedbacks = (data.feedbacks as Record<string, unknown>[])
-    .filter(isValidFeedback)
-    .map((f) => ({
-      ...f,
-      description: typeof f.description === 'string' ? DOMPurify.sanitize(f.description) : f.description,
-      createdAt: new Date(f.createdAt as string),
-    }))
-  // Sanitize text content in blocks
-  const blocks = data.blocks?.length
-    ? (data.blocks as Record<string, unknown>[])
-        .filter(isValidBlock)
-        .map((b) => ({
-          ...b,
-          content: typeof b.content === 'string' ? DOMPurify.sanitize(b.content) : b.content,
-        }))
-    : undefined
+  // Sanitize HTML content
+  const DOMPurify = await loadPurify()
+  if (DOMPurify) {
+    sanitizeHtml(timelineEntries)
+    sanitizeHtml(blocks)
+    sanitizeHtml(feedbacks)
+  }
 
   // Run everything in a transaction so failure rolls back
   await db.transaction('rw',
-    [db.tags, db.pages, db.layouts, db.blocks, db.timelineEntries, db.feedbacks, db.pageSettings, db.chartConfigs, db.hubProperties, db.pagePropertyValues],
+    [db.pages, db.layouts, db.blocks, db.timelineEntries, db.feedbacks, db.pageSettings, db.chartConfigs, db.hubProperties, db.pagePropertyValues],
     async () => {
       await Promise.all([
-        db.tags.clear(), db.pages.clear(), db.layouts.clear(), db.blocks.clear(),
-        db.timelineEntries.clear(), db.feedbacks.clear(),
-        db.pageSettings.clear(), db.chartConfigs.clear(),
-        db.hubProperties.clear(), db.pagePropertyValues.clear(),
+        db.pages.clear(),
+        db.layouts.clear(),
+        db.blocks.clear(),
+        db.timelineEntries.clear(),
+        db.feedbacks.clear(),
+        db.pageSettings.clear(),
+        db.chartConfigs.clear(),
+        db.hubProperties.clear(),
+        db.pagePropertyValues.clear(),
       ])
       await Promise.all([
-        db.tags.bulkAdd(data.tags as never[]),
-        db.pages.bulkAdd(pages as never[]),
-        db.layouts.bulkAdd(data.layouts as never[]),
-        blocks?.length ? db.blocks.bulkAdd(blocks as never[]) : Promise.resolve(),
-        db.timelineEntries.bulkAdd(entries as never[]),
-        db.feedbacks.bulkAdd(feedbacks as never[]),
-        data.pageSettings?.length ? db.pageSettings.bulkAdd(data.pageSettings as never[]) : Promise.resolve(),
-        data.chartConfigs?.length ? db.chartConfigs.bulkAdd(data.chartConfigs as never[]) : Promise.resolve(),
-        data.hubProperties?.length ? db.hubProperties.bulkAdd(data.hubProperties as never[]) : Promise.resolve(),
-        data.pagePropertyValues?.length ? db.pagePropertyValues.bulkAdd(data.pagePropertyValues as never[]) : Promise.resolve(),
+        db.pages.bulkAdd(pages),
+        db.layouts.bulkAdd(tabs),
+        db.blocks.bulkAdd(blocks),
+        db.timelineEntries.bulkAdd(timelineEntries),
+        db.feedbacks.bulkAdd(feedbacks),
+        pageSettings.length > 0 ? db.pageSettings.bulkAdd(pageSettings) : Promise.resolve(),
+        chartConfigs.length > 0 ? db.chartConfigs.bulkAdd(chartConfigs) : Promise.resolve(),
+        hubProperties.length > 0 ? db.hubProperties.bulkAdd(hubProperties) : Promise.resolve(),
+        pagePropertyValues.length > 0 ? db.pagePropertyValues.bulkAdd(pagePropertyValues) : Promise.resolve(),
       ])
     }
   )
-
-  // Post-import: ensure role fields exist on structural pages
-  await ensurePageRoles()
-}
-
-/**
- * Trigger a file picker and import from selected JSON file.
- */
-export function triggerImport(): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const input = document.createElement('input')
-    input.type = 'file'
-    input.accept = '.json'
-    input.onchange = async (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0]
-      if (!file) {
-        resolve()
-        return
-      }
-      try {
-        const text = await file.text()
-        await importData(text)
-        resolve()
-      } catch (err) {
-        reject(err)
-      }
-    }
-    // Handle cancel: resolve if the picker is dismissed without selecting a file
-    input.addEventListener('cancel', () => resolve())
-    input.click()
-  })
 }
 
 // ---- Merge Import ----
 
-interface MergeImportEntry {
-  date: string | Date
-  text: string
-  tagRefs?: string[]
-  isPending?: boolean
-  createdAt?: string | Date
-  updatedAt?: string | Date
-}
-
-interface MergeImportFeedback {
-  type: string
-  description: string
-  dimensionId?: string
-  createdAt?: string | Date
-}
-
-interface MergeImportData {
-  timelineEntries?: MergeImportEntry[]
-  feedbacks?: MergeImportFeedback[]
-}
-
-/**
- * Merge (append) timeline entries and feedbacks from a JSON file into the
- * existing database without removing any existing data.
- * All entries are assigned to the given targetPageId.
- *
- * Returns a summary string describing what was added.
- */
 async function mergeImportData(jsonString: string, targetPageId: number): Promise<string> {
-  const data: MergeImportData = JSON.parse(jsonString)
+  const raw: unknown = JSON.parse(jsonString)
+  if (!isObject(raw)) throw new Error('Invalid file: expected JSON object')
 
-  const entries = data.timelineEntries ?? []
-  const feedbacks = data.feedbacks ?? []
+  const timelineEntries = validateArray(raw.timelineEntries, validateTimelineEntry)
+  const feedbacks = validateArray(raw.feedbacks, validateFeedback)
 
-  if (entries.length === 0 && feedbacks.length === 0) {
+  if (timelineEntries.length === 0 && feedbacks.length === 0) {
     throw new Error('File contains no timeline entries or feedbacks to merge')
   }
 
-  // Validate target page exists
   const targetPage = await db.pages.get(targetPageId)
   if (!targetPage) {
     throw new Error(`Target page with id ${targetPageId} does not exist`)
   }
 
+  // Sanitize HTML content
+  const DOMPurify = await loadPurify()
+  if (DOMPurify) {
+    sanitizeHtml(timelineEntries)
+    sanitizeHtml(feedbacks)
+  }
+
   const now = new Date()
 
-  // Prepare timeline entries — all assigned to targetPageId
-  const preparedEntries = entries.map((e) => ({
+  // Reassign all entries to target page, strip IDs for new records
+  const preparedEntries = timelineEntries.map((e) => ({
     pageId: targetPageId,
-    date: new Date(e.date),
-    text: DOMPurify.sanitize(e.text),
-    tagRefs: e.tagRefs ?? [],
-    isPending: e.isPending ?? false,
-    createdAt: e.createdAt ? new Date(e.createdAt) : now,
-    updatedAt: e.updatedAt ? new Date(e.updatedAt) : now,
+    date: e.date,
+    text: e.text,
+    tagRefs: e.tagRefs,
+    isPending: e.isPending,
+    createdAt: e.createdAt ?? now,
+    updatedAt: e.updatedAt ?? now,
   }))
 
-  // Prepare feedbacks — all assigned to targetPageId as subjectId
   const preparedFeedbacks = feedbacks.map((f) => ({
     subjectId: targetPageId,
     type: f.type,
-    description: DOMPurify.sanitize(f.description),
+    description: f.description,
     dimensionId: f.dimensionId,
-    createdAt: f.createdAt ? new Date(f.createdAt) : now,
+    createdAt: f.createdAt ?? now,
   }))
 
-  // Insert in a transaction (all-or-nothing)
   await db.transaction('rw', [db.timelineEntries, db.feedbacks], async () => {
     if (preparedEntries.length > 0) {
-      await db.timelineEntries.bulkAdd(preparedEntries as never[])
+      await db.timelineEntries.bulkAdd(preparedEntries)
     }
     if (preparedFeedbacks.length > 0) {
-      await db.feedbacks.bulkAdd(preparedFeedbacks as never[])
+      await db.feedbacks.bulkAdd(preparedFeedbacks)
     }
   })
 
@@ -382,32 +390,31 @@ async function mergeImportData(jsonString: string, targetPageId: number): Promis
   return `Merged ${parts.join(' and ')}`
 }
 
-/**
- * Trigger a file picker and merge data from selected JSON file into existing data.
- * All entries/feedbacks in the file are assigned to the given targetPageId.
- * Returns a summary string on success.
- */
-export function triggerMergeImport(targetPageId: number): Promise<string> {
-  return new Promise((resolve, reject) => {
+// ---- File Picker UI ----
+
+function pickFile(): Promise<File | null> {
+  return new Promise((resolve) => {
     const input = document.createElement('input')
     input.type = 'file'
     input.accept = '.json'
-    input.onchange = async (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0]
-      if (!file) {
-        resolve('')
-        return
-      }
-      try {
-        const text = await file.text()
-        const summary = await mergeImportData(text, targetPageId)
-        resolve(summary)
-      } catch (err) {
-        reject(err)
-      }
+    input.onchange = () => {
+      resolve(input.files?.[0] ?? null)
     }
-    // Handle cancel: resolve if the picker is dismissed without selecting a file
-    input.addEventListener('cancel', () => resolve(''))
+    input.addEventListener('cancel', () => resolve(null))
     input.click()
   })
+}
+
+export async function triggerImport(): Promise<void> {
+  const file = await pickFile()
+  if (!file) return
+  const text = await file.text()
+  await importData(text)
+}
+
+export async function triggerMergeImport(targetPageId: number): Promise<string> {
+  const file = await pickFile()
+  if (!file) return ''
+  const text = await file.text()
+  return mergeImportData(text, targetPageId)
 }
