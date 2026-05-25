@@ -288,6 +288,8 @@ export function triggerImport(): Promise<void> {
         reject(err)
       }
     }
+    // Handle cancel: resolve if the picker is dismissed without selecting a file
+    input.addEventListener('cancel', () => resolve())
     input.click()
   })
 }
@@ -404,6 +406,8 @@ export function triggerMergeImport(targetPageId: number): Promise<string> {
         reject(err)
       }
     }
+    // Handle cancel: resolve if the picker is dismissed without selecting a file
+    input.addEventListener('cancel', () => resolve(''))
     input.click()
   })
 }

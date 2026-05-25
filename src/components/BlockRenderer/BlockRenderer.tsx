@@ -1,4 +1,4 @@
-import { useState, useEffect, lazy, Suspense, useCallback, useRef, memo } from 'react'
+import { useState, useEffect, lazy, Suspense, useCallback, useRef, memo, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { RichTextEditor } from '../RichTextEditor/RichTextEditor'
 import { TimelineView } from '../TimelineView/TimelineView'
@@ -43,6 +43,7 @@ const BlockList = memo(function BlockList({ pageId, page, blocks, tabId }: {
   pageId: number; page: Page; blocks: Block[]; tabId?: number
 }) {
   const handleMentionClick = useNavigateToPage()
+  const addingRef = useRef(false)
 
   // Onboarding: editor-walkthrough trigger
   const { triggerGuide } = useOnboardingGuides()
@@ -53,6 +54,19 @@ const BlockList = memo(function BlockList({ pageId, page, blocks, tabId }: {
   const hasContent = blocks.some((b) => b.type !== 'text' || (b.content?.trim() ?? '').length > 0)
   const defaultPlaceholder = 'Type here...'
   const firstTextIdx = blocks.findIndex((b) => b.type === 'text')
+
+  // Stable callback for empty-block creation — guards against duplicate adds
+  const handleEmptyBlockUpdate = useMemo(() => {
+    return async (content: string) => {
+      if (addingRef.current) return
+      addingRef.current = true
+      try {
+        await db.blocks.add({ pageId, tabId, type: 'text', content })
+      } finally {
+        addingRef.current = false
+      }
+    }
+  }, [pageId, tabId])
 
   return (
     <div className={styles.blockList}>
@@ -80,7 +94,7 @@ const BlockList = memo(function BlockList({ pageId, page, blocks, tabId }: {
         <div ref={editorAnchorRef}>
           <TextBlock
             block={{ pageId, tabId, type: 'text', content: '' }}
-            onUpdate={async (content) => { await db.blocks.add({ pageId, tabId, type: 'text', content }) }}
+            onUpdate={handleEmptyBlockUpdate}
             onMentionClick={handleMentionClick}
             placeholder={defaultPlaceholder}
             onEditorFocus={handleEditorFocus}

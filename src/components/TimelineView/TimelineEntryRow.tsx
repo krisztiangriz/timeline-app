@@ -62,7 +62,10 @@ export const TimelineEntryRow = memo(function TimelineEntryRow({
     <div
       className={crossRef ? styles.entryRowTextDisabled : styles.entryRowText}
       onClick={!editing && !crossRef ? handleStartEditing : undefined}
-        style={{ cursor: editing || crossRef ? 'auto' : 'text' }}
+      onKeyDown={!editing && !crossRef ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleStartEditing(e as unknown as React.MouseEvent) } } : undefined}
+      tabIndex={!editing && !crossRef ? 0 : undefined}
+      role={!editing && !crossRef ? 'button' : undefined}
+      style={{ cursor: editing || crossRef ? 'auto' : 'text' }}
     >
       {editing ? (
         <RichTextEditor

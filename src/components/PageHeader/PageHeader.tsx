@@ -65,6 +65,9 @@ export function PageHeader({
           <div
             className={styles.title}
             onClick={readOnly ? undefined : () => setEditing(true)}
+            onKeyDown={readOnly ? undefined : (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setEditing(true) } }}
+            tabIndex={readOnly ? undefined : 0}
+            role={readOnly ? undefined : 'button'}
             style={{ cursor: readOnly ? 'default' : 'text' }}
           >
             {name}

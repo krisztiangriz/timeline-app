@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback, type ReactNode } from 'react'
+import { useState, useRef, useEffect, useCallback, useMemo, type ReactNode } from 'react'
 import styles from './ContextMenu.module.css'
 
 export type MenuEntry =
@@ -17,7 +17,10 @@ export function ContextMenu({ items, trigger }: ContextMenuProps) {
   const triggerRef = useRef<HTMLDivElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
 
-  const actionItems = items.filter((e): e is { type: 'item'; label: string; onClick: () => void } => e.type === 'item')
+  const actionItems = useMemo(
+    () => items.filter((e): e is { type: 'item'; label: string; onClick: () => void } => e.type === 'item'),
+    [items]
+  )
 
   useEffect(() => {
     if (open && triggerRef.current) {

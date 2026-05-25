@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { db } from '../db/database'
 import type { Page } from '../types'
 
@@ -9,22 +9,43 @@ export function useTableSort(pageKey: string, defaultKey: SortKey = 'name', defa
   const [sortKey, setSortKey] = useState<SortKey>(defaultKey)
   const [sortDir, setSortDir] = useState<SortDir>(defaultDir)
   const [loaded, setLoaded] = useState(false)
+  const skipNextSave = useRef(true)
 
   // Load saved sort from DB
   useEffect(() => {
+    let cancelled = false
+    skipNextSave.current = true
+    setLoaded(false)
+
     db.pageSettings.where('pageKey').equals(pageKey).first().then((setting) => {
+      if (cancelled) return
       if (setting) {
         setSortKey(setting.sortKey as SortKey)
         setSortDir(setting.sortDir as SortDir)
       }
       setLoaded(true)
+    }).catch(() => {
+      if (!cancelled) setLoaded(true)
     })
+
+    return () => { cancelled = true }
   }, [pageKey])
 
-  // Save to DB on change (single upsert)
+  // Save to DB on change (upsert via modify-or-add)
   useEffect(() => {
     if (!loaded) return
-    db.pageSettings.put({ pageKey, sortKey, sortDir })
+    // Skip the first save triggered by loading from DB
+    if (skipNextSave.current) {
+      skipNextSave.current = false
+      return
+    }
+    db.pageSettings.where('pageKey').equals(pageKey).first().then((existing) => {
+      if (existing) {
+        return db.pageSettings.update(existing.id!, { sortKey, sortDir })
+      } else {
+        return db.pageSettings.add({ pageKey, sortKey, sortDir })
+      }
+    }).catch(() => { /* storage error — non-critical */ })
   }, [pageKey, sortKey, sortDir, loaded])
 
   const toggleSort = useCallback((key: SortKey) => {

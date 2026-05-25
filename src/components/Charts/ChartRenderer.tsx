@@ -462,7 +462,7 @@ function FeedbackOverTimeChart({ config, monthCount = 12, pages, hubProperties, 
     }
 
     return { data, keys, colorMap }
-  }, [scopedFeedbacks, typeProp, monthCount, palette])
+  }, [scopedFeedbacks, feedbacks, typeProp, monthCount, palette])
 
   if (keys.length === 0) return <ChartContainer className={cls}><EmptyState compact message="No feedback properties configured" /></ChartContainer>
 

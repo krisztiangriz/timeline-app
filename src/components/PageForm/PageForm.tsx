@@ -62,7 +62,7 @@ const BLOCK_TYPE_LABELS: Partial<Record<BlockType, string>> = {
 
 export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHubProp, hubs = EMPTY_HUBS, hubId }: PageFormProps) {
   const [name, setName] = useState('')
-  const [tabs, setTabs] = useState<{ name: string; type: BlockType }[]>([])
+  const [tabs, setTabs] = useState<{ name: string; type: BlockType; key: number }[]>([])
   const [addingTab, setAddingTab] = useState(false)
   const [newTabName, setNewTabName] = useState('')
   const [newTabType, setNewTabType] = useState<BlockType>('text')
@@ -79,6 +79,7 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
   const [blockTypeSelectOpen, setBlockTypeSelectOpen] = useState(false)
   const blockTypeAnchorRef = useRef<HTMLDivElement>(null)
   const [tabDeleteConfirm, setTabDeleteConfirm] = useState<number | null>(null)
+  const tabKeyCounter = useRef(0)
 
   // Close dropdown portals on Escape
   useEffect(() => {
@@ -127,8 +128,14 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
   // Cleanup function for cancel/close
   const cleanupPlaceholderHub = useCallback(async () => {
     if (createdHubId && !hubConfirmed.current) {
-      // Delete the placeholder hub and any properties/blocks created on it
-      await db.transaction('rw', [db.pages, db.blocks, db.hubProperties, db.pagePropertyValues], async () => {
+      // Delete the placeholder hub and any properties/blocks/chartConfigs created on it
+      await db.transaction('rw', [db.pages, db.blocks, db.hubProperties, db.pagePropertyValues, db.chartConfigs], async () => {
+        // Delete chart configs for any visualization blocks
+        const vizBlocks = await db.blocks.where('pageId').equals(createdHubId).filter((b) => b.type === 'visualization').toArray()
+        const vizBlockIds = vizBlocks.map((b) => b.id!)
+        if (vizBlockIds.length > 0) {
+          await db.chartConfigs.where('blockId').anyOf(vizBlockIds).delete()
+        }
         await db.hubProperties.where('hubId').equals(createdHubId).delete()
         await db.blocks.where('pageId').equals(createdHubId).delete()
         await db.pages.delete(createdHubId)
@@ -140,7 +147,8 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
   useEffect(() => {
     if (open && !prevOpen.current) {
       setName(initial?.name ?? '')
-      setTabs(initial?.tabs ?? [])
+      tabKeyCounter.current = 0
+      setTabs((initial?.tabs ?? []).map((t) => ({ ...t, key: tabKeyCounter.current++ })))
       setAddingTab(false)
       setNewTabName('')
       setParentHubId(initial?.parentHubId)
@@ -159,10 +167,11 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
     if (isEdit || isHubType) return
     const hub = hubs.find(h => h.id === parentHubId)
     if (hub?.role === 'colleague-hub' || hub?.role === 'project-hub') {
+      tabKeyCounter.current = 0
       setTabs([
-        { name: 'Timeline', type: 'timeline' },
-        { name: 'Feedback', type: 'feedback' },
-        { name: 'Visualization', type: 'visualization' },
+        { name: 'Timeline', type: 'timeline', key: tabKeyCounter.current++ },
+        { name: 'Feedback', type: 'feedback', key: tabKeyCounter.current++ },
+        { name: 'Visualization', type: 'visualization', key: tabKeyCounter.current++ },
       ])
     } else {
       setTabs([])
@@ -187,7 +196,7 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
     // Guard against duplicate non-text types
     if (newTabType !== 'text' && usedTypes.has(newTabType)) return
     const name = newTabName.trim() || (BLOCK_TYPE_LABELS[newTabType] ?? newTabType)
-    setTabs((t) => [...t, { name, type: newTabType }])
+    setTabs((t) => [...t, { name, type: newTabType, key: tabKeyCounter.current++ }])
     setNewTabName('')
     setNewTabType('text')
     setAddingTab(false)
@@ -206,6 +215,9 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
   }
 
   async function handleConfirm() {
+    // Strip internal key from tabs before submitting
+    const submitTabs = tabs.map(({ name, type }) => ({ name, type }))
+
     // Hub creation: hub already exists as placeholder, finalize it
     if (isCreatingHub && createdHubId) {
       try {
@@ -225,7 +237,7 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
         }
         // Notify parent (for navigation/toast)
         onSubmit({
-          name, tabs, parentHubId: undefined, isHub: true,
+          name, tabs: submitTabs, parentHubId: undefined, isHub: true,
           existingPageId: createdHubId,
           mentionTrigger: trigger || undefined, mentionCollapsed: collapsed || undefined,
         })
@@ -237,7 +249,7 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
 
     // Normal submit (edit mode or non-hub creation)
     onSubmit({
-      name, tabs, parentHubId: isHubType ? undefined : parentHubId, isHub: isHubType,
+      name, tabs: submitTabs, parentHubId: isHubType ? undefined : parentHubId, isHub: isHubType,
       mentionTrigger: trigger || undefined, mentionCollapsed: collapsed || undefined,
     })
   }
@@ -370,7 +382,7 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
         )}
         {/* All tabs — editable rows with drag, type label, name input, delete */}
         {tabs.map((tab, i) => (
-          <div key={`tab-${i}`} className={styles.tabRow}
+          <div key={tab.key} className={styles.tabRow}
             draggable
             onDragStart={(e) => { e.dataTransfer.effectAllowed = 'move'; setBlockDragIdx({ group: 'tabs', idx: i }) }}
             onDragOver={(e) => { e.preventDefault() }}

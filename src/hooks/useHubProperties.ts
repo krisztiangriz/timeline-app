@@ -125,10 +125,10 @@ export async function addPropertyOption(propertyId: number, label: string) {
 }
 
 export async function deletePropertyOption(propertyId: number, optionValue: string) {
-  const property = await db.hubProperties.get(propertyId)
-  if (!property) return
-
   await db.transaction('rw', [db.hubProperties, db.pagePropertyValues], async () => {
+    const property = await db.hubProperties.get(propertyId)
+    if (!property) return
+
     // Clear any page values that referenced this option
     const affected = await db.pagePropertyValues.where('propertyId').equals(propertyId).toArray()
     for (const pv of affected) {
@@ -143,24 +143,32 @@ export async function deletePropertyOption(propertyId: number, optionValue: stri
 }
 
 export async function renamePropertyOption(propertyId: number, oldValue: string, newLabel: string) {
-  const property = await db.hubProperties.get(propertyId)
-  if (!property) return
-
   const newValue = newLabel.toLowerCase().replace(/\s+/g, '-')
 
   await db.transaction('rw', [db.hubProperties, db.pagePropertyValues], async () => {
+    const property = await db.hubProperties.get(propertyId)
+    if (!property) return
+
+    // Ensure unique value within this property's options (skip collision with self)
+    const existingValues = new Set(property.options.filter((o) => o.value !== oldValue).map((o) => o.value))
+    let finalValue = newValue
+    let suffix = 1
+    while (existingValues.has(finalValue)) {
+      finalValue = `${newValue}-${suffix++}`
+    }
+
     // Update the option in the property definition
     const options = property.options.map((o) =>
-      o.value === oldValue ? { ...o, value: newValue, label: newLabel } : o
+      o.value === oldValue ? { ...o, value: finalValue, label: newLabel } : o
     )
     await db.hubProperties.update(propertyId, { options })
 
     // Update any page values referencing the old value
-    if (oldValue !== newValue) {
+    if (oldValue !== finalValue) {
       const affected = await db.pagePropertyValues.where('propertyId').equals(propertyId).toArray()
       for (const pv of affected) {
         if (pv.value === oldValue) {
-          await db.pagePropertyValues.update(pv.id!, { value: newValue })
+          await db.pagePropertyValues.update(pv.id!, { value: finalValue })
         }
       }
     }
@@ -168,11 +176,13 @@ export async function renamePropertyOption(propertyId: number, oldValue: string,
 }
 
 export async function updatePropertyOptionColor(propertyId: number, optionValue: string, color: string) {
-  const property = await db.hubProperties.get(propertyId)
-  if (!property) return
+  await db.transaction('rw', db.hubProperties, async () => {
+    const property = await db.hubProperties.get(propertyId)
+    if (!property) return
 
-  const options = property.options.map((o) =>
-    o.value === optionValue ? { ...o, color } : o
-  )
-  await db.hubProperties.update(propertyId, { options })
+    const options = property.options.map((o) =>
+      o.value === optionValue ? { ...o, color } : o
+    )
+    await db.hubProperties.update(propertyId, { options })
+  })
 }

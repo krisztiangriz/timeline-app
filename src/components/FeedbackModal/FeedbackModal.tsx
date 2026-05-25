@@ -14,6 +14,7 @@ import radio from '../../styles/radio.module.css'
 interface FeedbackModalProps {
   open: boolean
   onClose: () => void
+  /** Callback to show a toast message (used for both success and error feedback) */
   onSuccess: (msg: string) => void
 }
 
@@ -26,11 +27,17 @@ export function FeedbackModal({ open, onClose, onSuccess }: FeedbackModalProps) 
     return new Set(allHubProperties.filter((p) => p.scope === 'feedback').map((p) => p.hubId))
   }, [allHubProperties])
 
-  // Page IDs that have a feedback block
+  // Page IDs that have a feedback block — query by type index on pageId scoped to known hubs
   const feedbackPageIds = useLiveQuery(async () => {
-    const blocks = await db.blocks.filter((b) => b.type === 'feedback').toArray()
+    // Get child pages of hubs with feedback config, then check their blocks
+    const hubIds = [...hubsWithFeedback]
+    if (hubIds.length === 0) return new Set<number>()
+    const childPages = await db.pages.where('parentId').anyOf(hubIds).toArray()
+    const childPageIds = childPages.map((p) => p.id!)
+    if (childPageIds.length === 0) return new Set<number>()
+    const blocks = await db.blocks.where('pageId').anyOf(childPageIds).filter((b) => b.type === 'feedback').toArray()
     return new Set(blocks.map((b) => b.pageId))
-  }, []) ?? new Set<number>()
+  }, [hubsWithFeedback]) ?? new Set<number>()
 
   // Pages searchable for feedback (under hubs with feedback config AND have a feedback block)
   const searchablePages = useMemo(() => {
@@ -132,6 +139,7 @@ export function FeedbackModal({ open, onClose, onSuccess }: FeedbackModalProps) 
       onClose()
       onSuccess('Feedback added')
     } catch {
+      onClose()
       onSuccess('Failed to add feedback')
     }
   }

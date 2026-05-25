@@ -134,7 +134,7 @@ export function RichTextEditor({
     } else if (text !== '' || hasElements) {
       el.removeAttribute('data-empty')
     }
-  }, [value, collapseMentions])
+  }, [value, collapseMentions, allPages])
 
   // Use <br> for line breaks instead of wrapping in <div>
   useEffect(() => {
@@ -850,6 +850,9 @@ export function RichTextEditor({
         className={editorClassName}
         contentEditable
         suppressContentEditableWarning
+        role="textbox"
+        aria-multiline="true"
+        aria-label={placeholder || 'Rich text editor'}
         data-rich-editor="true"
         data-placeholder={placeholder}
         onInput={handleInput}

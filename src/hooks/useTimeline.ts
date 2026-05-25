@@ -8,13 +8,14 @@ import { extractMentionPageIds } from '../utils/mentionParser'
  */
 export function useTimelineEntries(pageId?: number) {
   return useLiveQuery(
-    () => {
+    async () => {
       if (!pageId) return []
-      return db.timelineEntries
+      const entries = await db.timelineEntries
         .where('pageId')
         .equals(pageId)
-        .reverse()
         .sortBy('date')
+      // sortBy returns ascending; reverse for descending
+      return entries.reverse()
     },
     [pageId]
   ) ?? []
@@ -104,43 +105,45 @@ export async function deleteEntry(id: number) {
  * Returns the merged entry's ID (or undefined if no pending entries existed).
  */
 export async function mergePendingEntries(pageId: number): Promise<number | undefined> {
-  const pendingEntries = await db.timelineEntries
-    .where('pageId')
-    .equals(pageId)
-    .filter((e) => e.isPending)
-    .sortBy('date')
+  return db.transaction('rw', db.timelineEntries, async () => {
+    const pendingEntries = await db.timelineEntries
+      .where('pageId')
+      .equals(pageId)
+      .filter((e) => e.isPending)
+      .sortBy('date')
 
-  if (pendingEntries.length <= 1) {
-    // Nothing to merge — return existing ID if any
-    return pendingEntries[0]?.id
-  }
+    if (pendingEntries.length <= 1) {
+      // Nothing to merge — return existing ID if any
+      return pendingEntries[0]?.id
+    }
 
-  // Build merged HTML: each entry becomes a <div> with a checkbox
-  const lines = pendingEntries.map((e) => {
-    const text = e.text.trim()
-    // If the text already contains a data-checkbox span, keep as-is
-    if (text.includes('data-checkbox')) return `<div>${text}</div>`
-    return `<div><span data-checkbox="false">\u00A0</span>${text}</div>`
+    // Build merged HTML: each entry becomes a <div> with a checkbox
+    const lines = pendingEntries.map((e) => {
+      const text = e.text.trim()
+      // If the text already contains a data-checkbox span, keep as-is
+      if (text.includes('data-checkbox')) return `<div>${text}</div>`
+      return `<div><span data-checkbox="false">\u00A0</span>${text}</div>`
+    })
+    const mergedHtml = lines.join('')
+
+    const now = new Date()
+    const tagRefs = extractMentionPageIds(mergedHtml)
+
+    // Create the merged entry
+    const mergedId = await db.timelineEntries.add({
+      pageId,
+      text: mergedHtml,
+      isPending: true,
+      date: pendingEntries[0].date, // keep earliest date
+      tagRefs,
+      createdAt: pendingEntries[0].createdAt,
+      updatedAt: now,
+    })
+
+    // Delete the old entries
+    const idsToDelete = pendingEntries.map((e) => e.id!)
+    await db.timelineEntries.bulkDelete(idsToDelete)
+
+    return mergedId as number
   })
-  const mergedHtml = lines.join('')
-
-  const now = new Date()
-  const tagRefs = extractMentionPageIds(mergedHtml)
-
-  // Create the merged entry
-  const mergedId = await db.timelineEntries.add({
-    pageId,
-    text: mergedHtml,
-    isPending: true,
-    date: pendingEntries[0].date, // keep earliest date
-    tagRefs,
-    createdAt: pendingEntries[0].createdAt,
-    updatedAt: now,
-  })
-
-  // Delete the old entries
-  const idsToDelete = pendingEntries.map((e) => e.id!)
-  await db.timelineEntries.bulkDelete(idsToDelete)
-
-  return mergedId as number
 }

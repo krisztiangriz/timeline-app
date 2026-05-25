@@ -13,6 +13,7 @@ import type { ChartConfig, ChartDataSource, ChartType, ChartScope, TimelineEntry
 import { useOnboardingGuides } from '../../hooks/useOnboardingGuides'
 import { OnboardingGuide } from '../OnboardingGuide/OnboardingGuide'
 import { safeGetItem, safeSetItem } from '../../utils/safeStorage'
+import { useToast } from '../../hooks/useToast'
 import styles from './Charts.module.css'
 
 interface ConfigurableVizProps {
@@ -23,6 +24,7 @@ interface ConfigurableVizProps {
 export const ConfigurableViz = memo(function ConfigurableViz({ blockId, pageId }: ConfigurableVizProps) {
   const configs = useChartConfigs(blockId)
   const { allPages } = useAutocomplete()
+  const { show: showToast } = useToast()
   const [range, setRangeState] = useState<RangeMonths>(() => {
     const stored = safeGetItem(`viz-range-${blockId}`)
     return stored === '0' ? 0 : stored === '3' ? 3 : stored === '6' ? 6 : 12
@@ -53,15 +55,15 @@ export const ConfigurableViz = memo(function ConfigurableViz({ blockId, pageId }
   }
 
   async function handleAdd(name: string, dataSource: ChartDataSource, chartType: ChartType, scopes?: ChartScope[], propertyId?: number) {
-    try { await addChartConfig(blockId, name, dataSource, chartType, scopes, propertyId) } catch { /* DB error */ }
+    try { await addChartConfig(blockId, name, dataSource, chartType, scopes, propertyId) } catch { showToast('Failed to add chart') }
   }
 
   async function handleUpdate(id: number, name: string, dataSource: ChartDataSource, chartType: ChartType, scopes?: ChartScope[], propertyId?: number) {
-    try { await updateChartConfig(id, { name, dataSource, chartType, scopes, propertyId }) } catch { /* DB error */ }
+    try { await updateChartConfig(id, { name, dataSource, chartType, scopes, propertyId }) } catch { showToast('Failed to update chart') }
   }
 
   async function handleDelete(id: number) {
-    try { await deleteChartConfig(id) } catch { /* DB error */ }
+    try { await deleteChartConfig(id) } catch { showToast('Failed to delete chart') }
   }
 
   const rows = buildRows(configs)
