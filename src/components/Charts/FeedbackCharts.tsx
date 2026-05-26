@@ -126,6 +126,7 @@ export function FeedbackOverTimeChart({ config, monthCount = 12, pages, hubPrope
     const keys = typeProp.options.map((o) => o.label)
     const colorMap = new Map(typeProp.options.map((o, i) => [o.label, o.color ?? getColor(i, palette)]))
     const valueToLabel = new Map(typeProp.options.map((o) => [o.value, o.label]))
+    const monthToIdx = new Map(months.map((m, i) => [m, i]))
 
     const data = months.map((m) => {
       const row: Record<string, string | number> = { month: `${m.slice(2, 4)}${m.slice(5)}` }
@@ -136,8 +137,8 @@ export function FeedbackOverTimeChart({ config, monthCount = 12, pages, hubPrope
     for (const f of scopedFeedbacks) {
       const d = new Date(f.createdAt)
       const m = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
-      const idx = months.indexOf(m)
-      if (idx === -1) continue
+      const idx = monthToIdx.get(m)
+      if (idx === undefined) continue
       const label = valueToLabel.get(f.type)
       if (label) data[idx][label] = (Number(data[idx][label]) || 0) + 1
     }

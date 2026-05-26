@@ -123,7 +123,7 @@ export function TimelineView({ pageId, title, readOnly = false, page }: Timeline
     migrationDone.current = true
     const pendingCount = allEntries.filter((e) => e.isPending).length
     if (pendingCount > 1) {
-      mergePendingEntries(pageId)
+      mergePendingEntries(pageId).catch(() => { /* merge failure non-critical — entries still display individually */ })
     }
   }, [pageId]) // eslint-disable-line react-hooks/exhaustive-deps — guarded by migrationDone ref, only needs to run once per mount
 

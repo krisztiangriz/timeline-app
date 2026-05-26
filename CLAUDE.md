@@ -6,7 +6,7 @@ visualizing work. Built with React + Dexie (IndexedDB) + Vite. Deployed to
 GitHub Pages as a PWA.
 
 ## Tech Stack
-- **Frontend:** React 18, TypeScript, CSS Modules
+- **Frontend:** React 19, TypeScript 6 (strict mode), CSS Modules
 - **Database:** Dexie (IndexedDB) — local-first, no backend
 - **Charts:** Recharts (lazy-loaded via ConfigurableViz)
 - **Build:** Vite with manual chunks (react, dexie, recharts vendor splits)
@@ -41,8 +41,10 @@ git push         # triggers GitHub Actions deploy
 
 ### State Management
 - No Redux/Zustand — Dexie `useLiveQuery` for reactive DB state
-- `AutocompleteProvider` shares `allPages` across the app (single subscription)
-- `ModalContext` + `PreferencesContext` split from `AppContext`
+- `AutocompleteProvider` shares `allPages` across the app (single subscription,
+  stabilized via `pagesEqual` shallow comparison — skips `updatedAt`/`editCount`)
+- `ModalContext` + `MentionInsertContext` + `PreferencesContext` split from
+  `AppContext` (editors subscribe only to `MentionInsertContext`, not modal state)
 - `ToastProvider` — shared toast queue, `useToast()` hook
 
 ### Component Patterns
@@ -51,15 +53,23 @@ git push         # triggers GitHub Actions deploy
   OnboardingModal)
 - `RichTextEditor` uses `contentEditable` with `lastSetValue` ref to prevent
   DOM resets on re-render (critical for mention detection)
-- `BlockList` and `TextBlock` wrapped in `memo`
+- `RichTextDisplay` uses `useSyncExternalStore` for lazy DOMPurify loading
+  (single module-level load, all instances notified simultaneously)
+- `BlockList`, `TextBlock`, and `ComponentBlockContent` wrapped in `memo`
+- `CrossRefRow` — lightweight memoized component for read-only cross-ref entries
 - `useNavigateToPage()` hook for stable mention navigation callbacks
 - `DropdownPortal` component for dropdowns inside modals (escapes overflow)
+- Page CRUD operations (`addPage`, `updatePage`, `deletePage`, `updateTabs`,
+  `archivePage`, `unarchivePage`) are plain exported async functions — stable
+  references, no hook wrapper
 
 ### Service Worker
 - Custom SW (no Workbox) in `src/sw-template.js`
 - Post-build script: `scripts/generate-sw.mjs` generates precache manifest
 - Only critical assets precached (vendor chunks + CSS + HTML)
 - Lazy chunks cached on first use via cache-first strategy
+- Navigation uses stale-while-revalidate (instant shell, background update)
+- Video files skipped (not cached)
 
 ## Code Style Preferences
 
@@ -91,6 +101,7 @@ git push         # triggers GitHub Actions deploy
 - `safeStorage` utility for all localStorage access (handles Safari private
   browsing quota errors)
 - All async DB writes wrapped in try/catch with `showToast('Failed to...')`
+- `useSyncExternalStore` for module-level singleton state (e.g., DOMPurify load)
 
 ## Key Constraints / Gotchas
 
@@ -101,6 +112,9 @@ git push         # triggers GitHub Actions deploy
 - `blurTimer` stored in ref and cleaned up on unmount
 - DOMPurify is lazy-loaded (not in initial bundle)
 - No `~` component insertion — blocks only added via tabs in Edit Page modal
+- Mention detection extracted to `useMentionDetection.ts` hook
+- Pending mention insert extracted to `usePendingMentionInsert.ts` hook
+- Checkbox handling extracted to `useCheckboxHandling.ts` hook
 
 ### Mentions
 - `enrichMentionHtml` uses a module-level cache keyed by `allPages` reference
@@ -116,6 +130,10 @@ git push         # triggers GitHub Actions deploy
 
 ### Charts
 - Recharts lazy-loaded via `ConfigurableViz` (separate vendor chunk: ~110KB gz)
+- ChartRenderer split into 6 modules: `chartConstants`, `chartHooks`,
+  `ChartContainer`, `EntryCharts`, `FeedbackCharts`, `PropertyChart`
+- `palette` passed as prop from `ConfigurableViz` (single `useChartPalette` call)
+- `AddChartModal` uses shared `DropdownPortal` (no local reimplementation)
 - `useAllEntries(monthCount)` scoped by date range — not full table scan
 - Feedbacks scoped by date range in `ConfigurableViz`
 - Pie charts: donut style (55%/85% inner/outer radius) with right-side labels
@@ -145,6 +163,11 @@ git push         # triggers GitHub Actions deploy
 - Toast container: `aria-live="polite"`, `role="status"`
 - Search dropdowns: use `DropdownPortal` + tracks scroll via capture listener
 - ContextMenu: full keyboard nav (ArrowUp/Down, Enter, Escape), `role="menu"`
+- PropertyRow: full keyboard nav (ArrowUp/Down, Enter, Escape), `role="listbox"`
+- ColorPicker: arrow grid nav + Enter/Escape, `role="listbox"`
+- Custom radio/checkbox buttons: `role="radio"`/`role="checkbox"` + `aria-checked`
+- Form inputs: `aria-label` for inputs without `<label>` elements
+- Tab groups: `role="tablist"` + `role="tab"` + `aria-selected`
 
 ## Commit Style
 - Short imperative: `Fix auto-backup timer: use ref pattern for stable deps`

@@ -150,8 +150,8 @@ Data Model
 ### Service Worker Strategy
 | Request Type | Strategy |
 |---|---|
-| Navigation | Network-first, fallback to cached `index.html` (SPA routing) |
-| `/assets/*` (hashed) | Cache-first (immutable content-hashed files) |
+| Navigation | Stale-while-revalidate (cached shell, background update) |
+| `/assets/*` (hashed) | Cache-first (precached + lazy chunks cached on first fetch) |
 | Video (`.mp4`, `.webm`, `.mov`) | Skip service worker (pass through to network) |
 | Other same-origin GET | Network-first with cache fallback |
 

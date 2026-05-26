@@ -83,8 +83,12 @@ export function RootPage() {
     const draggedPage = allPages.find((p) => p.id === dragId)
     if (!draggedPage || draggedPage.type === 'hub' || !!draggedPage.role) return
     const newType = targetPage.role ? ROLE_TO_PAGE_TYPE[targetPage.role] ?? draggedPage.type : draggedPage.type
-    await updatePage(dragId, { parentId: targetPageId, type: newType as PageType })
-    showToast(`Moved "${draggedPage.name}" into "${targetPage.name}"`)
+    try {
+      await updatePage(dragId, { parentId: targetPageId, type: newType as PageType })
+      showToast(`Moved "${draggedPage.name}" into "${targetPage.name}"`)
+    } catch {
+      showToast('Failed to move page')
+    }
     setDraggedId(null); setDropTargetId(null)
   }
 

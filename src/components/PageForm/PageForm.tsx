@@ -103,15 +103,17 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
     if (!open || isEdit) return
     if (isHubType && !createdHubId) {
       ;(async () => {
-        const id = await db.pages.add({
-          name: name.trim() || 'Untitled',
-          type: 'hub' as const,
-          description: '',
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          editCount: 0,
-        })
-        setCreatedHubId(id as number)
+        try {
+          const id = await db.pages.add({
+            name: name.trim() || 'Untitled',
+            type: 'hub' as const,
+            description: '',
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            editCount: 0,
+          })
+          setCreatedHubId(id as number)
+        } catch { /* DB unavailable — hub creation will fail gracefully on confirm */ }
       })()
     }
   }, [isHubType, open, isEdit]) // eslint-disable-line react-hooks/exhaustive-deps
