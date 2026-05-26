@@ -183,8 +183,13 @@ export function RichTextEditor({
     el.removeAttribute('data-empty')
     onFocus?.()
 
-    // Position cursor at the beginning
+    // Position cursor at the beginning only on programmatic/keyboard focus.
+    // If the browser already placed the cursor inside the editor (via mouse click), don't override.
     const sel = window.getSelection()
+    if (sel && sel.rangeCount > 0) {
+      const range = sel.getRangeAt(0)
+      if (el.contains(range.startContainer)) return // cursor already inside — mouse click
+    }
     if (sel) {
       const range = document.createRange()
       range.setStart(el, 0)
