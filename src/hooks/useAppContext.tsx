@@ -37,11 +37,18 @@ interface ModalContextValue {
   setOnboardingOpen: (v: boolean) => void
   addPageInitial: AddPageInitial | undefined
   setAddPageInitial: (v: AddPageInitial | undefined) => void
+}
+
+const ModalContext = createContext<ModalContextValue>(null!)
+
+// ---- Mention insert context (separate to avoid editor re-renders on modal changes) ----
+
+interface MentionInsertContextValue {
   pendingMentionInsert: PendingMentionInsert | null
   setPendingMentionInsert: (v: PendingMentionInsert | null) => void
 }
 
-const ModalContext = createContext<ModalContextValue>(null!)
+const MentionInsertContext = createContext<MentionInsertContextValue>(null!)
 
 // ---- Preferences context (user settings persisted to localStorage) ----
 
@@ -57,6 +64,11 @@ const PreferencesContext = createContext<PreferencesContextValue>(null!)
 /** Use modal open/close states only (won't re-render on preference changes) */
 export function useModalContext() {
   return useContext(ModalContext)
+}
+
+/** Use pending mention insert state (only re-renders when mention insert changes) */
+export function useMentionInsertContext() {
+  return useContext(MentionInsertContext)
 }
 
 /** Use user preferences only (won't re-render on modal open/close) */
@@ -125,8 +137,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     helpOpen, setHelpOpen,
     onboardingOpen, setOnboardingOpen,
     addPageInitial, setAddPageInitial,
+  }), [feedbackOpen, searchOpen, addPageOpen, settingsOpen, helpOpen, onboardingOpen, addPageInitial])
+
+  const mentionInsertValue = useMemo<MentionInsertContextValue>(() => ({
     pendingMentionInsert, setPendingMentionInsert,
-  }), [feedbackOpen, searchOpen, addPageOpen, settingsOpen, helpOpen, onboardingOpen, addPageInitial, pendingMentionInsert])
+  }), [pendingMentionInsert])
 
   const prefsValue = useMemo<PreferencesContextValue>(() => ({
     showArchived, setShowArchived,
@@ -134,9 +149,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   return (
     <ModalContext.Provider value={modalValue}>
-      <PreferencesContext.Provider value={prefsValue}>
-        {children}
-      </PreferencesContext.Provider>
+      <MentionInsertContext.Provider value={mentionInsertValue}>
+        <PreferencesContext.Provider value={prefsValue}>
+          {children}
+        </PreferencesContext.Provider>
+      </MentionInsertContext.Provider>
     </ModalContext.Provider>
   )
 }

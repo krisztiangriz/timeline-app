@@ -110,7 +110,6 @@ export function useEntryCount(
 ) {
   return useMemo(() => {
     const months = buildMonthKeys(monthCount, entries)
-    const cutoff = getCutoff(monthCount)
 
     // Collect hub scopes — if any scope is hub-type, do per-child breakdown
     const hubIds: number[] = []
@@ -135,6 +134,9 @@ export function useEntryCount(
         return row
       })
 
+      // Accumulate summary totals in the same pass
+      const summaryTotals = new Map<number, number>(children.map((c) => [c.id!, 0]))
+
       for (const e of entries) {
         if (e.isPending) continue
         const m = formatMonthKey(new Date(e.date))
@@ -143,7 +145,12 @@ export function useEntryCount(
         const counted = new Set<number>()
         if (childIdSet.has(e.pageId)) {
           const child = childById.get(e.pageId)
-          if (child) { data[idx][child.name] = (Number(data[idx][child.name]) || 0) + countHtmlBlocks(e.text); counted.add(child.id!) }
+          if (child) {
+            const blocks = countHtmlBlocks(e.text)
+            data[idx][child.name] = (Number(data[idx][child.name]) || 0) + blocks
+            summaryTotals.set(child.id!, summaryTotals.get(child.id!)! + blocks)
+            counted.add(child.id!)
+          }
         }
         if (e.tagRefs) {
           for (const ref of e.tagRefs) {
@@ -151,7 +158,12 @@ export function useEntryCount(
             if (counted.has(refId)) continue
             if (childIdSet.has(refId)) {
               const child = childById.get(refId)
-              if (child) { data[idx][child.name] = (Number(data[idx][child.name]) || 0) + countMentionBlocks(e.text, refId); counted.add(refId) }
+              if (child) {
+                const blocks = countMentionBlocks(e.text, refId)
+                data[idx][child.name] = (Number(data[idx][child.name]) || 0) + blocks
+                summaryTotals.set(child.id!, summaryTotals.get(child.id!)! + blocks)
+                counted.add(refId)
+              }
             }
           }
         }
@@ -159,19 +171,7 @@ export function useEntryCount(
 
       const keys = children.map((c) => c.name).filter((k) => data.some((d) => Number(d[k]) > 0))
       const summary = children
-        .map((c) => {
-          let total = 0
-          for (const e of entries) {
-            if (e.isPending) continue
-            if (new Date(e.date) < cutoff) continue
-            if (e.pageId === c.id) {
-              total += countHtmlBlocks(e.text)
-            } else if (e.tagRefs?.includes(String(c.id))) {
-              total += countMentionBlocks(e.text, c.id!)
-            }
-          }
-          return { name: c.name, value: total }
-        })
+        .map((c) => ({ name: c.name, value: summaryTotals.get(c.id!) ?? 0 }))
         .filter((s) => s.value > 0)
 
       return { data, keys, summary }
@@ -188,6 +188,7 @@ export function useEntryCount(
     })
 
     const monthToIdx2 = new Map(months.map((m, i) => [m, i]))
+    let total = 0
 
     for (const e of entries) {
       if (e.isPending) continue
@@ -198,18 +199,10 @@ export function useEntryCount(
         ? countMentionBlocks(e.text, scopePageId)
         : countHtmlBlocks(e.text)
       data[idx].Entries = (Number(data[idx].Entries) || 0) + blocks
+      total += blocks
     }
 
     const keys = ['Entries']
-    let total = 0
-    for (const e of entries) {
-      if (e.isPending) continue
-      if (new Date(e.date) < cutoff) continue
-      const blocks = scopePageId && e.pageId !== scopePageId
-        ? countMentionBlocks(e.text, scopePageId)
-        : countHtmlBlocks(e.text)
-      total += blocks
-    }
     const summary = total > 0 ? [{ name: 'Entries', value: total }] : []
 
     return { data, keys, summary }

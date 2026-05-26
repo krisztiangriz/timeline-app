@@ -1,6 +1,6 @@
 import { useMemo, useEffect, lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom'
-import { AppProvider, useModalContext } from './hooks/useAppContext'
+import { AppProvider, useModalContext, useMentionInsertContext } from './hooks/useAppContext'
 import { AutocompleteProvider, useAutocomplete } from './hooks/useAutocomplete'
 import { OnboardingGuidesProvider, useOnboardingGuides } from './hooks/useOnboardingGuides'
 import { ToastContainer } from './components/Toast/Toast'
@@ -39,8 +39,8 @@ function GlobalOverlays() {
     helpOpen, setHelpOpen,
     onboardingOpen, setOnboardingOpen,
     addPageInitial, setAddPageInitial,
-    setPendingMentionInsert,
   } = useModalContext()
+  const { setPendingMentionInsert } = useMentionInsertContext()
   const { toasts, show: showToast } = useToast()
   const { allPages } = useAutocomplete()
   const navigate = useNavigate()

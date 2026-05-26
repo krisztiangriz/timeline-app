@@ -8,7 +8,7 @@ import {
   type KeyboardEvent,
 } from 'react'
 import { useAutocomplete } from '../../hooks/useAutocomplete'
-import { useModalContext } from '../../hooks/useAppContext'
+import { useModalContext, useMentionInsertContext } from '../../hooks/useAppContext'
 import { enrichMentionHtml } from '../../utils/mentionEnricher'
 import { formatTableDate } from '../../utils/dateUtils'
 import { CloseIcon } from '../Icons/Icons'
@@ -83,7 +83,8 @@ export function RichTextEditor({
 
   // Load pages for autocomplete (shared context — single subscription for all editors)
   const { allPages } = useAutocomplete()
-  const { setAddPageOpen, setAddPageInitial, pendingMentionInsert, setPendingMentionInsert } = useModalContext()
+  const { setAddPageOpen, setAddPageInitial } = useModalContext()
+  const { pendingMentionInsert, setPendingMentionInsert } = useMentionInsertContext()
 
   // Build set of active hub trigger characters
   const hubTriggers = useMemo<Set<string>>(() =>

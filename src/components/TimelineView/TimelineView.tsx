@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
+import { useState, useMemo, useEffect, useRef, useCallback, memo } from 'react'
 import { stripHtml, stripCheckboxHtml } from '../../utils/stripHtml'
 import { filterHtmlToMentionLines } from '../../utils/mentionParser'
 
@@ -16,7 +16,14 @@ import { useOnboardingGuides } from '../../hooks/useOnboardingGuides'
 import { OnboardingGuide } from '../OnboardingGuide/OnboardingGuide'
 import styles from './TimelineView.module.css'
 
-const NOOP = () => {}
+/** Lightweight read-only row for cross-referenced entries — avoids unstable object spread */
+const CrossRefRow = memo(function CrossRefRow({ html }: { html: string }) {
+  return (
+    <div className={styles.entryRowTextDisabled} style={{ cursor: 'auto' }}>
+      <RichTextDisplay html={html} collapseMentions />
+    </div>
+  )
+})
 
 /** Ensure each line in pending HTML has a checkbox. Used when migrating old entries. */
 function ensureCheckboxes(html: string): string {
@@ -444,12 +451,9 @@ export function TimelineView({ pageId, title, readOnly = false, page }: Timeline
           {todayCrossRefs.flatMap((entry) => {
             const lines = filterHtmlToMentionLines(entry.text, pageId)
             return lines.map((lineHtml, li) => (
-              <TimelineEntryRow
+              <CrossRefRow
                 key={`${entry.id}-${li}`}
-                entry={{ ...entry, text: lineHtml }}
-                onUpdate={NOOP}
-                onDelete={NOOP}
-                crossRef
+                html={lineHtml}
               />
             ))
           })}
@@ -471,12 +475,9 @@ export function TimelineView({ pageId, title, readOnly = false, page }: Timeline
                 if (isCrossRef) {
                   const lines = filterHtmlToMentionLines(entry.text, pageId)
                   return lines.map((lineHtml, li) => (
-                    <TimelineEntryRow
+                    <CrossRefRow
                       key={`${entry.id}-${li}`}
-                      entry={{ ...entry, text: lineHtml }}
-                      onUpdate={NOOP}
-                      onDelete={NOOP}
-                      crossRef
+                      html={lineHtml}
                     />
                   ))
                 }
