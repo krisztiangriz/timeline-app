@@ -61,7 +61,7 @@ export function useAutoBackup() {
  */
 export function useBackupSettings() {
   const [frequency, setFrequencyState] = useState<BackupFrequency>(getFrequency)
-  const [lastBackup] = useState<string | null>(getLastBackup)
+  const lastBackup = getLastBackup()
 
   const setFrequency = useCallback((v: BackupFrequency) => {
     setFrequencyState(v)

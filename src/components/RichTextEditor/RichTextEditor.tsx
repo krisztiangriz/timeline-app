@@ -894,6 +894,7 @@ export function RichTextEditor({
         <div
           className={styles.mentionDropdown}
           style={{ top: mentionPos.top, left: mentionPos.left }}
+          role="listbox"
         >
           {autocompleteOptions.map((opt, i) => (
             <div
@@ -904,6 +905,7 @@ export function RichTextEditor({
                 insertAutocomplete(opt)
               }}
               onMouseEnter={() => setMentionIndex(i)}
+              role="option"
             >
               <span className={styles.mentionPrefix}>{opt.prefix}</span>
               {opt.name}

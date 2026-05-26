@@ -125,7 +125,7 @@ export function SettingsModal({ open, onClose, onToast }: SettingsModalProps) {
         <span className={styles.sectionTitle}>Theme</span>
         <div className={styles.backupRow}>
           {(['light', 'dark'] as Theme[]).map((opt) => (
-            <button key={opt} className={styles.checkboxRow} onClick={() => setTheme(opt)}>
+            <button key={opt} className={styles.checkboxRow} onClick={() => setTheme(opt)} role="radio" aria-checked={theme === opt}>
               <div className={styles.radio} data-checked={theme === opt} />
               <span className={styles.checkboxLabel}>{opt.charAt(0).toUpperCase() + opt.slice(1)}</span>
             </button>
@@ -219,7 +219,7 @@ export function SettingsModal({ open, onClose, onToast }: SettingsModalProps) {
         <span className={styles.sectionTitle}>Auto-backup</span>
         <div className={styles.backupRow}>
           {(['daily', 'weekly', 'monthly', 'off'] as BackupFrequency[]).map((opt) => (
-            <button key={opt} className={styles.checkboxRow} onClick={() => setFrequency(opt)}>
+            <button key={opt} className={styles.checkboxRow} onClick={() => setFrequency(opt)} role="radio" aria-checked={frequency === opt}>
               <div className={styles.radio} data-checked={frequency === opt} />
               <span className={styles.checkboxLabel}>{opt.charAt(0).toUpperCase() + opt.slice(1)}</span>
             </button>
@@ -294,7 +294,7 @@ export function SettingsModal({ open, onClose, onToast }: SettingsModalProps) {
       <div className={styles.section}>
         <div className={styles.listHeader}>
           <span className={styles.sectionTitle}>Archived pages</span>
-          <button className={styles.checkboxRow} onClick={() => setShowArchived(!showArchived)}>
+          <button className={styles.checkboxRow} onClick={() => setShowArchived(!showArchived)} role="checkbox" aria-checked={showArchived}>
             <div className={styles.checkbox} data-checked={showArchived} />
             <span className={styles.checkboxLabel}>Show archived</span>
           </button>

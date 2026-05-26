@@ -27,7 +27,7 @@ export const PropertyRow = memo(function PropertyRow({ property, value, onChange
 
   return (
     <div className={styles.wrapper} ref={ref}>
-      <button className={styles.trigger} onClick={() => setOpen((v) => !v)}>
+      <button className={styles.trigger} onClick={() => setOpen((v) => !v)} aria-expanded={open} aria-haspopup="listbox" aria-label={property.name}>
         {selectedOption ? (
           <>
             <span className={styles.dot} style={{ background: selectedOption.color }} />
@@ -41,13 +41,15 @@ export const PropertyRow = memo(function PropertyRow({ property, value, onChange
         </svg>
       </button>
       {open && (
-        <div className={styles.menu}>
+        <div className={styles.menu} role="listbox">
           {property.options.map((option) => (
             <button
               key={option.value}
               className={styles.menuItem}
               data-active={option.value === value || undefined}
               onClick={() => { onChange(option.value); setOpen(false) }}
+              role="option"
+              aria-selected={option.value === value}
             >
               <span className={styles.dot} style={{ background: option.color }} />
               {option.label}

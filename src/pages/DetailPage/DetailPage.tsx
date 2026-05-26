@@ -1,9 +1,9 @@
 import { useStickyScroll } from '../../hooks/useStickyScroll'
-import { useState, useMemo, useEffect, useCallback } from 'react'
+import { useState, useMemo, useEffect, useCallback, lazy, Suspense } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { BreadcrumbNav } from '../../components/Breadcrumb/Breadcrumb'
 import { PageHeader } from '../../components/PageHeader/PageHeader'
-import { PageForm, type PageFormData } from '../../components/PageForm/PageForm'
+import type { PageFormData } from '../../components/PageForm/PageForm'
 import { ConfirmModal } from '../../components/ConfirmModal/ConfirmModal'
 import { BlockRenderer } from '../../components/BlockRenderer/BlockRenderer'
 import { PropertyRow } from '../../components/PropertyRow/PropertyRow'
@@ -15,6 +15,8 @@ import { useToast } from '../../hooks/useToast'
 import { useHubPageProperties, usePagePropertyValues, setPagePropertyValue, getPagePropertyValue } from '../../hooks/useHubProperties'
 import layout from '../../styles/layout.module.css'
 import pd from '../../components/PageDetail/PageDetail.module.css'
+
+const PageForm = lazy(() => import('../../components/PageForm/PageForm').then((m) => ({ default: m.PageForm })))
 
 interface DetailPageProps {
   /** Route prefix for breadcrumb path, e.g. 'colleagues', 'projects', 'candidates'. If undefined, uses '/page/:id'. */
@@ -62,7 +64,7 @@ export function DetailPage({ routePrefix }: DetailPageProps) {
       await archivePage(pageId)
       showToast('Archived')
     }
-  }, [pageId, page, archivePage, unarchivePage, showToast])
+  }, [pageId, page, showToast]) // archivePage/unarchivePage are stable module-level imports
 
   const { moreMenuItems } = usePageMenus({
     canDelete, canArchive, isArchived: !!page?.archived,
@@ -145,7 +147,7 @@ export function DetailPage({ routePrefix }: DetailPageProps) {
           </div>
         )}
       </div>
-      <PageForm open={editPageOpen} onClose={() => setEditPageOpen(false)} onSubmit={handleEditSubmit} initial={editInitial} isEdit isHub={page.type === 'hub' || undefined} hubId={page.type === 'hub' ? page.id : undefined} />
+      {editPageOpen && <Suspense fallback={null}><PageForm open={editPageOpen} onClose={() => setEditPageOpen(false)} onSubmit={handleEditSubmit} initial={editInitial} isEdit isHub={page.type === 'hub' || undefined} hubId={page.type === 'hub' ? page.id : undefined} /></Suspense>}
       <ConfirmModal
         open={deleteConfirm}
         title={page.type === 'hub' ? 'Delete hub' : 'Delete page'}

@@ -1,9 +1,9 @@
 import { useStickyScroll } from '../../hooks/useStickyScroll'
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, lazy, Suspense } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { BreadcrumbNav } from '../../components/Breadcrumb/Breadcrumb'
 import { PageHeader } from '../../components/PageHeader/PageHeader'
-import { PageForm, type PageFormData } from '../../components/PageForm/PageForm'
+import type { PageFormData } from '../../components/PageForm/PageForm'
 import { ConfirmModal } from '../../components/ConfirmModal/ConfirmModal'
 import { BlockRenderer } from '../../components/BlockRenderer/BlockRenderer'
 import { usePageByRole, updatePage, deletePage, updateTabs, archivePage, unarchivePage, usePageTabs, getPagePath } from '../../hooks/usePages'
@@ -13,6 +13,8 @@ import { useAutocomplete } from '../../hooks/useAutocomplete'
 import { useToast } from '../../hooks/useToast'
 import type { PageRole } from '../../types'
 import layout from '../../styles/layout.module.css'
+
+const PageForm = lazy(() => import('../../components/PageForm/PageForm').then((m) => ({ default: m.PageForm })))
 
 interface HubPageProps {
   role: PageRole
@@ -40,7 +42,7 @@ export function HubPage({ role }: HubPageProps) {
       await archivePage(hub.id)
       showToast('Archived')
     }
-  }, [hub, archivePage, unarchivePage, showToast])
+  }, [hub, showToast]) // archivePage/unarchivePage are stable module-level imports
 
   const { moreMenuItems } = usePageMenus({
     onEditPage: () => setEditPageOpen(true),
@@ -82,7 +84,7 @@ export function HubPage({ role }: HubPageProps) {
         </div>
         <BlockRenderer page={hub} />
       </div>
-      <PageForm open={editPageOpen} onClose={() => setEditPageOpen(false)} onSubmit={handleEditSubmit} initial={editInitial} isEdit isHub hubId={hub.id!} />
+      {editPageOpen && <Suspense fallback={null}><PageForm open={editPageOpen} onClose={() => setEditPageOpen(false)} onSubmit={handleEditSubmit} initial={editInitial} isEdit isHub hubId={hub.id!} /></Suspense>}
       <ConfirmModal
         open={deleteConfirm}
         title="Delete hub"

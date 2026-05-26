@@ -3,25 +3,29 @@ import { db } from '../db/database'
 import type { Block } from '../types'
 
 /**
- * Get all blocks for a page (optionally filtered by tab).
+ * Get blocks for a page.
+ * - tabId = number → blocks for that specific tab
+ * - tabId = null → page-level blocks only (no tab)
+ * - tabId = undefined → all blocks for the page
  */
 export function useBlocks(pageId?: number, tabId?: number | null) {
   return useLiveQuery(
     () => {
       if (!pageId) return []
-      // Use compound index when filtering by a specific tab
       if (typeof tabId === 'number') {
         return db.blocks
           .where('[pageId+tabId]')
           .equals([pageId, tabId])
           .toArray()
       }
-      // Page-level blocks (no tab) or all blocks
-      return db.blocks
-        .where('pageId')
-        .equals(pageId)
-        .filter((b) => tabId === undefined ? true : !b.tabId)
-        .toArray()
+      if (tabId === null) {
+        return db.blocks
+          .where('pageId')
+          .equals(pageId)
+          .filter((b) => !b.tabId)
+          .toArray()
+      }
+      return db.blocks.where('pageId').equals(pageId).toArray()
     },
     [pageId, tabId]
   ) ?? []

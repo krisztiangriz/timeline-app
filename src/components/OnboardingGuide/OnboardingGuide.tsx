@@ -114,14 +114,23 @@ export function OnboardingGuide({
 
   useEffect(() => {
     if (!isActive) return
-    // Compute position on mount and on resize/scroll
+    // Compute position on mount and on resize/scroll (throttled via rAF)
     const frame = requestAnimationFrame(computePosition)
-    window.addEventListener('resize', computePosition)
-    window.addEventListener('scroll', computePosition, true)
+    let rafId: number | null = null
+    const throttledReposition = () => {
+      if (rafId !== null) return
+      rafId = requestAnimationFrame(() => {
+        computePosition()
+        rafId = null
+      })
+    }
+    window.addEventListener('resize', throttledReposition)
+    window.addEventListener('scroll', throttledReposition, true)
     return () => {
       cancelAnimationFrame(frame)
-      window.removeEventListener('resize', computePosition)
-      window.removeEventListener('scroll', computePosition, true)
+      if (rafId !== null) cancelAnimationFrame(rafId)
+      window.removeEventListener('resize', throttledReposition)
+      window.removeEventListener('scroll', throttledReposition, true)
     }
   }, [isActive, computePosition])
 

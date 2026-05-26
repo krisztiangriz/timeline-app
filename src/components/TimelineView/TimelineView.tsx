@@ -235,14 +235,6 @@ export function TimelineView({ pageId, title, readOnly = false, page }: Timeline
     } catch { showToast('Failed to save') }
   }
 
-  const handleUpdateEntry = useCallback(async (id: number, data: { text?: string }) => {
-    await updateEntry(id, data)
-  }, [])
-
-  const handleDeleteEntry = useCallback(async (id: number) => {
-    await deleteEntry(id)
-  }, [])
-
   async function handleDeletePending() {
     if (pendingEntryId.current) {
       await deleteEntry(pendingEntryId.current)
@@ -294,10 +286,6 @@ export function TimelineView({ pageId, title, readOnly = false, page }: Timeline
       }
     } catch { /* auto-save failure — non-critical */ }
   }, [pageId])
-
-  async function handleDeleteHistoryEntry(entryId: number) {
-    await deleteEntry(entryId)
-  }
 
   const handleMentionClick = useNavigateToPage()
 
@@ -496,8 +484,8 @@ export function TimelineView({ pageId, title, readOnly = false, page }: Timeline
                   <TimelineEntryRow
                     key={entry.id}
                     entry={entry}
-                    onUpdate={handleUpdateEntry}
-                    onDelete={handleDeleteEntry}
+                    onUpdate={updateEntry}
+                    onDelete={deleteEntry}
                   />
                 )]
               })}
@@ -505,7 +493,7 @@ export function TimelineView({ pageId, title, readOnly = false, page }: Timeline
             <div className={styles.sectionDateContainer}>
               <span className={styles.sectionDate}>{formatEntryDate(new Date(dateKey))}</span>
               {directEntry && (
-                <button className={styles.sectionDeleteLabel} onClick={() => handleDeleteHistoryEntry(directEntry.id!)}>Delete</button>
+                <button className={styles.sectionDeleteLabel} onClick={() => deleteEntry(directEntry.id!)}>Delete</button>
               )}
             </div>
           </div>

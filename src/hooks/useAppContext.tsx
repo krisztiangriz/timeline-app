@@ -41,24 +41,7 @@ interface ModalContextValue {
   setPendingMentionInsert: (v: PendingMentionInsert | null) => void
 }
 
-const ModalContext = createContext<ModalContextValue>({
-  feedbackOpen: false,
-  setFeedbackOpen: () => {},
-  searchOpen: false,
-  setSearchOpen: () => {},
-  addPageOpen: false,
-  setAddPageOpen: () => {},
-  settingsOpen: false,
-  setSettingsOpen: () => {},
-  helpOpen: false,
-  setHelpOpen: () => {},
-  onboardingOpen: false,
-  setOnboardingOpen: () => {},
-  addPageInitial: undefined,
-  setAddPageInitial: () => {},
-  pendingMentionInsert: null,
-  setPendingMentionInsert: () => {},
-})
+const ModalContext = createContext<ModalContextValue>(null!)
 
 // ---- Preferences context (user settings persisted to localStorage) ----
 
@@ -67,10 +50,7 @@ interface PreferencesContextValue {
   setShowArchived: (v: boolean) => void
 }
 
-const PreferencesContext = createContext<PreferencesContextValue>({
-  showArchived: false,
-  setShowArchived: () => {},
-})
+const PreferencesContext = createContext<PreferencesContextValue>(null!)
 
 // ---- Hooks ----
 

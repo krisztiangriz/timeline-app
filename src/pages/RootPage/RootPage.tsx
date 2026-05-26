@@ -24,11 +24,6 @@ import { safeGetItem } from '../../utils/safeStorage'
 import layout from '../../styles/layout.module.css'
 import table from '../../styles/table.module.css'
 
-/** Check if a page is a hub (accepts drops) */
-function isHubPage(type: string): boolean {
-  return type === 'hub'
-}
-
 export function RootPage() {
   const { allPages } = useAutocomplete()
   const { showArchived } = usePreferences()
@@ -69,7 +64,7 @@ export function RootPage() {
 
   function handleDragOver(e: React.DragEvent, targetPageId: number) {
     const targetPage = allPages.find((p) => p.id === targetPageId)
-    if (!targetPage || !isHubPage(targetPage.type) || targetPageId === draggedId) return
+    if (!targetPage || targetPage.type !== 'hub' || targetPageId === draggedId) return
     e.preventDefault(); e.dataTransfer.dropEffect = 'move'; setDropTargetId(targetPageId)
   }
 
@@ -84,9 +79,9 @@ export function RootPage() {
     const dragId = Number(e.dataTransfer.getData('text/plain'))
     if (!dragId || dragId === targetPageId) return
     const targetPage = allPages.find((p) => p.id === targetPageId)
-    if (!targetPage || !isHubPage(targetPage.type)) return
+    if (!targetPage || targetPage.type !== 'hub') return
     const draggedPage = allPages.find((p) => p.id === dragId)
-    if (!draggedPage || isHubPage(draggedPage.type) || !!draggedPage.role) return
+    if (!draggedPage || draggedPage.type === 'hub' || !!draggedPage.role) return
     const newType = targetPage.role ? ROLE_TO_PAGE_TYPE[targetPage.role] ?? draggedPage.type : draggedPage.type
     await updatePage(dragId, { parentId: targetPageId, type: newType as PageType })
     showToast(`Moved "${draggedPage.name}" into "${targetPage.name}"`)
@@ -126,8 +121,8 @@ export function RootPage() {
           </div>
 
           {flatRows.map(({ page, depth }) => {
-            const cantDrag = isHubPage(page.type) || !!page.role
-            const isHub = isHubPage(page.type)
+            const cantDrag = page.type === 'hub' || !!page.role
+            const isHub = page.type === 'hub'
             const isDragging = draggedId === page.id
             const isOver = dropTargetId === page.id
             let cls = table.row

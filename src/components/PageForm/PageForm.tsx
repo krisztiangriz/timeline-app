@@ -269,7 +269,7 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
       {/* Page name */}
       <div className={styles.section}>
         <span className={styles.label}>Page name</span>
-        <input className={styles.textInput} type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Enter page name" />
+        <input className={styles.textInput} type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Enter page name" aria-label="Page name" />
       </div>
 
       {/* Trigger character (optional — for hubs and standalone root pages; read-only for child pages) */}
@@ -305,7 +305,7 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
                   style={{ width: 52, fontFamily: 'ui-monospace, monospace' }}
                 />
                 {trigger && (
-                  <button className={styles.labelToggle} onClick={() => setCollapsed(!collapsed)} type="button">
+                  <button className={styles.labelToggle} onClick={() => setCollapsed(!collapsed)} type="button" role="checkbox" aria-checked={!collapsed}>
                     <div className={styles.labelCheckbox} data-checked={!collapsed} />
                     <span className={styles.labelText}>Label</span>
                   </button>

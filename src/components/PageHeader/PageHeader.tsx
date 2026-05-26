@@ -77,13 +77,15 @@ export function PageHeader({
       </div>
 
       {tabs.length > 1 && (
-        <div className={styles.tabGroup}>
+        <div className={styles.tabGroup} role="tablist">
           {tabs.map((tab, i) => (
             <Fragment key={tab.id}>
               {i > 0 && <div className={styles.tabSeparator} />}
               <button
                 className={activeTabId === tab.id ? styles.tab : styles.tabInactive}
                 onClick={() => onTabChange?.(tab.id!)}
+                role="tab"
+                aria-selected={activeTabId === tab.id}
               >
                 {tab.name}
               </button>

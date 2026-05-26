@@ -13,13 +13,15 @@ interface RangeToggleProps {
 
 export function RangeToggle({ value, onChange }: RangeToggleProps) {
   return (
-    <div className={styles.rangeToggle}>
+    <div className={styles.rangeToggle} role="radiogroup" aria-label="Time range">
       {RANGE_OPTIONS.map((r, i) => (
         <Fragment key={r}>
           {i > 0 && <div className={styles.rangeSeparator} />}
           <button
             className={value === r ? styles.rangeButtonActive : styles.rangeButton}
             onClick={() => onChange(r)}
+            role="radio"
+            aria-checked={value === r}
           >
             {RANGE_LABELS[r]}
           </button>

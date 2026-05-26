@@ -7,16 +7,24 @@ let cachedMentionInfo: Map<number, { trigger: string; collapsed: boolean }> = ne
 function getMentionInfo(allPages: Page[]): Map<number, { trigger: string; collapsed: boolean }> {
   if (cachedPages === allPages) return cachedMentionInfo
   const info = new Map<number, { trigger: string; collapsed: boolean }>()
+
+  // Build parentId → trigger lookup (only hubs have mentionTrigger)
+  const hubTriggers = new Map<number, { trigger: string; collapsed: boolean }>()
   for (const page of allPages) {
     if (page.mentionTrigger) {
-      info.set(page.id!, { trigger: page.mentionTrigger, collapsed: !!page.mentionCollapsed })
-      for (const child of allPages) {
-        if (child.parentId === page.id) {
-          info.set(child.id!, { trigger: page.mentionTrigger, collapsed: !!page.mentionCollapsed })
-        }
-      }
+      const entry = { trigger: page.mentionTrigger, collapsed: !!page.mentionCollapsed }
+      info.set(page.id!, entry)
+      hubTriggers.set(page.id!, entry)
     }
   }
+
+  // Single pass: assign hub trigger to children via parentId lookup
+  for (const page of allPages) {
+    if (page.parentId && hubTriggers.has(page.parentId)) {
+      info.set(page.id!, hubTriggers.get(page.parentId)!)
+    }
+  }
+
   cachedPages = allPages
   cachedMentionInfo = info
   return info

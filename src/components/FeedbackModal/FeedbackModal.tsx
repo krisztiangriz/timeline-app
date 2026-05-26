@@ -167,6 +167,7 @@ export function FeedbackModal({ open, onClose, onSuccess }: FeedbackModalProps) 
             onKeyDown={handleSubjectKeyDown}
             placeholder={selectedSubjects.length > 0 ? 'Add another...' : 'Look up pages...'}
             autoFocus={selectedSubjects.length === 0}
+            aria-label="Subject"
           />
           {subjectQuery && (
             <button className={styles.clearSearch} onClick={() => setSubjectQuery('')} aria-label="Clear">
@@ -216,6 +217,7 @@ export function FeedbackModal({ open, onClose, onSuccess }: FeedbackModalProps) 
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           placeholder="Enter feedback..."
+          aria-label="Description"
         />
       </div>
 

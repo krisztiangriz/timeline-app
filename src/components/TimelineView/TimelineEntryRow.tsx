@@ -56,13 +56,22 @@ export const TimelineEntryRow = memo(function TimelineEntryRow({
     setEditing(true)
   }
 
+  function handleKeyboardActivate(e: React.KeyboardEvent) {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      clickPos.current = undefined
+      setEditHtml(entry.text)
+      setEditing(true)
+    }
+  }
+
   const hasHtml = !isPlainText(entry.text)
 
   return (
     <div
       className={crossRef ? styles.entryRowTextDisabled : styles.entryRowText}
       onClick={!editing && !crossRef ? handleStartEditing : undefined}
-      onKeyDown={!editing && !crossRef ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleStartEditing(e as unknown as React.MouseEvent) } } : undefined}
+      onKeyDown={!editing && !crossRef ? handleKeyboardActivate : undefined}
       tabIndex={!editing && !crossRef ? 0 : undefined}
       role={!editing && !crossRef ? 'button' : undefined}
       style={{ cursor: editing || crossRef ? 'auto' : 'text' }}
