@@ -106,8 +106,8 @@ export function FeedbackOverTimeChart({ config, monthCount = 12, pages, hubPrope
     const now = new Date()
     let count: number = monthCount
     if (count === 0) {
-      if (feedbacks.length > 0) {
-        const earliest = feedbacks.reduce((min, f) => {
+      if (scopedFeedbacks.length > 0) {
+        const earliest = scopedFeedbacks.reduce((min, f) => {
           const d = new Date(f.createdAt)
           return d < min ? d : min
         }, now)
@@ -143,7 +143,7 @@ export function FeedbackOverTimeChart({ config, monthCount = 12, pages, hubPrope
     }
 
     return { data, keys, colorMap }
-  }, [scopedFeedbacks, feedbacks, typeProp, monthCount, palette])
+  }, [scopedFeedbacks, typeProp, monthCount, palette])
 
   if (keys.length === 0) return <ChartContainer className={cls}><EmptyState compact message="No feedback properties configured" /></ChartContainer>
 

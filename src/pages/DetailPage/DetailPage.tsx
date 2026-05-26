@@ -1,5 +1,5 @@
 import { useStickyScroll } from '../../hooks/useStickyScroll'
-import { useState, useMemo, useEffect, useCallback, lazy, Suspense } from 'react'
+import { useState, useEffect, useCallback, lazy, Suspense } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { BreadcrumbNav } from '../../components/Breadcrumb/Breadcrumb'
 import { PageHeader } from '../../components/PageHeader/PageHeader'
@@ -73,7 +73,7 @@ export function DetailPage({ routePrefix }: DetailPageProps) {
     onRequestDelete: () => setDeleteConfirm(true),
   })
 
-  const editInitial = useMemo(() => {
+  function getEditInitial() {
     const parentHub = page?.parentId ? allPages.find((p) => p.id === page.parentId) : undefined
     return {
       name: page?.name ?? '',
@@ -86,7 +86,7 @@ export function DetailPage({ routePrefix }: DetailPageProps) {
       inheritedTrigger: parentHub?.mentionTrigger,
       inheritedFrom: parentHub?.name,
     }
-  }, [page, tabs, allPages, allBlocks])
+  }
 
   async function handleEditSubmit(data: PageFormData) {
     if (!pageId) return
@@ -147,7 +147,7 @@ export function DetailPage({ routePrefix }: DetailPageProps) {
           </div>
         )}
       </div>
-      {editPageOpen && <Suspense fallback={null}><PageForm open={editPageOpen} onClose={() => setEditPageOpen(false)} onSubmit={handleEditSubmit} initial={editInitial} isEdit isHub={page.type === 'hub' || undefined} hubId={page.type === 'hub' ? page.id : undefined} /></Suspense>}
+      {editPageOpen && <Suspense fallback={null}><PageForm open={editPageOpen} onClose={() => setEditPageOpen(false)} onSubmit={handleEditSubmit} initial={getEditInitial()} isEdit isHub={page.type === 'hub' || undefined} hubId={page.type === 'hub' ? page.id : undefined} /></Suspense>}
       <ConfirmModal
         open={deleteConfirm}
         title={page.type === 'hub' ? 'Delete hub' : 'Delete page'}

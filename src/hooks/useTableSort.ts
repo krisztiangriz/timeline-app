@@ -39,12 +39,8 @@ export function useTableSort(pageKey: string, defaultKey: SortKey = 'name', defa
       skipNextSave.current = false
       return
     }
-    db.pageSettings.where('pageKey').equals(pageKey).first().then((existing) => {
-      if (existing) {
-        return db.pageSettings.update(existing.id!, { sortKey, sortDir })
-      } else {
-        return db.pageSettings.add({ pageKey, sortKey, sortDir })
-      }
+    db.pageSettings.where('pageKey').equals(pageKey).modify({ sortKey, sortDir }).then((updated) => {
+      if (updated === 0) return db.pageSettings.add({ pageKey, sortKey, sortDir })
     }).catch(() => { /* storage error — non-critical */ })
   }, [pageKey, sortKey, sortDir, loaded])
 

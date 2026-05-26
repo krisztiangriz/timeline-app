@@ -30,10 +30,11 @@ export function usePage(id?: number) {
 
 /**
  * Get a single page by its stable role identifier.
+ * Pass undefined to skip the query.
  */
-export function usePageByRole(role: PageRole) {
+export function usePageByRole(role: PageRole | undefined) {
   return useLiveQuery(
-    () => db.pages.where('role').equals(role).first(),
+    () => role ? db.pages.where('role').equals(role).first() : undefined,
     [role]
   )
 }

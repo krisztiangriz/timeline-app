@@ -1,4 +1,4 @@
-import { useMemo, useEffect, lazy, Suspense } from 'react'
+import { useMemo, useEffect, useRef, lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom'
 import { AppProvider, useModalContext, useMentionInsertContext } from './hooks/useAppContext'
 import { AutocompleteProvider, useAutocomplete } from './hooks/useAutocomplete'
@@ -208,29 +208,33 @@ function useEnsureDefaults() {
 /** Listens for storage-unavailable events and shows a one-time toast */
 function StorageWarningListener() {
   const { show: showToast } = useToast()
+  const showToastRef = useRef(showToast)
+  showToastRef.current = showToast
   useEffect(() => {
     function handleStorageUnavailable() {
-      showToast('Storage unavailable — preferences won\'t persist')
+      showToastRef.current('Storage unavailable — preferences won\'t persist')
     }
     window.addEventListener('storage-unavailable', handleStorageUnavailable)
     return () => window.removeEventListener('storage-unavailable', handleStorageUnavailable)
-  }, [showToast])
+  }, [])
   return null
 }
 
 /** Listens for backup events and shows toast notifications */
 function BackupToastListener() {
   const { show: showToast } = useToast()
+  const showToastRef = useRef(showToast)
+  showToastRef.current = showToast
   useEffect(() => {
-    const onSuccess = () => showToast('Backup saved')
-    const onFailed = () => showToast('Backup failed — export manually from Settings')
+    const onSuccess = () => showToastRef.current('Backup saved')
+    const onFailed = () => showToastRef.current('Backup failed — export manually from Settings')
     window.addEventListener('backup-success', onSuccess)
     window.addEventListener('backup-failed', onFailed)
     return () => {
       window.removeEventListener('backup-success', onSuccess)
       window.removeEventListener('backup-failed', onFailed)
     }
-  }, [showToast])
+  }, [])
   return null
 }
 

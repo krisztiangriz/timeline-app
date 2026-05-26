@@ -45,20 +45,21 @@ self.addEventListener('fetch', (event) => {
     return
   }
 
-  // Navigation → serve cached index.html for SPA routing (handles 404 from GitHub Pages)
+  // Navigation → stale-while-revalidate (instant paint from cache, background update)
   if (event.request.mode === 'navigate') {
     event.respondWith(
-      fetch(event.request)
-        .then((response) => {
-          if (response.ok) {
-            const clone = response.clone()
-            caches.open(CACHE_NAME).then((cache) => cache.put(BASE + 'index.html', clone))
+      caches.match(BASE + 'index.html').then((cached) => {
+        const fetchPromise = fetch(event.request)
+          .then((response) => {
+            if (response.ok) {
+              const clone = response.clone()
+              caches.open(CACHE_NAME).then((cache) => cache.put(BASE + 'index.html', clone))
+            }
             return response
-          }
-          // Non-OK (404) → serve cached index.html so React Router handles the route
-          return caches.match(BASE + 'index.html') || response
-        })
-        .catch(() => caches.match(BASE + 'index.html'))
+          })
+          .catch(() => cached || new Response('', { status: 503, headers: { 'Content-Type': 'text/plain' } }))
+        return cached || fetchPromise
+      })
     )
     return
   }

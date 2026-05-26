@@ -298,7 +298,7 @@ export function TimelineView({ pageId, title, readOnly = false, page }: Timeline
 
   // ---- Filtered pending (for non-main-timeline pages) ----
   const isMainTimeline = page?.role === 'main-timeline'
-  const mainTimelinePage = usePageByRole('main-timeline')
+  const mainTimelinePage = usePageByRole(isMainTimeline ? undefined : 'main-timeline')
   const mainPendingEntry = usePendingEntry(isMainTimeline ? undefined : mainTimelinePage?.id)
   const hubChildren = useChildPages(page?.type === 'hub' ? page.id : undefined)
 

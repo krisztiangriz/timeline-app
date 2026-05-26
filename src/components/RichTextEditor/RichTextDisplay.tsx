@@ -1,21 +1,28 @@
-import { memo, useMemo, useState, useEffect } from 'react'
+import { memo, useMemo, useSyncExternalStore } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getPagePath } from '../../hooks/usePages'
 import { useAutocomplete } from '../../hooks/useAutocomplete'
 import { enrichMentionHtml } from '../../utils/mentionEnricher'
 import styles from './RichTextEditor.module.css'
 
-// Lazy-load DOMPurify — loaded once on first render, then cached
+// Lazy-load DOMPurify — loaded once, subscribers notified via useSyncExternalStore
 let purifyInstance: { sanitize: (html: string) => string } | null = null
-let purifyPromise: Promise<void> | null = null
+let purifyLoaded = !!purifyInstance
+const listeners = new Set<() => void>()
 
-function loadPurify() {
-  if (!purifyPromise) {
-    purifyPromise = import('dompurify').then((mod) => {
-      purifyInstance = mod.default
-    })
-  }
-  return purifyPromise
+function subscribePurify(cb: () => void) {
+  listeners.add(cb)
+  return () => { listeners.delete(cb) }
+}
+function getPurifyLoaded() { return purifyLoaded }
+
+// Trigger load immediately (module-level)
+if (!purifyInstance) {
+  import('dompurify').then((mod) => {
+    purifyInstance = mod.default
+    purifyLoaded = true
+    listeners.forEach((cb) => cb())
+  })
 }
 
 interface RichTextDisplayProps {
@@ -36,13 +43,7 @@ export const RichTextDisplay = memo(function RichTextDisplay({ html, className, 
   const navigate = useNavigate()
   const { allPages } = useAutocomplete()
   const displayClassName = [styles.editor, className].filter(Boolean).join(' ')
-  const [purifyLoaded, setPurifyLoaded] = useState(!!purifyInstance)
-
-  useEffect(() => {
-    if (!purifyInstance) {
-      loadPurify().then(() => setPurifyLoaded(true))
-    }
-  }, [])
+  const isLoaded = useSyncExternalStore(subscribePurify, getPurifyLoaded)
 
   const cleanHtml = useMemo(() => {
     if (!purifyInstance) return ''
@@ -50,9 +51,9 @@ export const RichTextDisplay = memo(function RichTextDisplay({ html, className, 
     // Ensure all links open in new tab
     sanitized = sanitized.replace(/<a /g, '<a target="_blank" rel="noopener" ')
     return sanitized
-  }, [html, allPages, collapseMentions, purifyLoaded])
+  }, [html, allPages, collapseMentions, isLoaded])
 
-  if (!html || html === '<br>' || !purifyLoaded) {
+  if (!html || html === '<br>' || !isLoaded) {
     return null
   }
 

@@ -118,7 +118,9 @@ const TextBlock = memo(function TextBlock({ block, onUpdate, onMentionClick, pla
   const [html, setHtml] = useState(block.content ?? '')
   useEffect(() => { setHtml(block.content ?? '') }, [block.content])
   function save() { if (html !== (block.content ?? '')) onUpdate(html) }
-  const autoSave = useCallback((h: string) => { if (h !== (block.content ?? '')) onUpdate(h) }, [block.content, onUpdate])
+  const blockContentRef = useRef(block.content)
+  blockContentRef.current = block.content
+  const autoSave = useCallback((h: string) => { if (h !== (blockContentRef.current ?? '')) onUpdate(h) }, [onUpdate])
 
   return (
     <div onFocus={onEditorFocus}>
