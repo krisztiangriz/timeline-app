@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
-import { createPortal } from 'react-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../../db/database'
 import { Modal } from '../Modal/Modal'
+import { DropdownPortal } from '../DropdownPortal/DropdownPortal'
 import { DATA_SOURCE_LABELS, VALID_CHART_TYPES } from './ChartRenderer'
 import type { ChartDataSource, ChartType, ChartConfig, ChartScope, Page, HubProperty } from '../../types'
 import styles from './Charts.module.css'
@@ -49,34 +49,6 @@ function toggleScope(scopes: ChartScope[], scope: ChartScope): ChartScope[] {
 
 function isScopeSelected(scopes: ChartScope[], scope: ChartScope): boolean {
   return scopes.some((s) => scopesEqual(s, scope))
-}
-
-// ---- Dropdown panel rendered in a portal to escape modal overflow ----
-
-function DropdownPanel({ anchorRef, children }: { anchorRef: React.RefObject<HTMLElement | null>; children: React.ReactNode }) {
-  const [pos, setPos] = useState<{ top: number; left: number; width: number } | null>(null)
-
-  useEffect(() => {
-    function update() {
-      const el = anchorRef.current
-      if (!el) return
-      const rect = el.getBoundingClientRect()
-      setPos({ top: rect.bottom + 4, left: rect.left, width: rect.width })
-    }
-    update()
-    window.addEventListener('scroll', update, true)
-    window.addEventListener('resize', update)
-    return () => { window.removeEventListener('scroll', update, true); window.removeEventListener('resize', update) }
-  }, [anchorRef])
-
-  if (!pos) return null
-
-  return createPortal(
-    <div className={styles.scopePanel} data-dropdown-panel style={{ position: 'fixed', top: pos.top, left: pos.left, width: pos.width }}>
-      {children}
-    </div>,
-    document.body,
-  )
 }
 
 // ---- Component ----
@@ -248,8 +220,8 @@ export function AddChartModal({ open, onClose, onAdd, editing, onUpdate, pageId,
                 <path d="M12 13.0729L7.42708 8.5L5.92708 10L12 16.0729L18.0729 10L16.5729 8.5L12 13.0729Z" fill="currentColor" />
               </svg>
             </button>
-            {scopeOpen && (
-              <DropdownPanel anchorRef={scopeTriggerRef}>
+            <DropdownPortal anchorRef={scopeTriggerRef} open={scopeOpen}>
+              <div className={styles.scopePanel} data-dropdown-panel>
                 {scopeOptions.map((opt) => (
                   <button
                     key={opt.key}
@@ -264,8 +236,8 @@ export function AddChartModal({ open, onClose, onAdd, editing, onUpdate, pageId,
                     {opt.label}
                   </button>
                 ))}
-              </DropdownPanel>
-            )}
+              </div>
+            </DropdownPortal>
           </div>
         </div>
 
@@ -287,8 +259,8 @@ export function AddChartModal({ open, onClose, onAdd, editing, onUpdate, pageId,
                 <path d="M12 13.0729L7.42708 8.5L5.92708 10L12 16.0729L18.0729 10L16.5729 8.5L12 13.0729Z" fill="currentColor" />
               </svg>
             </button>
-            {sourceOpen && (
-              <DropdownPanel anchorRef={sourceTriggerRef}>
+            <DropdownPortal anchorRef={sourceTriggerRef} open={sourceOpen}>
+              <div className={styles.scopePanel} data-dropdown-panel>
                 {ALL_SOURCES.map((s) => (
                   <button
                     key={s}
@@ -320,8 +292,8 @@ export function AddChartModal({ open, onClose, onAdd, editing, onUpdate, pageId,
                     </button>
                   )
                 })}
-              </DropdownPanel>
-            )}
+              </div>
+            </DropdownPortal>
           </div>
         </div>
 

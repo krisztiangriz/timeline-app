@@ -7,6 +7,7 @@ import { AddChartModal } from './AddChartModal'
 import { useChartConfigs, addChartConfig, updateChartConfig, deleteChartConfig } from '../../hooks/useChartConfigs'
 import { useAutocomplete } from '../../hooks/useAutocomplete'
 import { useAllEntries } from '../../hooks/useChartData'
+import { useChartPalette } from '../../hooks/useChartPalette'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../../db/database'
 import type { ChartConfig, ChartDataSource, ChartType, ChartScope, TimelineEntry, Page, HubProperty, PagePropertyValue, Feedback } from '../../types'
@@ -25,6 +26,7 @@ export const ConfigurableViz = memo(function ConfigurableViz({ blockId, pageId }
   const configs = useChartConfigs(blockId)
   const { allPages } = useAutocomplete()
   const { show: showToast } = useToast()
+  const { palette } = useChartPalette()
   const [range, setRangeState] = useState<RangeMonths>(() => {
     const stored = safeGetItem(`viz-range-${blockId}`)
     return stored === '0' ? 0 : stored === '3' ? 3 : stored === '6' ? 6 : 12
@@ -89,17 +91,17 @@ export const ConfigurableViz = memo(function ConfigurableViz({ blockId, pageId }
             return (
               <div key={`pair-${row.time!.id}`} className={styles.chartPair}>
                 <div className={styles.chartPairLeft}>
-                  <ChartCard config={row.time!} monthCount={range} entries={allEntries} pages={allPages} hubProperties={allHubProperties} feedbacks={allFeedbacks} propertyValues={allPropertyValues} onEdit={setEditing} onDelete={handleDelete} />
+                  <ChartCard config={row.time!} monthCount={range} entries={allEntries} pages={allPages} hubProperties={allHubProperties} feedbacks={allFeedbacks} propertyValues={allPropertyValues} onEdit={setEditing} onDelete={handleDelete} palette={palette} />
                 </div>
                 <div className={styles.chartPairRight}>
-                  <ChartCard config={row.pie!} monthCount={range} entries={allEntries} pages={allPages} hubProperties={allHubProperties} feedbacks={allFeedbacks} propertyValues={allPropertyValues} onEdit={setEditing} onDelete={handleDelete} isPie />
+                  <ChartCard config={row.pie!} monthCount={range} entries={allEntries} pages={allPages} hubProperties={allHubProperties} feedbacks={allFeedbacks} propertyValues={allPropertyValues} onEdit={setEditing} onDelete={handleDelete} isPie palette={palette} />
                 </div>
               </div>
             )
           }
           return (
             <div key={`single-${row.config!.id}`} className={styles.chartSection}>
-              <ChartCard config={row.config!} monthCount={range} entries={allEntries} pages={allPages} hubProperties={allHubProperties} feedbacks={allFeedbacks} propertyValues={allPropertyValues} onEdit={setEditing} onDelete={handleDelete} />
+              <ChartCard config={row.config!} monthCount={range} entries={allEntries} pages={allPages} hubProperties={allHubProperties} feedbacks={allFeedbacks} propertyValues={allPropertyValues} onEdit={setEditing} onDelete={handleDelete} palette={palette} />
             </div>
           )
         })
@@ -132,6 +134,7 @@ const ChartCard = memo(function ChartCard({
   onEdit,
   onDelete,
   isPie,
+  palette,
 }: {
   config: ChartConfig
   monthCount: 0 | 3 | 6 | 12
@@ -143,6 +146,7 @@ const ChartCard = memo(function ChartCard({
   onEdit: (c: ChartConfig) => void
   onDelete: (id: number) => void
   isPie?: boolean
+  palette: string[]
 }) {
   return (
     <div className={styles.chartCard}>
@@ -168,6 +172,7 @@ const ChartCard = memo(function ChartCard({
         feedbacks={feedbacks}
         propertyValues={propertyValues}
         containerClass={isPie ? styles.chartContainerPie : styles.chartContainer}
+        palette={palette}
       />
     </div>
   )

@@ -13,6 +13,10 @@ interface ColorPickerProps {
 export function ColorPicker({ colors, value, onChange, onClose, anchorRef }: ColorPickerProps) {
   const ref = useRef<HTMLDivElement>(null)
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null)
+  const [activeIndex, setActiveIndex] = useState(() => {
+    const idx = value ? colors.indexOf(value) : -1
+    return idx >= 0 ? idx : 0
+  })
 
   // Position relative to anchor element
   useEffect(() => {
@@ -42,19 +46,66 @@ export function ColorPicker({ colors, value, onChange, onClose, anchorRef }: Col
     return () => document.removeEventListener('mousedown', handleClick)
   }, [onClose])
 
+  // Auto-focus picker on mount
+  useEffect(() => {
+    ref.current?.focus()
+  }, [])
+
+  function handleKeyDown(e: React.KeyboardEvent) {
+    switch (e.key) {
+      case 'ArrowRight':
+        e.preventDefault()
+        setActiveIndex((prev) => (prev < colors.length - 1 ? prev + 1 : 0))
+        break
+      case 'ArrowLeft':
+        e.preventDefault()
+        setActiveIndex((prev) => (prev > 0 ? prev - 1 : colors.length - 1))
+        break
+      case 'ArrowDown':
+        e.preventDefault()
+        setActiveIndex((prev) => Math.min(prev + 5, colors.length - 1))
+        break
+      case 'ArrowUp':
+        e.preventDefault()
+        setActiveIndex((prev) => Math.max(prev - 5, 0))
+        break
+      case 'Enter':
+      case ' ':
+        e.preventDefault()
+        if (activeIndex >= 0) {
+          onChange(colors[activeIndex])
+          onClose()
+          anchorRef?.current?.focus()
+        }
+        break
+      case 'Escape':
+        e.preventDefault()
+        onClose()
+        anchorRef?.current?.focus()
+        break
+    }
+  }
+
   const content = (
     <div
       ref={ref}
       className={styles.picker}
       style={pos ? { position: 'fixed', top: pos.top, left: pos.left } : undefined}
+      tabIndex={-1}
+      role="listbox"
+      aria-label="Pick a color"
+      onKeyDown={handleKeyDown}
     >
-      {colors.map((color) => (
+      {colors.map((color, i) => (
         <button
           key={color}
           className={color === value ? styles.swatchActive : styles.swatch}
           style={{ background: color }}
-          onClick={() => { onChange(color); onClose() }}
+          onClick={() => { onChange(color); onClose(); anchorRef?.current?.focus() }}
           aria-label={color}
+          role="option"
+          aria-selected={color === value}
+          tabIndex={i === activeIndex ? 0 : -1}
         />
       ))}
     </div>
