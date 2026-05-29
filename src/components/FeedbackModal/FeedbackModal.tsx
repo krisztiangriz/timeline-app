@@ -225,12 +225,14 @@ export function FeedbackModal({ open, onClose, onSuccess }: FeedbackModalProps) 
       {feedbackProperties.map((prop, index) => (
         <div key={prop.id} className={styles.section}>
           <span className={styles.label}>{prop.name}</span>
-          <div className={prop.options.length > 3 ? styles.optionsVertical : styles.optionsRow}>
+          <div className={prop.options.length > 3 ? styles.optionsVertical : styles.optionsRow} role="radiogroup" aria-label={prop.name}>
             {prop.options.map((opt) => (
               <button
                 key={opt.value}
                 className={radio.radioOption}
                 onClick={() => setPropertyValue(prop.id!, opt.value)}
+                role="radio"
+                aria-checked={(propertyValues[prop.id!] || (index === 0 ? prop.options[0]?.value : '')) === opt.value}
               >
                 <div
                   className={radio.radioCircle}

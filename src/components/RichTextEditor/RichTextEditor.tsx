@@ -155,6 +155,15 @@ export function RichTextEditor({
         // Place cursor at the click position if provided
         if (initialClickPosition) {
           range = document.caretRangeFromPoint(initialClickPosition.x, initialClickPosition.y)
+          // Firefox fallback: caretPositionFromPoint
+          if (!range && 'caretPositionFromPoint' in document) {
+            const pos = (document as unknown as { caretPositionFromPoint(x: number, y: number): { offsetNode: Node; offset: number } | null }).caretPositionFromPoint(initialClickPosition.x, initialClickPosition.y)
+            if (pos) {
+              range = document.createRange()
+              range.setStart(pos.offsetNode, pos.offset)
+              range.collapse(true)
+            }
+          }
         }
         // Fallback: place cursor at end of content
         if (!range) {

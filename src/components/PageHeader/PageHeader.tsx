@@ -60,6 +60,7 @@ export const PageHeader = memo(function PageHeader({
               if (e.key === 'Escape') { setEditValue(name); setEditing(false) }
             }}
             onBlur={handleSave}
+            aria-label="Page title"
           />
         ) : (
           <div

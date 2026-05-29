@@ -3,6 +3,7 @@ import { Modal } from '../Modal/Modal'
 import { useFeedbackForSubject, addFeedback, updateFeedback, deleteFeedback } from '../../hooks/useFeedback'
 import { useHubFeedbackProperties } from '../../hooks/useHubProperties'
 import { useAutocomplete } from '../../hooks/useAutocomplete'
+import { useToast } from '../../hooks/useToast'
 import { formatTableDate } from '../../utils/dateUtils'
 import { EmptyState } from '../EmptyState/EmptyState'
 import { RichTextEditor } from '../RichTextEditor/RichTextEditor'
@@ -19,6 +20,7 @@ interface FeedbackListProps {
 export const FeedbackList = memo(function FeedbackList({ subjectId }: FeedbackListProps) {
   const feedbacks = useFeedbackForSubject(subjectId)
   const { allPages } = useAutocomplete()
+  const { show: showToast } = useToast()
 
   // Range filter state
   const [range, setRange] = useState<RangeMonths>(0)
@@ -98,7 +100,7 @@ export const FeedbackList = memo(function FeedbackList({ subjectId }: FeedbackLi
       setModalDescription('')
       setModalPropertyValues({})
     } catch {
-      // Silent failure — DB error unlikely in normal operation
+      showToast('Failed to save feedback')
     }
   }
 
@@ -194,12 +196,14 @@ export const FeedbackList = memo(function FeedbackList({ subjectId }: FeedbackLi
         {feedbackProperties.map((prop, index) => (
           <div key={prop.id} className={styles.feedbackModalSection}>
             <span className={styles.feedbackModalLabel}>{prop.name}</span>
-            <div className={prop.options.length > 3 ? styles.feedbackModalOptionsVertical : styles.feedbackModalOptions}>
+            <div className={prop.options.length > 3 ? styles.feedbackModalOptionsVertical : styles.feedbackModalOptions} role="radiogroup" aria-label={prop.name}>
               {prop.options.map((opt) => (
                 <button
                   key={opt.value}
                   className={radio.radioOption}
                   onClick={() => setPropertyValue(prop.id!, opt.value)}
+                  role="radio"
+                  aria-checked={(modalPropertyValues[prop.id!] || (index === 0 ? prop.options[0]?.value : '')) === opt.value}
                 >
                   <div
                     className={radio.radioCircle}

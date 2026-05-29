@@ -88,7 +88,7 @@ export function SearchBar({ open, onClose, onAddPage }: SearchBarProps) {
 
   return (
     <>
-      <div className={styles.backdrop} onClick={onClose} />
+      <div className={styles.backdrop} onClick={onClose} role="presentation" />
       <div className={styles.container}>
         <div className={styles.inputWrapper}>
           <SearchIcon />

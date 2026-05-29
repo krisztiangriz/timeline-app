@@ -313,6 +313,9 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
                   </button>
                 )}
                 {!trigger && <span className={styles.radioDescription}>Use single special character</span>}
+                {trigger && hubs.some(h => h.mentionTrigger === trigger && h.id !== initial?.existingPageId) && (
+                  <span className={styles.radioDescription} style={{ color: 'var(--color-negative)' }}>Already used by {hubs.find(h => h.mentionTrigger === trigger && h.id !== initial?.existingPageId)?.name}</span>
+                )}
               </div>
             </>
           )}

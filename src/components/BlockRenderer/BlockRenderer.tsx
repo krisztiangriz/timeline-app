@@ -155,9 +155,9 @@ function TableBlock({ page }: { page: Page }) {
   return (
     <div className={tableStyles.table} style={{ padding: 0 }}>
       <div className={tableStyles.tableHeader}>
-        <span className={tableStyles.thName} onClick={() => toggleSort('name')}>Name <span className={tableStyles.sortArrow}>{arrow('name')}</span></span>
-        <span className={tableStyles.thDate} onClick={() => toggleSort('createdAt')}>Created on <span className={tableStyles.sortArrow}>{arrow('createdAt')}</span></span>
-        <span className={tableStyles.thDate} onClick={() => toggleSort('updatedAt')}>Last updated <span className={tableStyles.sortArrow}>{arrow('updatedAt')}</span></span>
+        <button className={tableStyles.thName} onClick={() => toggleSort('name')}>Name <span className={tableStyles.sortArrow}>{arrow('name')}</span></button>
+        <button className={tableStyles.thDate} onClick={() => toggleSort('createdAt')}>Created on <span className={tableStyles.sortArrow}>{arrow('createdAt')}</span></button>
+        <button className={tableStyles.thDate} onClick={() => toggleSort('updatedAt')}>Last updated <span className={tableStyles.sortArrow}>{arrow('updatedAt')}</span></button>
       </div>
       {sorted.map((child) => (
         <div key={child.id} className={child.archived ? `${tableStyles.row} ${tableStyles.rowArchived}` : tableStyles.row} tabIndex={0} role="link" onClick={() => navigate(getPagePath(child, allPages))} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(getPagePath(child, allPages)) } }}>

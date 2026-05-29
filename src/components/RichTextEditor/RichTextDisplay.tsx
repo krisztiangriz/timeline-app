@@ -48,8 +48,8 @@ export const RichTextDisplay = memo(function RichTextDisplay({ html, className, 
   const cleanHtml = useMemo(() => {
     if (!purifyInstance) return ''
     let sanitized = enrichMentionHtml(purifyInstance.sanitize(html), allPages, collapseMentions)
-    // Ensure all links open in new tab
-    sanitized = sanitized.replace(/<a /g, '<a target="_blank" rel="noopener" ')
+    // Ensure all links open in new tab (only add if not already present)
+    sanitized = sanitized.replace(/<a(?![^>]*target=)/g, '<a target="_blank" rel="noopener"')
     return sanitized
   }, [html, allPages, collapseMentions, isLoaded])
 

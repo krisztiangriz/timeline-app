@@ -156,6 +156,7 @@ export function OnboardingGuide({
       className={styles.card}
       style={anchorRef ? posStyle : undefined}
       data-floating={anchorRef ? '' : undefined}
+      aria-live="polite"
     >
       {/* Optional video (takes priority over image) */}
       {step.video && (
