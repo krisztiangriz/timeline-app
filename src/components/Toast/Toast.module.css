@@ -45,6 +45,12 @@
   opacity: 1;
 }
 
+.action:focus-visible {
+  outline: 2px solid var(--color-bg);
+  outline-offset: 2px;
+  opacity: 1;
+}
+
 @keyframes slideUp {
   from {
     opacity: 0;

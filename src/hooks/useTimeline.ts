@@ -42,15 +42,15 @@ export function useCrossRefEntries(pageId?: number) {
 
 /**
  * Get only the pending entry for a page (avoids loading all entries).
- * Uses [pageId+isPending] compound index for indexed lookup.
  */
 export function usePendingEntry(pageId?: number) {
   return useLiveQuery(
     () => {
       if (!pageId) return undefined
       return db.timelineEntries
-        .where('[pageId+isPending]')
-        .equals([pageId, 1])
+        .where('pageId')
+        .equals(pageId)
+        .filter((e) => !!e.isPending)
         .first()
     },
     [pageId]
@@ -108,8 +108,9 @@ export async function deleteEntry(id: number) {
 export async function mergePendingEntries(pageId: number): Promise<number | undefined> {
   return db.transaction('rw', db.timelineEntries, async () => {
     const pendingEntries = await db.timelineEntries
-      .where('[pageId+isPending]')
-      .equals([pageId, 1])
+      .where('pageId')
+      .equals(pageId)
+      .filter((e) => !!e.isPending)
       .sortBy('date')
 
     if (pendingEntries.length <= 1) {

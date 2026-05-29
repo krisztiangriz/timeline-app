@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef, useCallback, memo } from 'react'
 import { stripHtml, stripCheckboxHtml } from '../../utils/stripHtml'
-import { filterHtmlToMentionLines } from '../../utils/mentionParser'
+import { filterHtmlToMentionLines, extractMentionPageIds } from '../../utils/mentionParser'
 
 import { useTimelineEntries, useCrossRefEntries, usePendingEntry, addEntry, updateEntry, deleteEntry, mergePendingEntries } from '../../hooks/useTimeline'
 import { usePageByRole, useChildPages } from '../../hooks/usePages'
@@ -273,6 +273,7 @@ export function TimelineView({ pageId, title, readOnly = false, page }: Timeline
       showToast('Deleted', {
         label: 'Undo',
         onClick: async () => {
+          if (pendingEntryId.current) return // user already started new content
           const id = await addEntry({ pageId, text: savedHtml, isPending: true })
           pendingEntryId.current = id
           setPendingHtml(savedHtml)
@@ -291,6 +292,7 @@ export function TimelineView({ pageId, title, readOnly = false, page }: Timeline
       showToast('Deleted', {
         label: 'Undo',
         onClick: async () => {
+          if (todayEntryId.current) return // user already started new content
           const id = await addEntry({ pageId, text: savedHtml, isPending: false })
           todayEntryId.current = id
           setTodayHtml(savedHtml)
@@ -536,10 +538,18 @@ export function TimelineView({ pageId, title, readOnly = false, page }: Timeline
               {directEntry && (
                 <button className={styles.sectionDeleteLabel} onClick={async () => {
                   const savedText = directEntry.text
+                  const savedDate = directEntry.date
                   await deleteEntry(directEntry.id!)
                   showToast('Deleted', {
                     label: 'Undo',
-                    onClick: async () => { await addEntry({ pageId, text: savedText, isPending: false }) },
+                    onClick: async () => {
+                      await db.timelineEntries.add({
+                        pageId, text: savedText, isPending: false,
+                        date: savedDate,
+                        tagRefs: extractMentionPageIds(savedText),
+                        createdAt: new Date(), updatedAt: new Date(),
+                      })
+                    },
                   })
                 }}>Delete</button>
               )}

@@ -5,6 +5,7 @@ import { PropertyEditorContent } from '../PropertyEditor/PropertyEditor'
 import { DragHandleIcon, TrashIcon, CheckIcon, PlusIcon, CloseIcon } from '../Icons/Icons'
 import { DropdownPortal } from '../DropdownPortal/DropdownPortal'
 import { db } from '../../db/database'
+import { useToast } from '../../hooks/useToast'
 import type { BlockType } from '../../types'
 import styles from './PageForm.module.css'
 import radio from '../../styles/radio.module.css'
@@ -61,6 +62,7 @@ const BLOCK_TYPE_LABELS: Partial<Record<BlockType, string>> = {
 }
 
 export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHubProp, hubs = EMPTY_HUBS, hubId }: PageFormProps) {
+  const { show: showToast } = useToast()
   const [name, setName] = useState('')
   const [tabs, setTabs] = useState<{ name: string; type: BlockType; key: number }[]>([])
   const [addingTab, setAddingTab] = useState(false)
@@ -105,7 +107,7 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
       ;(async () => {
         try {
           const id = await db.pages.add({
-            name: name.trim() || 'Untitled',
+            name: 'Untitled',
             type: 'hub' as const,
             isDraft: true,
             description: '',
@@ -247,6 +249,7 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
         })
       } catch {
         hubConfirmed.current = false
+        showToast('Failed to create hub')
       }
       return
     }

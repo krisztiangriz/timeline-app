@@ -165,6 +165,12 @@ function TimelineRedirect() {
 function useEnsureDefaults() {
   useEffect(() => {
     ;(async () => {
+      // Clean up any orphaned draft pages (from crashes during hub creation)
+      const drafts = await db.pages.filter((p) => !!p.isDraft).toArray()
+      if (drafts.length > 0) {
+        await db.pages.bulkDelete(drafts.map((p) => p.id!))
+      }
+
       const existingPages = await db.pages.toArray()
       if (existingPages.length > 0) return // not a fresh install
 
