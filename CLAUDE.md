@@ -21,10 +21,12 @@ git push         # triggers GitHub Actions deploy
 ## Key Architecture Decisions
 
 ### Data Model
-- DB schema version: **18** (Dexie, IndexedDB)
+- DB schema version: **20** (Dexie, IndexedDB)
 - All data is local — no server, no auth
 - Pages have `role` field for special pages: `main-timeline`, `colleague-hub`,
   `candidate-hub`, `project-hub`
+- Pages can have `isDraft: true` during hub creation (excluded from all queries)
+- Orphaned drafts cleaned up on app startup
 - Pending tasks live ONLY on the main-timeline page (`isPending: true`)
 - Filtered pending shown on other pages via cross-ref (read-only)
 
@@ -43,9 +45,14 @@ git push         # triggers GitHub Actions deploy
 - No Redux/Zustand — Dexie `useLiveQuery` for reactive DB state
 - `AutocompleteProvider` shares `allPages` across the app (single subscription,
   stabilized via `pagesEqual` shallow comparison — skips `updatedAt`/`editCount`)
+- `AutocompleteProvider` filters out `isDraft` pages (placeholder hubs invisible)
 - `ModalContext` + `MentionInsertContext` + `PreferencesContext` split from
   `AppContext` (editors subscribe only to `MentionInsertContext`, not modal state)
-- `ToastProvider` — shared toast queue, `useToast()` hook
+- `OnboardingGuidesProvider` split into actions + state contexts:
+  - `useOnboardingActions()` — stable callbacks, no re-render on guide changes
+  - `useOnboardingGuides()` — for components needing `activeGuide` state
+- `ToastProvider` — shared toast queue with optional undo action button,
+  `useToast()` hook
 
 ### Component Patterns
 - Route-level lazy loading (RootPage, HubPage, DetailPage)
@@ -57,8 +64,10 @@ git push         # triggers GitHub Actions deploy
   (single module-level load, all instances notified simultaneously)
 - `BlockList`, `TextBlock`, and `ComponentBlockContent` wrapped in `memo`
 - `CrossRefRow` — lightweight memoized component for read-only cross-ref entries
+- `PageHeader` wrapped in `memo`
 - `useNavigateToPage()` hook for stable mention navigation callbacks
-- `DropdownPortal` component for dropdowns inside modals (escapes overflow)
+- `DropdownPortal` component for dropdowns inside modals (escapes overflow,
+  `onClose` prop renders backdrop at proper z-index)
 - Page CRUD operations (`addPage`, `updatePage`, `deletePage`, `updateTabs`,
   `archivePage`, `unarchivePage`) are plain exported async functions — stable
   references, no hook wrapper
@@ -121,12 +130,18 @@ git push         # triggers GitHub Actions deploy
 - Collapsed mentions: `data-collapsed="true"` + CSS `::before` shows trigger char
 - `collapseMentions` prop scopes collapse to timeline blocks only
 - Non-collapsed mentions: `color: inherit` + always underlined
+- Read-only mentions: `tabindex="0"`, `role="link"`, keyboard-navigable (Enter/Space)
+- Mention triggers: only hub-configured triggers (no hardcoded characters)
 
 ### Timeline / Pending
 - Pending section only on main-timeline page (full editor)
 - Other pages show filtered pending (read-only, cross-ref from main timeline)
 - Filtered pending uses `usePendingEntry(pageId)` — NOT `useTimelineEntries`
 - `useCrossRefEntries` uses `*tagRefs` multi-entry Dexie index
+- `useTimelineEntries` uses `[pageId+date]` compound index (cursor-ordered, no in-memory sort)
+- `usePendingEntry` uses `pageId` index + JS filter (booleans not valid IndexedDB keys)
+- Delete actions (pending/today/history) show undo toast (5s, preserves original date)
+- Undo guards: skips restore if user already started new content
 
 ### Charts
 - Recharts lazy-loaded via `ConfigurableViz` (separate vendor chunk: ~110KB gz)
@@ -168,6 +183,10 @@ git push         # triggers GitHub Actions deploy
 - Custom radio/checkbox buttons: `role="radio"`/`role="checkbox"` + `aria-checked`
 - Form inputs: `aria-label` for inputs without `<label>` elements
 - Tab groups: `role="tablist"` + `role="tab"` + `aria-selected`
+- Read-only mentions: `tabindex="0"`, `role="link"`, Enter/Space to navigate
+- Dropdown search results: Escape dismisses results (stops propagation)
+- Delete buttons: descriptive `aria-label` for screen readers
+- Toast action buttons: `:focus-visible` outline
 
 ## Commit Style
 - Short imperative: `Fix auto-backup timer: use ref pattern for stable deps`
@@ -180,5 +199,6 @@ git push         # triggers GitHub Actions deploy
 - `src/utils/safeStorage.ts` — safe localStorage wrapper
 - `src/utils/mentionEnricher.ts` — HTML enrichment with module-level cache
 - `src/components/DropdownPortal/DropdownPortal.tsx` — portal for modal dropdowns
+- `src/components/DropdownPortal/DropdownPortal.module.css` — backdrop + portal z-index
 - `src/constants/colors.ts` — chart color palette (source of truth)
 - `scripts/generate-sw.mjs` — post-build SW manifest generator
