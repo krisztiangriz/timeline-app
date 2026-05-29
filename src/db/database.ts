@@ -429,6 +429,10 @@ class TimelineDB extends Dexie {
         }
       }
     })
+    // v19: add compound indexes for timeline queries — [pageId+isPending] and [pageId+date]
+    this.version(19).stores({
+      timelineEntries: '++id, pageId, date, *tagRefs, [pageId+isPending], [pageId+date]',
+    })
   }
 }
 

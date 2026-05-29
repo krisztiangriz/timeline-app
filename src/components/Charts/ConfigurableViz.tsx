@@ -11,7 +11,7 @@ import { useChartPalette } from '../../hooks/useChartPalette'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../../db/database'
 import type { ChartConfig, ChartDataSource, ChartType, ChartScope, TimelineEntry, Page, HubProperty, PagePropertyValue, Feedback } from '../../types'
-import { useOnboardingGuides } from '../../hooks/useOnboardingGuides'
+import { useOnboardingActions } from '../../hooks/useOnboardingGuides'
 import { OnboardingGuide } from '../OnboardingGuide/OnboardingGuide'
 import { safeGetItem, safeSetItem } from '../../utils/safeStorage'
 import { useToast } from '../../hooks/useToast'
@@ -32,10 +32,14 @@ export const ConfigurableViz = memo(function ConfigurableViz({ blockId, pageId }
     return stored === '0' ? 0 : stored === '3' ? 3 : stored === '6' ? 6 : 12
   })
   const allEntries = useAllEntries(range || undefined)
-  const { allHubProperties, allPropertyValues } = useLiveQuery(async () => ({
-    allHubProperties: await db.hubProperties.toArray(),
-    allPropertyValues: await db.pagePropertyValues.toArray(),
-  }), []) ?? { allHubProperties: [], allPropertyValues: [] }
+  const allHubProperties = useLiveQuery(
+    () => db.hubProperties.toArray(),
+    []
+  ) ?? []
+  const allPropertyValues = useLiveQuery(
+    () => db.pagePropertyValues.toArray(),
+    []
+  ) ?? []
   const allFeedbacks = useLiveQuery(() => {
     const cutoff = range ? new Date(Date.now() - range * 30 * 24 * 60 * 60 * 1000) : undefined
     return cutoff
@@ -46,7 +50,7 @@ export const ConfigurableViz = memo(function ConfigurableViz({ blockId, pageId }
   const [editing, setEditing] = useState<ChartConfig | undefined>()
 
   // Onboarding: trigger visualization-charts guide when no charts configured
-  const { triggerGuide } = useOnboardingGuides()
+  const { triggerGuide } = useOnboardingActions()
   const addBtnRef = useRef<HTMLButtonElement>(null)
   const isEmpty = configs.length === 0
   useEffect(() => { if (isEmpty) triggerGuide('visualization-charts') }, [isEmpty, triggerGuide])

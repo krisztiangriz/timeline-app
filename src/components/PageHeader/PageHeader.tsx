@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, Fragment, type ReactNode } from 'react'
+import { useState, useRef, useEffect, Fragment, memo, type ReactNode } from 'react'
 import type { Tab } from '../../types'
 import styles from './PageHeader.module.css'
 
@@ -14,7 +14,7 @@ interface PageHeaderProps {
   actions?: ReactNode
 }
 
-export function PageHeader({
+export const PageHeader = memo(function PageHeader({
   name,
   onUpdateName,
   tabs = [],
@@ -95,4 +95,4 @@ export function PageHeader({
       )}
     </div>
   )
-}
+})

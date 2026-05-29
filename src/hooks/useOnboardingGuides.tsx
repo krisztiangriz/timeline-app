@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, useMemo, type ReactNode } from 'react'
+import { createContext, useContext, useState, useCallback, useMemo, useRef, type ReactNode } from 'react'
 import { safeGetItem, safeSetItem, safeRemoveItem } from '../utils/safeStorage'
 
 /* ------------------------------------------------------------------ */
@@ -23,7 +23,7 @@ interface ActiveGuide {
   currentStep: number
 }
 
-interface OnboardingGuidesContextValue {
+interface OnboardingActionsContextValue {
   /** Whether all guides are globally disabled */
   guidesDisabled: boolean
   /** Disable all contextual guides */
@@ -46,11 +46,17 @@ interface OnboardingGuidesContextValue {
   isGuideDismissed: (id: string) => boolean
   /** Reset all dismissed guides */
   resetAllGuides: () => void
-  /** The currently active guide (if any) */
-  activeGuide: ActiveGuide | null
   /** Get the definition for a guide by id */
   getGuideDefinition: (id: string) => GuideDefinition | undefined
 }
+
+interface OnboardingStateContextValue {
+  /** The currently active guide (if any) */
+  activeGuide: ActiveGuide | null
+}
+
+// Combined type for backward-compatible useOnboardingGuides hook
+interface OnboardingGuidesContextValue extends OnboardingActionsContextValue, OnboardingStateContextValue {}
 
 /* ------------------------------------------------------------------ */
 /*  localStorage keys                                                  */
@@ -85,16 +91,23 @@ function setGuidesDisabledStorage(disabled: boolean) {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Context                                                            */
+/*  Contexts                                                           */
 /* ------------------------------------------------------------------ */
 
-const OnboardingGuidesContext = createContext<OnboardingGuidesContextValue | null>(null)
+const OnboardingActionsContext = createContext<OnboardingActionsContextValue | null>(null)
+const OnboardingStateContext = createContext<OnboardingStateContextValue | null>(null)
 
 export function OnboardingGuidesProvider({ children }: { children: ReactNode }) {
   const [guidesDisabled, setGuidesDisabled] = useState(getGuidesDisabled)
   const [dismissed, setDismissed] = useState(getDismissedGuides)
   const [registry, setRegistry] = useState<Map<string, GuideDefinition>>(new Map())
   const [activeGuide, setActiveGuide] = useState<ActiveGuide | null>(null)
+
+  // Refs for stable callbacks (ref pattern — avoids recreating triggerGuide on guidesDisabled/dismissed changes)
+  const guidesDisabledRef = useRef(guidesDisabled)
+  guidesDisabledRef.current = guidesDisabled
+  const dismissedRef = useRef(dismissed)
+  dismissedRef.current = dismissed
 
   const disableAllGuides = useCallback(() => {
     setGuidesDisabled(true)
@@ -126,15 +139,15 @@ export function OnboardingGuidesProvider({ children }: { children: ReactNode }) 
   }, [])
 
   const isGuideDismissed = useCallback((id: string) => {
-    return dismissed.includes(id)
-  }, [dismissed])
+    return dismissedRef.current.includes(id)
+  }, [])
 
   const triggerGuide = useCallback((id: string) => {
-    if (guidesDisabled) return
-    if (dismissed.includes(id)) return
+    if (guidesDisabledRef.current) return
+    if (dismissedRef.current.includes(id)) return
     if (!registry.has(id)) return
     setActiveGuide({ id, currentStep: 0 })
-  }, [guidesDisabled, dismissed, registry])
+  }, [registry])
 
   const dismissGuide = useCallback((id: string) => {
     setDismissed((prev) => {
@@ -183,7 +196,8 @@ export function OnboardingGuidesProvider({ children }: { children: ReactNode }) 
     return registry.get(id)
   }, [registry])
 
-  const contextValue = useMemo<OnboardingGuidesContextValue>(() => ({
+  // Actions context — stable (callbacks never change identity)
+  const actionsValue = useMemo<OnboardingActionsContextValue>(() => ({
     guidesDisabled,
     disableAllGuides,
     enableAllGuides,
@@ -195,7 +209,6 @@ export function OnboardingGuidesProvider({ children }: { children: ReactNode }) 
     prevStep,
     isGuideDismissed,
     resetAllGuides,
-    activeGuide,
     getGuideDefinition,
   }), [
     guidesDisabled,
@@ -209,21 +222,44 @@ export function OnboardingGuidesProvider({ children }: { children: ReactNode }) 
     prevStep,
     isGuideDismissed,
     resetAllGuides,
-    activeGuide,
     getGuideDefinition,
   ])
 
+  // State context — only changes when activeGuide changes
+  const stateValue = useMemo<OnboardingStateContextValue>(() => ({
+    activeGuide,
+  }), [activeGuide])
+
   return (
-    <OnboardingGuidesContext.Provider value={contextValue}>
-      {children}
-    </OnboardingGuidesContext.Provider>
+    <OnboardingActionsContext.Provider value={actionsValue}>
+      <OnboardingStateContext.Provider value={stateValue}>
+        {children}
+      </OnboardingStateContext.Provider>
+    </OnboardingActionsContext.Provider>
   )
 }
 
-export function useOnboardingGuides() {
-  const ctx = useContext(OnboardingGuidesContext)
-  if (!ctx) {
+/**
+ * Full context hook — for components that need both actions AND state (e.g., OnboardingGuide, SettingsModal).
+ * Most consumers should prefer useOnboardingActions() to avoid re-renders on activeGuide changes.
+ */
+export function useOnboardingGuides(): OnboardingGuidesContextValue {
+  const actions = useContext(OnboardingActionsContext)
+  const state = useContext(OnboardingStateContext)
+  if (!actions || !state) {
     throw new Error('useOnboardingGuides must be used within OnboardingGuidesProvider')
+  }
+  return { ...actions, ...state }
+}
+
+/**
+ * Actions-only hook — stable references, does NOT re-render when activeGuide changes.
+ * Use this in components that only call triggerGuide/registerGuide/etc.
+ */
+export function useOnboardingActions() {
+  const ctx = useContext(OnboardingActionsContext)
+  if (!ctx) {
+    throw new Error('useOnboardingActions must be used within OnboardingGuidesProvider')
   }
   return ctx
 }

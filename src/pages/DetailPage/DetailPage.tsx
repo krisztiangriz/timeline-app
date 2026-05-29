@@ -1,5 +1,5 @@
 import { useStickyScroll } from '../../hooks/useStickyScroll'
-import { useState, useEffect, useCallback, lazy, Suspense } from 'react'
+import { useState, useEffect, useCallback, useMemo, lazy, Suspense } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { BreadcrumbNav } from '../../components/Breadcrumb/Breadcrumb'
 import { PageHeader } from '../../components/PageHeader/PageHeader'
@@ -99,6 +99,15 @@ export function DetailPage({ routePrefix }: DetailPageProps) {
     }
   }
 
+  const handleUpdateName = useCallback((name: string) => updatePage(pageId!, { name }), [pageId])
+  const handlePropertyChange = useMemo(
+    () => hubProperties.reduce((acc, prop) => {
+      acc[prop.id!] = (value: string) => setPagePropertyValue(pageId!, prop.id!, value)
+      return acc
+    }, {} as Record<number, (value: string) => void>),
+    [pageId, hubProperties]
+  )
+
   if (!page) return null
 
   return (
@@ -110,7 +119,7 @@ export function DetailPage({ routePrefix }: DetailPageProps) {
           {hubProperties.length === 1 ? (
             <PageHeader
               name={page.name}
-              onUpdateName={(name) => updatePage(pageId!, { name })}
+              onUpdateName={handleUpdateName}
               tabs={tabs}
               activeTabId={activeTabId}
               onTabChange={setActiveTabId}
@@ -118,13 +127,13 @@ export function DetailPage({ routePrefix }: DetailPageProps) {
                 <PropertyRow
                   property={hubProperties[0]}
                   value={getPagePropertyValue(propertyValues, hubProperties[0].id!)}
-                  onChange={(value) => setPagePropertyValue(pageId!, hubProperties[0].id!, value)}
+                  onChange={handlePropertyChange[hubProperties[0].id!]}
                 />
               }
             />
           ) : (
             <>
-              <PageHeader name={page.name} onUpdateName={(name) => updatePage(pageId!, { name })} tabs={tabs} activeTabId={activeTabId} onTabChange={setActiveTabId} />
+              <PageHeader name={page.name} onUpdateName={handleUpdateName} tabs={tabs} activeTabId={activeTabId} onTabChange={setActiveTabId} />
               {hubProperties.length > 1 && (
                 <div className={pd.propertyRow}>
                   {hubProperties.map((prop) => (
@@ -132,7 +141,7 @@ export function DetailPage({ routePrefix }: DetailPageProps) {
                       key={prop.id}
                       property={prop}
                       value={getPagePropertyValue(propertyValues, prop.id!)}
-                      onChange={(value) => setPagePropertyValue(pageId!, prop.id!, value)}
+                      onChange={handlePropertyChange[prop.id!]}
                     />
                   ))}
                 </div>

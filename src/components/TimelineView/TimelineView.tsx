@@ -12,7 +12,7 @@ import { TimelineEntryRow } from './TimelineEntryRow'
 import { RichTextEditor } from '../RichTextEditor/RichTextEditor'
 import { RichTextDisplay } from '../RichTextEditor/RichTextDisplay'
 import type { TimelineEntry, Page } from '../../types'
-import { useOnboardingGuides } from '../../hooks/useOnboardingGuides'
+import { useOnboardingActions } from '../../hooks/useOnboardingGuides'
 import { OnboardingGuide } from '../OnboardingGuide/OnboardingGuide'
 import styles from './TimelineView.module.css'
 
@@ -116,6 +116,27 @@ export function TimelineView({ pageId, title, readOnly = false, page }: Timeline
     return { pendingEntry: singlePending, todayEntry: todayDirect, todayCrossRefs: todayCrossRefEntries, historyGroups: history }
   }, [allEntries, directIds, todayKey])
 
+  // Memoize cross-ref line splitting (avoids DOM parsing on every render)
+  const todayCrossRefLines = useMemo(() =>
+    todayCrossRefs.map((entry) => ({
+      entry,
+      lines: filterHtmlToMentionLines(entry.text, pageId),
+    })),
+    [todayCrossRefs, pageId]
+  )
+
+  const historyCrossRefLines = useMemo(() => {
+    const map = new Map<number, string[]>()
+    for (const [, entries] of historyGroups) {
+      for (const entry of entries) {
+        if (!directIds.has(entry.id!)) {
+          map.set(entry.id!, filterHtmlToMentionLines(entry.text, pageId))
+        }
+      }
+    }
+    return map
+  }, [historyGroups, directIds, pageId])
+
   // ---- Migration: merge multiple pending entries into one ----
   const migrationDone = useRef(false)
   useEffect(() => {
@@ -134,7 +155,7 @@ export function TimelineView({ pageId, title, readOnly = false, page }: Timeline
   const pendingSectionRef = useRef<HTMLDivElement>(null)
 
   // Onboarding: trigger pending-tasks guide on first focus
-  const { triggerGuide } = useOnboardingGuides()
+  const { triggerGuide } = useOnboardingActions()
 
   // Sync pending entry from DB → local state (only when editor is not focused)
   useEffect(() => {
@@ -448,15 +469,14 @@ export function TimelineView({ pageId, title, readOnly = false, page }: Timeline
               />
             </div>
           )}
-          {todayCrossRefs.flatMap((entry) => {
-            const lines = filterHtmlToMentionLines(entry.text, pageId)
-            return lines.map((lineHtml, li) => (
+          {todayCrossRefLines.flatMap(({ entry, lines }) =>
+            lines.map((lineHtml, li) => (
               <CrossRefRow
                 key={`${entry.id}-${li}`}
                 html={lineHtml}
               />
             ))
-          })}
+          )}
         </div>
         <div className={styles.sectionDateContainer}>
           <span className={styles.sectionDate}>Today</span>
@@ -473,7 +493,7 @@ export function TimelineView({ pageId, title, readOnly = false, page }: Timeline
               {entries.flatMap((entry) => {
                 const isCrossRef = !directIds.has(entry.id!)
                 if (isCrossRef) {
-                  const lines = filterHtmlToMentionLines(entry.text, pageId)
+                  const lines = historyCrossRefLines.get(entry.id!) ?? []
                   return lines.map((lineHtml, li) => (
                     <CrossRefRow
                       key={`${entry.id}-${li}`}

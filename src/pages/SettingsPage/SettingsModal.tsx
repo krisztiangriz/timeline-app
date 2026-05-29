@@ -3,7 +3,7 @@ import { Modal } from '../../components/Modal/Modal'
 import { useAutocomplete } from '../../hooks/useAutocomplete'
 import { useModalContext, usePreferences } from '../../hooks/useAppContext'
 import { useBackupSettings, type BackupFrequency } from '../../hooks/useAutoBackup'
-import { useOnboardingGuides } from '../../hooks/useOnboardingGuides'
+import { useOnboardingActions } from '../../hooks/useOnboardingGuides'
 import { onboardingGuides } from '../../config/onboardingGuides'
 import { TrashIcon, CheckIcon, PlusIcon, CloseIcon, SearchIcon, ResetIcon } from '../../components/Icons/Icons'
 import { downloadExport, triggerImport, triggerMergeImport } from '../../utils/exportImport'
@@ -26,7 +26,7 @@ export function SettingsModal({ open, onClose, onToast }: SettingsModalProps) {
   const { showArchived, setShowArchived } = usePreferences()
   const { setOnboardingOpen } = useModalContext()
   const { frequency, setFrequency, lastBackup } = useBackupSettings()
-  const { resetAllGuides, isGuideDismissed } = useOnboardingGuides()
+  const { resetAllGuides, isGuideDismissed } = useOnboardingActions()
   const { palette, updateColor, resetPalette } = useChartPalette()
   const { theme, setTheme } = useTheme()
   const [palettePickerIndex, setPalettePickerIndex] = useState<number | null>(null)

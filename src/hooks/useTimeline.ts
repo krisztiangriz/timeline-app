@@ -1,3 +1,4 @@
+import Dexie from 'dexie'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db/database'
 import type { TimelineEntry } from '../types'
@@ -5,17 +6,17 @@ import { extractMentionPageIds } from '../utils/mentionParser'
 
 /**
  * Get timeline entries for a specific page, ordered by date descending.
+ * Uses [pageId+date] compound index for cursor-ordered reads (no in-memory sort).
  */
 export function useTimelineEntries(pageId?: number) {
   return useLiveQuery(
-    async () => {
+    () => {
       if (!pageId) return []
-      const entries = await db.timelineEntries
-        .where('pageId')
-        .equals(pageId)
-        .sortBy('date')
-      // sortBy returns ascending; reverse for descending
-      return entries.reverse()
+      return db.timelineEntries
+        .where('[pageId+date]')
+        .between([pageId, Dexie.minKey], [pageId, Dexie.maxKey])
+        .reverse()
+        .toArray()
     },
     [pageId]
   ) ?? []
@@ -41,15 +42,15 @@ export function useCrossRefEntries(pageId?: number) {
 
 /**
  * Get only the pending entry for a page (avoids loading all entries).
+ * Uses [pageId+isPending] compound index for indexed lookup.
  */
 export function usePendingEntry(pageId?: number) {
   return useLiveQuery(
     () => {
       if (!pageId) return undefined
       return db.timelineEntries
-        .where('pageId')
-        .equals(pageId)
-        .filter((e) => e.isPending)
+        .where('[pageId+isPending]')
+        .equals([pageId, 1])
         .first()
     },
     [pageId]
@@ -107,9 +108,8 @@ export async function deleteEntry(id: number) {
 export async function mergePendingEntries(pageId: number): Promise<number | undefined> {
   return db.transaction('rw', db.timelineEntries, async () => {
     const pendingEntries = await db.timelineEntries
-      .where('pageId')
-      .equals(pageId)
-      .filter((e) => e.isPending)
+      .where('[pageId+isPending]')
+      .equals([pageId, 1])
       .sortBy('date')
 
     if (pendingEntries.length <= 1) {

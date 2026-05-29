@@ -2,7 +2,7 @@ import { useMemo, useEffect, useRef, lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom'
 import { AppProvider, useModalContext, useMentionInsertContext } from './hooks/useAppContext'
 import { AutocompleteProvider, useAutocomplete } from './hooks/useAutocomplete'
-import { OnboardingGuidesProvider, useOnboardingGuides } from './hooks/useOnboardingGuides'
+import { OnboardingGuidesProvider, useOnboardingActions } from './hooks/useOnboardingGuides'
 import { ToastContainer } from './components/Toast/Toast'
 import { ToastProvider, useToast } from './hooks/useToast'
 import { useAutoBackup } from './hooks/useAutoBackup'
@@ -47,7 +47,7 @@ function GlobalOverlays() {
   const location = useLocation()
 
   // Register all onboarding guide definitions centrally
-  const { registerGuide } = useOnboardingGuides()
+  const { registerGuide } = useOnboardingActions()
   useEffect(() => { onboardingGuides.forEach(registerGuide) }, [registerGuide])
 
   // Build hubs list for PageForm

@@ -18,7 +18,7 @@ import { formatTableDate } from '../../utils/dateUtils'
 import { ROLE_TO_PAGE_TYPE } from '../../types'
 import type { PageType } from '../../types'
 import { DragHandleIcon } from '../../components/Icons/Icons'
-import { useOnboardingGuides } from '../../hooks/useOnboardingGuides'
+import { useOnboardingActions } from '../../hooks/useOnboardingGuides'
 import { OnboardingGuide } from '../../components/OnboardingGuide/OnboardingGuide'
 import { safeGetItem } from '../../utils/safeStorage'
 import layout from '../../styles/layout.module.css'
@@ -43,7 +43,7 @@ export function RootPage() {
   }, [allPages, sortPages, showArchived])
 
   // Onboarding: trigger home-intro guide when user has created pages
-  const { triggerGuide } = useOnboardingGuides()
+  const { triggerGuide } = useOnboardingActions()
   const tableRef = useRef<HTMLDivElement>(null)
   const hasPages = flatRows.length > 0
   const onboardingDone = safeGetItem('onboarding-completed') === 'true'

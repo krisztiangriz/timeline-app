@@ -13,7 +13,7 @@ import { useTableSort } from '../../hooks/useTableSort'
 import { formatTableDate } from '../../utils/dateUtils'
 import { db } from '../../db/database'
 import type { Page, Block } from '../../types'
-import { useOnboardingGuides } from '../../hooks/useOnboardingGuides'
+import { useOnboardingActions } from '../../hooks/useOnboardingGuides'
 import { OnboardingGuide } from '../OnboardingGuide/OnboardingGuide'
 import styles from './BlockRenderer.module.css'
 import tableStyles from '../../styles/table.module.css'
@@ -46,7 +46,7 @@ const BlockList = memo(function BlockList({ pageId, page, blocks, tabId }: {
   const addingRef = useRef(false)
 
   // Onboarding: editor-walkthrough trigger
-  const { triggerGuide } = useOnboardingGuides()
+  const { triggerGuide } = useOnboardingActions()
   const editorAnchorRef = useRef<HTMLDivElement>(null)
   const handleEditorFocus = useCallback(() => { triggerGuide('editor-walkthrough') }, [triggerGuide])
 
