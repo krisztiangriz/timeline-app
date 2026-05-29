@@ -433,6 +433,10 @@ class TimelineDB extends Dexie {
     this.version(19).stores({
       timelineEntries: '++id, pageId, date, *tagRefs, [pageId+isPending], [pageId+date]',
     })
+    // v20: isDraft field on pages (for placeholder hubs during creation)
+    this.version(20).stores({
+      pages: '++id, parentId, role, isDraft',
+    })
   }
 }
 

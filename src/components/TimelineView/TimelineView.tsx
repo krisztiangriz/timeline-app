@@ -265,17 +265,37 @@ export function TimelineView({ pageId, title, readOnly = false, page }: Timeline
 
   async function handleDeletePending() {
     if (pendingEntryId.current) {
-      await deleteEntry(pendingEntryId.current)
+      const entryId = pendingEntryId.current
+      const savedHtml = pendingHtml
+      await deleteEntry(entryId)
       pendingEntryId.current = undefined
       setPendingHtml('')
+      showToast('Deleted', {
+        label: 'Undo',
+        onClick: async () => {
+          const id = await addEntry({ pageId, text: savedHtml, isPending: true })
+          pendingEntryId.current = id
+          setPendingHtml(savedHtml)
+        },
+      })
     }
   }
 
   async function handleDeleteToday() {
     if (todayEntryId.current) {
-      await deleteEntry(todayEntryId.current)
+      const entryId = todayEntryId.current
+      const savedHtml = todayHtml
+      await deleteEntry(entryId)
       todayEntryId.current = undefined
       setTodayHtml('')
+      showToast('Deleted', {
+        label: 'Undo',
+        onClick: async () => {
+          const id = await addEntry({ pageId, text: savedHtml, isPending: false })
+          todayEntryId.current = id
+          setTodayHtml(savedHtml)
+        },
+      })
     }
   }
 
@@ -514,7 +534,14 @@ export function TimelineView({ pageId, title, readOnly = false, page }: Timeline
             <div className={styles.sectionDateContainer}>
               <span className={styles.sectionDate}>{formatEntryDate(new Date(dateKey))}</span>
               {directEntry && (
-                <button className={styles.sectionDeleteLabel} onClick={() => deleteEntry(directEntry.id!)}>Delete</button>
+                <button className={styles.sectionDeleteLabel} onClick={async () => {
+                  const savedText = directEntry.text
+                  await deleteEntry(directEntry.id!)
+                  showToast('Deleted', {
+                    label: 'Undo',
+                    onClick: async () => { await addEntry({ pageId, text: savedText, isPending: false }) },
+                  })
+                }}>Delete</button>
               )}
             </div>
           </div>

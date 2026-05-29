@@ -28,6 +28,23 @@
   animation: slideUp 0.2s ease-out;
 }
 
+.action {
+  margin-left: var(--space-sm);
+  padding: var(--space-2xs) var(--space-sm);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-bg);
+  background: none;
+  border: 1px solid currentColor;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  opacity: 0.85;
+}
+
+.action:hover {
+  opacity: 1;
+}
+
 @keyframes slideUp {
   from {
     opacity: 0;

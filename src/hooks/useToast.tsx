@@ -1,13 +1,19 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 
+export interface ToastAction {
+  label: string
+  onClick: () => void
+}
+
 export interface ToastMessage {
   id: number
   text: string
+  action?: ToastAction
 }
 
 interface ToastContextValue {
   toasts: ToastMessage[]
-  show: (text: string) => void
+  show: (text: string, action?: ToastAction) => void
 }
 
 const ToastContext = createContext<ToastContextValue>({
@@ -34,13 +40,15 @@ export function ToastProvider({ children, duration = 3000 }: { children: ReactNo
   }, [])
 
   const show = useCallback(
-    (text: string) => {
+    (text: string, action?: ToastAction) => {
       const id = nextId.current++
-      setToasts((prev) => [...prev, { id, text }])
+      setToasts((prev) => [...prev, { id, text, action }])
+      // Undo toasts get longer duration (5s)
+      const timeout = action ? 5000 : duration
       const timer = setTimeout(() => {
         setToasts((prev) => prev.filter((t) => t.id !== id))
         timersRef.current.delete(id)
-      }, duration)
+      }, timeout)
       timersRef.current.set(id, timer)
     },
     [duration]

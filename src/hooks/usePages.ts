@@ -104,6 +104,8 @@ export async function deletePage(id: number) {
   if (target?.role) return
 
   await db.transaction('rw', [db.pages, db.layouts, db.blocks, db.timelineEntries, db.feedbacks, db.chartConfigs, db.pagePropertyValues, db.hubProperties], async () => {
+    const deletedIds: number[] = []
+
     async function deleteRecursive(pageId: number) {
       const children = await db.pages.where('parentId').equals(pageId).toArray()
       for (const child of children) {
@@ -123,15 +125,18 @@ export async function deletePage(id: number) {
       // Clean hub properties if this is a hub page
       await db.hubProperties.where('hubId').equals(pageId).delete()
       await db.pages.delete(pageId)
+      deletedIds.push(pageId)
     }
     await deleteRecursive(id)
 
-    // Remove deleted page ID from tagRefs in other entries
-    const pageIdStr = String(id)
-    const referencingEntries = await db.timelineEntries.where('tagRefs').equals(pageIdStr).toArray()
-    for (const entry of referencingEntries) {
-      const updatedRefs = entry.tagRefs.filter((ref) => ref !== pageIdStr)
-      await db.timelineEntries.update(entry.id!, { tagRefs: updatedRefs })
+    // Remove all deleted page IDs from tagRefs in other entries
+    for (const deletedId of deletedIds) {
+      const pageIdStr = String(deletedId)
+      const referencingEntries = await db.timelineEntries.where('tagRefs').equals(pageIdStr).toArray()
+      for (const entry of referencingEntries) {
+        const updatedRefs = entry.tagRefs.filter((ref) => ref !== pageIdStr)
+        await db.timelineEntries.update(entry.id!, { tagRefs: updatedRefs })
+      }
     }
   })
 }

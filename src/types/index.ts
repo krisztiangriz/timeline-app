@@ -39,6 +39,7 @@ export interface Page {
   mentionCollapsed?: boolean // when true, mentions show only the trigger char (not the full name)
   parentId?: number        // hub grouping
   archived?: boolean       // hidden from views unless "Show archived" is on
+  isDraft?: boolean        // true for placeholder hubs being configured — excluded from queries
   description: string
   createdAt: Date
   updatedAt: Date

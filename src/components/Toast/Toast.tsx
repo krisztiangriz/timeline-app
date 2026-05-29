@@ -12,7 +12,12 @@ export function ToastContainer({ toasts }: ToastContainerProps) {
     <div className={styles.container} aria-live="polite" role="status">
       {toasts.map((toast) => (
         <div key={toast.id} className={styles.toast}>
-          {toast.text}
+          <span>{toast.text}</span>
+          {toast.action && (
+            <button className={styles.action} onClick={toast.action.onClick}>
+              {toast.action.label}
+            </button>
+          )}
         </div>
       ))}
     </div>

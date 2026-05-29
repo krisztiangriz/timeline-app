@@ -28,13 +28,13 @@ function pagesEqual(a: Page[], b: Page[]): boolean {
         pa.parentId !== pb.parentId || pa.role !== pb.role ||
         pa.mentionTrigger !== pb.mentionTrigger ||
         pa.mentionCollapsed !== pb.mentionCollapsed ||
-        pa.archived !== pb.archived) return false
+        pa.archived !== pb.archived || pa.isDraft !== pb.isDraft) return false
   }
   return true
 }
 
 export function AutocompleteProvider({ children }: { children: ReactNode }) {
-  const rawPages = useLiveQuery(() => db.pages.toArray()) ?? []
+  const rawPages = useLiveQuery(() => db.pages.filter((p) => !p.isDraft).toArray()) ?? []
   const stableRef = useRef<Page[]>(rawPages)
 
   // Only update the reference when meaningful fields change

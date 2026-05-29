@@ -107,6 +107,7 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
           const id = await db.pages.add({
             name: name.trim() || 'Untitled',
             type: 'hub' as const,
+            isDraft: true,
             description: '',
             createdAt: new Date(),
             updatedAt: new Date(),
@@ -224,11 +225,12 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
     if (isCreatingHub && createdHubId) {
       try {
         hubConfirmed.current = true
-        // Update the hub with final name/trigger
+        // Update the hub with final name/trigger, clear draft flag
         await db.pages.update(createdHubId, {
           name: name.trim() || 'Untitled',
           mentionTrigger: trigger || undefined,
           mentionCollapsed: collapsed || undefined,
+          isDraft: undefined,
           updatedAt: new Date(),
         })
         // Add default blocks (visualization + table)
