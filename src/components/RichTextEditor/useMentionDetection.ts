@@ -82,7 +82,7 @@ export function useMentionDetection(
     let prefix: string | null = null
     for (let i = offset - 1; i >= 0; i--) {
       const ch = text[i]
-      if (ch === '!' || hubTriggers.has(ch)) {
+      if (hubTriggers.has(ch)) {
         if (i === 0 || /\s/.test(text[i - 1])) {
           triggerIdx = i
           prefix = ch

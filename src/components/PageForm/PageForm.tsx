@@ -44,7 +44,7 @@ function RadioOption({ selected, onChange, label, description, disabled }: {
   selected: boolean; onChange: () => void; label: string; description?: string; disabled?: boolean
 }) {
   return (
-    <button className={disabled ? styles.radioOptionDisabled : radio.radioOption} onClick={disabled ? undefined : onChange}>
+    <button className={disabled ? styles.radioOptionDisabled : radio.radioOption} onClick={disabled ? undefined : onChange} role="radio" aria-checked={selected}>
       <div className={radio.radioCircle} data-checked={selected} />
       <span>{label}</span>
       {description && <span className={styles.radioDescription}>{description}</span>}
@@ -331,7 +331,7 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
       {!isEdit && !isHubProp && (
         <div className={styles.section}>
           <span className={styles.label}>Type</span>
-          <div className={styles.radioCol}>
+          <div className={styles.radioCol} role="radiogroup" aria-label="Page type">
             <RadioOption selected={!isHubType} onChange={() => setIsHubType(false)} label="Page" />
             <RadioOption selected={isHubType} onChange={() => setIsHubType(true)} label="Hub" />
           </div>
@@ -358,9 +358,7 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
               <svg width="10" height="6" viewBox="0 0 10 6" fill="none"><path d="M1 1L5 5L9 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
             </button>
           </div>
-          <DropdownPortal anchorRef={hubSelectAnchorRef} open={hubSelectOpen}>
-            <>
-              <div style={{ position: 'fixed', inset: 0, zIndex: -1 }} onClick={() => setHubSelectOpen(false)} />
+          <DropdownPortal anchorRef={hubSelectAnchorRef} open={hubSelectOpen} onClose={() => setHubSelectOpen(false)}>
               <div className={styles.hubSelectMenu} role="listbox">
                 <button className={!parentHubId ? styles.hubSelectItemActive : styles.hubSelectItem} role="option" onClick={() => { setParentHubId(undefined); setHubSelectOpen(false) }}>
                   None (standalone page)
@@ -372,7 +370,6 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
                   </button>
                 ))}
               </div>
-            </>
           </DropdownPortal>
         </div>
       )}
@@ -424,9 +421,7 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
                 <svg width="10" height="6" viewBox="0 0 10 6" fill="none"><path d="M1 1L5 5L9 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
               </button>
             </div>
-            <DropdownPortal anchorRef={blockTypeAnchorRef} open={blockTypeSelectOpen}>
-              <>
-                <div style={{ position: 'fixed', inset: 0, zIndex: -1 }} onClick={() => setBlockTypeSelectOpen(false)} />
+            <DropdownPortal anchorRef={blockTypeAnchorRef} open={blockTypeSelectOpen} onClose={() => setBlockTypeSelectOpen(false)}>
                 <div className={styles.hubSelectMenu} role="listbox">
                   {(['timeline', 'feedback', 'visualization', 'text'] as BlockType[]).map((type) => {
                     const disabled = type !== 'text' && usedTypes.has(type)
@@ -443,7 +438,6 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
                     )
                   })}
                 </div>
-              </>
             </DropdownPortal>
             <button className={styles.tabInputAction} onClick={confirmTab} aria-label="Confirm tab">
               <CheckIcon />

@@ -56,8 +56,8 @@ export function enrichMentionHtml(html: string, allPages: Page[], collapse = fal
       }
 
       const safeTrigger = info.trigger.replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-      const safeTitle = textContent.replace(/"/g, '&quot;')
-      return `<span${attrs} data-trigger="${safeTrigger}" title="${safeTitle}"${collapsedAttr}>${textContent}</span>`
+      const safeTitle = textContent.replace(/&/g, '&amp;').replace(/"/g, '&quot;')
+      return `<span${attrs} data-trigger="${safeTrigger}" title="${safeTitle}" tabindex="0" role="link"${collapsedAttr}>${textContent}</span>`
     }
   )
 }

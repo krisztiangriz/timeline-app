@@ -126,6 +126,7 @@ export function TimelineView({ pageId, title, readOnly = false, page }: Timeline
   )
 
   const historyCrossRefLines = useMemo(() => {
+    if (crossRefEntries.length === 0) return new Map<number, string[]>()
     const map = new Map<number, string[]>()
     for (const [, entries] of historyGroups) {
       for (const entry of entries) {
@@ -135,7 +136,7 @@ export function TimelineView({ pageId, title, readOnly = false, page }: Timeline
       }
     }
     return map
-  }, [historyGroups, directIds, pageId])
+  }, [historyGroups, directIds, pageId, crossRefEntries.length])
 
   // ---- Migration: merge multiple pending entries into one ----
   const migrationDone = useRef(false)
@@ -267,13 +268,15 @@ export function TimelineView({ pageId, title, readOnly = false, page }: Timeline
     if (pendingEntryId.current) {
       const entryId = pendingEntryId.current
       const savedHtml = pendingHtml
-      await deleteEntry(entryId)
+      try {
+        await deleteEntry(entryId)
+      } catch { showToast('Failed to delete'); return }
       pendingEntryId.current = undefined
       setPendingHtml('')
       showToast('Deleted', {
         label: 'Undo',
         onClick: async () => {
-          if (pendingEntryId.current) return // user already started new content
+          if (pendingEntryId.current) return
           const id = await addEntry({ pageId, text: savedHtml, isPending: true })
           pendingEntryId.current = id
           setPendingHtml(savedHtml)
@@ -286,13 +289,15 @@ export function TimelineView({ pageId, title, readOnly = false, page }: Timeline
     if (todayEntryId.current) {
       const entryId = todayEntryId.current
       const savedHtml = todayHtml
-      await deleteEntry(entryId)
+      try {
+        await deleteEntry(entryId)
+      } catch { showToast('Failed to delete'); return }
       todayEntryId.current = undefined
       setTodayHtml('')
       showToast('Deleted', {
         label: 'Undo',
         onClick: async () => {
-          if (todayEntryId.current) return // user already started new content
+          if (todayEntryId.current) return
           const id = await addEntry({ pageId, text: savedHtml, isPending: false })
           todayEntryId.current = id
           setTodayHtml(savedHtml)
@@ -387,7 +392,7 @@ export function TimelineView({ pageId, title, readOnly = false, page }: Timeline
 
       // Find the target line in the fresh data
       const originalIndex = freshLines.indexOf(targetLine)
-      if (originalIndex === -1) return
+      if (originalIndex === -1) { showToast('Task was already completed'); return }
       const remaining = [...freshLines]
       remaining.splice(originalIndex, 1)
       const newHtml = remaining.length > 0 ? remaining.map((l) => `<div>${l}</div>`).join('') : ''
@@ -444,7 +449,7 @@ export function TimelineView({ pageId, title, readOnly = false, page }: Timeline
           </div>
           <div className={styles.sectionDateContainer}>
             <span className={styles.sectionDate}>Pending</span>
-            <button className={styles.sectionDeleteLabel} onClick={handleDeletePending}>Delete</button>
+            <button className={styles.sectionDeleteLabel} onClick={handleDeletePending} aria-label="Delete pending tasks">Delete</button>
           </div>
         </div>
       )}
@@ -502,7 +507,7 @@ export function TimelineView({ pageId, title, readOnly = false, page }: Timeline
         </div>
         <div className={styles.sectionDateContainer}>
           <span className={styles.sectionDate}>Today</span>
-          <button className={styles.sectionDeleteLabel} onClick={handleDeleteToday}>Delete</button>
+          <button className={styles.sectionDeleteLabel} onClick={handleDeleteToday} aria-label="Delete today's entry">Delete</button>
         </div>
       </div>
 
@@ -539,7 +544,10 @@ export function TimelineView({ pageId, title, readOnly = false, page }: Timeline
                 <button className={styles.sectionDeleteLabel} onClick={async () => {
                   const savedText = directEntry.text
                   const savedDate = directEntry.date
-                  await deleteEntry(directEntry.id!)
+                  const savedCreatedAt = directEntry.createdAt
+                  try {
+                    await deleteEntry(directEntry.id!)
+                  } catch { showToast('Failed to delete'); return }
                   showToast('Deleted', {
                     label: 'Undo',
                     onClick: async () => {
@@ -547,11 +555,11 @@ export function TimelineView({ pageId, title, readOnly = false, page }: Timeline
                         pageId, text: savedText, isPending: false,
                         date: savedDate,
                         tagRefs: extractMentionPageIds(savedText),
-                        createdAt: new Date(), updatedAt: new Date(),
+                        createdAt: savedCreatedAt, updatedAt: new Date(),
                       })
                     },
                   })
-                }}>Delete</button>
+                }} aria-label="Delete entry">Delete</button>
               )}
             </div>
           </div>

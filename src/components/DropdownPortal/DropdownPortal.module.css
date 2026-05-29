@@ -1,0 +1,10 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: calc(var(--z-popover) - 1);
+}
+
+.portal {
+  position: fixed;
+  z-index: var(--z-popover);
+}

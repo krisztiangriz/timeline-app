@@ -138,13 +138,23 @@ function validatePageSetting(raw: unknown): PageSetting | null {
 function validateChartConfig(raw: unknown): ChartConfig | null {
   if (!isObject(raw)) return null
   if (!isNumber(raw.blockId) || !isString(raw.dataSource) || !isString(raw.chartType)) return null
+  // Validate scopes structure
+  let scopes: ChartConfig['scopes'] | undefined
+  if (isArray(raw.scopes)) {
+    const validScopes = (raw.scopes as unknown[]).filter((s) => {
+      if (!isObject(s) || !isString((s as Record<string, unknown>).type)) return false
+      const t = (s as Record<string, unknown>).type
+      return t === 'global' || t === 'page' || t === 'hub'
+    })
+    scopes = validScopes.length > 0 ? validScopes as ChartConfig['scopes'] : undefined
+  }
   return {
     ...(isNumber(raw.id) ? { id: raw.id } : {}),
     blockId: raw.blockId,
     name: isString(raw.name) ? raw.name : undefined,
     dataSource: raw.dataSource as ChartConfig['dataSource'],
     chartType: raw.chartType as ChartConfig['chartType'],
-    scopes: isArray(raw.scopes) ? raw.scopes as ChartConfig['scopes'] : undefined,
+    scopes,
     propertyId: isNumber(raw.propertyId) ? raw.propertyId : undefined,
     order: isNumber(raw.order) ? raw.order : 0,
   }

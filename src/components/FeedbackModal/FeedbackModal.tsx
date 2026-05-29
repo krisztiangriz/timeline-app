@@ -79,6 +79,12 @@ export function FeedbackModal({ open, onClose, onSuccess }: FeedbackModalProps) 
   }, [activeIndex])
 
   function handleSubjectKeyDown(e: React.KeyboardEvent) {
+    if (e.key === 'Escape' && subjectResults.length) {
+      e.preventDefault()
+      e.stopPropagation()
+      setSubjectQuery('')
+      return
+    }
     if (!subjectResults.length) return
     if (e.key === 'ArrowDown') {
       e.preventDefault()

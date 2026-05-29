@@ -303,9 +303,9 @@ export function AddChartModal({ open, onClose, onAdd, editing, onUpdate, pageId,
         {/* Chart type */}
         <div className={styles.formSection}>
           <span className={styles.formLabel}>Chart type</span>
-          <div className={styles.radioRow}>
+          <div className={styles.radioRow} role="radiogroup" aria-label="Chart type">
             {validTypes.map((t) => (
-              <button key={t} className={radio.radioOption} onClick={() => setType(t)}>
+              <button key={t} className={radio.radioOption} onClick={() => setType(t)} role="radio" aria-checked={effectiveType === t}>
                 <div className={radio.radioCircle} data-checked={effectiveType === t} />
                 {CHART_TYPE_LABELS[t]}
               </button>

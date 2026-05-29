@@ -99,6 +99,12 @@ export function SettingsModal({ open, onClose, onToast }: SettingsModalProps) {
   }
 
   function handleMergeKeyDown(e: React.KeyboardEvent) {
+    if (e.key === 'Escape' && mergeResults.length) {
+      e.preventDefault()
+      e.stopPropagation()
+      setMergeQuery('')
+      return
+    }
     if (!mergeResults.length) return
     if (e.key === 'ArrowDown') {
       e.preventDefault()

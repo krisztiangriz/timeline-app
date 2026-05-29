@@ -72,22 +72,36 @@ export const RichTextDisplay = memo(function RichTextDisplay({ html, className, 
     const mention = target.closest('[data-page-id]') as HTMLElement | null
     if (mention) {
       e.stopPropagation()
-      const pageId = Number(mention.getAttribute('data-page-id'))
-      if (pageId) {
-        if (onMentionClick) {
-          onMentionClick(pageId)
-        } else {
-          const page = allPages.find((p) => p.id === pageId)
-          if (page) {
-            navigate(getPagePath(page, allPages))
-          } else {
-            navigate(`/page/${pageId}`)
-          }
-        }
-        return
-      }
+      navigateToMention(mention)
+      return
     }
     onClick?.()
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if (e.key !== 'Enter' && e.key !== ' ') return
+    const target = e.target as HTMLElement
+    const mention = target.closest('[data-page-id]') as HTMLElement | null
+    if (mention) {
+      e.preventDefault()
+      navigateToMention(mention)
+    }
+  }
+
+  function navigateToMention(mention: HTMLElement) {
+    const pageId = Number(mention.getAttribute('data-page-id'))
+    if (pageId) {
+      if (onMentionClick) {
+        onMentionClick(pageId)
+      } else {
+        const page = allPages.find((p) => p.id === pageId)
+        if (page) {
+          navigate(getPagePath(page, allPages))
+        } else {
+          navigate(`/page/${pageId}`)
+        }
+      }
+    }
   }
 
   return (
@@ -95,6 +109,7 @@ export const RichTextDisplay = memo(function RichTextDisplay({ html, className, 
       className={displayClassName}
       dangerouslySetInnerHTML={{ __html: cleanHtml }}
       onClick={handleClick}
+      onKeyDown={handleKeyDown}
       style={{ cursor: onClick ? 'text' : 'auto' }}
     />
   )
