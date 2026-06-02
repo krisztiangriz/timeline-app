@@ -42,6 +42,8 @@ export function useCrossRefEntries(pageId?: number) {
 
 /**
  * Get only the pending entry for a page (avoids loading all entries).
+ * Uses pageId index to scope the scan to one page's entries; JS filter
+ * for isPending (booleans not reliably indexable in IndexedDB).
  */
 export function usePendingEntry(pageId?: number) {
   return useLiveQuery(

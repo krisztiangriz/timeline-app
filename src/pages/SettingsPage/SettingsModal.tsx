@@ -129,7 +129,7 @@ export function SettingsModal({ open, onClose, onToast }: SettingsModalProps) {
       {/* Theme */}
       <div className={styles.section}>
         <span className={styles.sectionTitle}>Theme</span>
-        <div className={styles.backupRow}>
+        <div className={styles.backupRow} role="radiogroup" aria-label="Theme">
           {(['light', 'dark'] as Theme[]).map((opt) => (
             <button key={opt} className={styles.checkboxRow} onClick={() => setTheme(opt)} role="radio" aria-checked={theme === opt}>
               <div className={styles.radio} data-checked={theme === opt} />
@@ -223,7 +223,7 @@ export function SettingsModal({ open, onClose, onToast }: SettingsModalProps) {
       {/* Auto-backup */}
       <div className={styles.section}>
         <span className={styles.sectionTitle}>Auto-backup</span>
-        <div className={styles.backupRow}>
+        <div className={styles.backupRow} role="radiogroup" aria-label="Auto-backup frequency">
           {(['daily', 'weekly', 'monthly', 'off'] as BackupFrequency[]).map((opt) => (
             <button key={opt} className={styles.checkboxRow} onClick={() => setFrequency(opt)} role="radio" aria-checked={frequency === opt}>
               <div className={styles.radio} data-checked={frequency === opt} />

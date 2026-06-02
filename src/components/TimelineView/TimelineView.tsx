@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect, useRef, useCallback, memo } from 'react'
 import { stripHtml, stripCheckboxHtml } from '../../utils/stripHtml'
 import { filterHtmlToMentionLines, extractMentionPageIds } from '../../utils/mentionParser'
 
+import Dexie from 'dexie'
 import { useTimelineEntries, useCrossRefEntries, usePendingEntry, addEntry, updateEntry, deleteEntry, mergePendingEntries } from '../../hooks/useTimeline'
 import { usePageByRole, useChildPages } from '../../hooks/usePages'
 import { db } from '../../db/database'
@@ -81,8 +82,8 @@ export function TimelineView({ pageId, title, readOnly = false, page }: Timeline
     return merged
   }, [directEntries, crossRefEntries])
 
-  // Compute today's key outside useMemo so it updates at midnight on next render
-  const todayKey = startOfDay(new Date()).toISOString()
+  // Memoize today's key — stable for the lifetime of the component (day doesn't change mid-session)
+  const todayKey = useMemo(() => startOfDay(new Date()).toISOString(), [])
 
   // Split entries into pending, today (direct + cross-ref), and history groups
   const { pendingEntry, todayEntry, todayCrossRefs, historyGroups } = useMemo(() => {
@@ -395,6 +396,26 @@ export function TimelineView({ pageId, title, readOnly = false, page }: Timeline
     el?.focus()
   }, [])
 
+  const handleDeleteHistory = useCallback(async (entry: TimelineEntry) => {
+    const savedText = entry.text
+    const savedDate = entry.date
+    const savedCreatedAt = entry.createdAt
+    try {
+      await deleteEntry(entry.id!)
+    } catch { showToast('Failed to delete'); return }
+    showToast('Deleted', {
+      label: 'Undo',
+      onClick: async () => {
+        await db.timelineEntries.add({
+          pageId, text: savedText, isPending: false,
+          date: savedDate,
+          tagRefs: extractMentionPageIds(savedText),
+          createdAt: savedCreatedAt, updatedAt: new Date(),
+        })
+      },
+    })
+  }, [pageId, showToast])
+
   const handleSectionKeyDown = useCallback((sectionKey: string, e: React.KeyboardEvent) => {
     // Only handle when the section div itself is focused (not a child editor)
     if (e.target !== e.currentTarget) return
@@ -446,27 +467,10 @@ export function TimelineView({ pageId, title, readOnly = false, page }: Timeline
         const dateKey = sectionKey.replace('history-', '')
         const group = historyGroups.find(([k]) => k === dateKey)
         const directEntry = group?.[1].find((ent) => directIds.has(ent.id!))
-        if (directEntry) {
-          const savedText = directEntry.text
-          const savedDate = directEntry.date
-          const savedCreatedAt = directEntry.createdAt
-          deleteEntry(directEntry.id!).then(() => {
-            showToast('Deleted', {
-              label: 'Undo',
-              onClick: async () => {
-                await db.timelineEntries.add({
-                  pageId, text: savedText, isPending: false,
-                  date: savedDate,
-                  tagRefs: extractMentionPageIds(savedText),
-                  createdAt: savedCreatedAt, updatedAt: new Date(),
-                })
-              },
-            })
-          }).catch(() => showToast('Failed to delete'))
-        }
+        if (directEntry) handleDeleteHistory(directEntry)
       }
     }
-  }, [sectionKeys, focusSection, handleDeletePending, handleDeleteToday, historyGroups, directIds, pageId, showToast])
+  }, [sectionKeys, focusSection, handleDeletePending, handleDeleteToday, handleDeleteHistory, historyGroups, directIds])
 
   const handleSectionEscape = useCallback((sectionKey: string) => {
     setEditingSection(null)
@@ -544,12 +548,13 @@ export function TimelineView({ pageId, title, readOnly = false, page }: Timeline
         await deleteEntry(mainPendingEntry.id)
       }
 
-      // Append to today's entry on the main timeline
+      // Append to today's entry on the main timeline — use [pageId+date] index
       if (cleanText) {
         const todayStart = startOfDay(new Date())
         const mainTodayEntries = await db.timelineEntries
-          .where('pageId').equals(mainTimelinePage.id)
-          .filter((e) => !e.isPending && new Date(e.date) >= todayStart)
+          .where('[pageId+date]')
+          .between([mainTimelinePage.id, todayStart], [mainTimelinePage.id, Dexie.maxKey])
+          .filter((e) => !e.isPending)
           .toArray()
         const mainTodayEntry = mainTodayEntries[0]
         if (mainTodayEntry?.id) {
@@ -725,25 +730,7 @@ export function TimelineView({ pageId, title, readOnly = false, page }: Timeline
             <div className={styles.sectionDateContainer}>
               <span className={styles.sectionDate}>{formatEntryDate(new Date(dateKey))}</span>
               {directEntry && (
-                <button className={styles.sectionDeleteLabel} onClick={async () => {
-                  const savedText = directEntry.text
-                  const savedDate = directEntry.date
-                  const savedCreatedAt = directEntry.createdAt
-                  try {
-                    await deleteEntry(directEntry.id!)
-                  } catch { showToast('Failed to delete'); return }
-                  showToast('Deleted', {
-                    label: 'Undo',
-                    onClick: async () => {
-                      await db.timelineEntries.add({
-                        pageId, text: savedText, isPending: false,
-                        date: savedDate,
-                        tagRefs: extractMentionPageIds(savedText),
-                        createdAt: savedCreatedAt, updatedAt: new Date(),
-                      })
-                    },
-                  })
-                }} aria-label="Delete entry" tabIndex={-1}>Delete</button>
+                <button className={styles.sectionDeleteLabel} onClick={() => handleDeleteHistory(directEntry)} aria-label="Delete entry" tabIndex={-1}>Delete</button>
               )}
             </div>
           </div>

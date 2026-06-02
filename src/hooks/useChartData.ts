@@ -41,7 +41,7 @@ function buildMonthKeys(monthCount: number, entries?: { date: Date | string }[])
   return months
 }
 
-function getCutoff(monthCount: number): Date {
+export function getCutoff(monthCount: number): Date {
   if (monthCount === 0) return new Date(0) // no cutoff — include everything
   const now = new Date()
   return new Date(now.getFullYear(), now.getMonth() - (monthCount - 1), 1)

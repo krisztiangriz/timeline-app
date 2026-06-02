@@ -29,6 +29,17 @@ interface ExportData {
   pagePropertyValues: PagePropertyValue[]
 }
 
+// ---- Enum allowlists (runtime guards — TypeScript casts are erased at runtime) ----
+
+const VALID_PAGE_TYPES = new Set(['general', 'candidate', 'colleague', 'project', 'hub'])
+const VALID_PAGE_ROLES = new Set(['colleague-hub', 'candidate-hub', 'project-hub', 'main-timeline'])
+const VALID_BLOCK_TYPES = new Set(['text', 'timeline', 'feedback', 'table', 'visualization'])
+const VALID_CHART_DATA_SOURCES = new Set([
+  'entry-count', 'entry-by-weekday', 'property-distribution', 'page-count',
+  'feedback-by-type', 'feedback-by-dimension', 'feedback-over-time', 'feedback-per-page',
+])
+const VALID_CHART_TYPES = new Set(['bar', 'line', 'area', 'pie'])
+
 // ---- Validation ----
 
 function isObject(v: unknown): v is Record<string, unknown> {
@@ -56,11 +67,12 @@ function toDate(v: unknown): Date {
 function validatePage(raw: unknown): Page | null {
   if (!isObject(raw)) return null
   if (!isString(raw.name) || !isString(raw.type)) return null
+  if (!VALID_PAGE_TYPES.has(raw.type)) return null
   return {
     ...(isNumber(raw.id) ? { id: raw.id } : {}),
     name: raw.name,
     type: raw.type as Page['type'],
-    role: isString(raw.role) ? raw.role as Page['role'] : undefined,
+    role: isString(raw.role) && VALID_PAGE_ROLES.has(raw.role) ? raw.role as Page['role'] : undefined,
     mentionTrigger: isString(raw.mentionTrigger) ? raw.mentionTrigger.slice(0, 1) : undefined,
     mentionCollapsed: raw.mentionCollapsed === true ? true : undefined,
     parentId: isNumber(raw.parentId) ? raw.parentId : undefined,
@@ -87,6 +99,7 @@ function validateTab(raw: unknown): Tab | null {
 function validateBlock(raw: unknown): Block | null {
   if (!isObject(raw)) return null
   if (!isNumber(raw.pageId) || !isString(raw.type)) return null
+  if (!VALID_BLOCK_TYPES.has(raw.type)) return null
   return {
     ...(isNumber(raw.id) ? { id: raw.id } : {}),
     pageId: raw.pageId,
@@ -138,6 +151,7 @@ function validatePageSetting(raw: unknown): PageSetting | null {
 function validateChartConfig(raw: unknown): ChartConfig | null {
   if (!isObject(raw)) return null
   if (!isNumber(raw.blockId) || !isString(raw.dataSource) || !isString(raw.chartType)) return null
+  if (!VALID_CHART_DATA_SOURCES.has(raw.dataSource) || !VALID_CHART_TYPES.has(raw.chartType)) return null
   // Validate scopes structure
   let scopes: ChartConfig['scopes'] | undefined
   if (isArray(raw.scopes)) {

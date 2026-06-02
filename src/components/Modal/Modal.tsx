@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, useCallback } from 'react'
 import { CloseIcon, CheckIcon } from '../Icons/Icons'
 import styles from './Modal.module.css'
 
@@ -22,6 +22,7 @@ interface ModalProps {
   hideClose?: boolean
   compact?: boolean
   zIndex?: number
+  descriptionId?: string
 }
 
 export function Modal({
@@ -35,6 +36,7 @@ export function Modal({
   hideClose,
   compact,
   zIndex,
+  descriptionId,
 }: ModalProps) {
   const bodyRef = useRef<HTMLDivElement>(null)
   const modalRef = useRef<HTMLDivElement>(null)
@@ -117,13 +119,18 @@ export function Modal({
     if (!open) didAutoFocus.current = false
   }, [open])
 
-  // Return focus to the element that opened the modal
+  // Capture trigger element synchronously before auto-focus moves focus into the modal
   const triggerRef = useRef<Element | null>(null)
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (open) {
       triggerRef.current = document.activeElement
-    } else if (triggerRef.current instanceof HTMLElement) {
-      triggerRef.current.focus()
+    }
+  }, [open])
+  useEffect(() => {
+    if (!open && triggerRef.current instanceof HTMLElement) {
+      if (document.contains(triggerRef.current)) {
+        triggerRef.current.focus()
+      }
       triggerRef.current = null
     }
   }, [open])
@@ -139,7 +146,7 @@ export function Modal({
 
   return (
     <div className={styles.overlay} style={zIndex ? { zIndex } : undefined} onClick={onClose}>
-      <div ref={modalRef} className={compact ? `${styles.modal} ${styles.modalCompact}` : styles.modal} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <div ref={modalRef} className={compact ? `${styles.modal} ${styles.modalCompact}` : styles.modal} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="modal-title" aria-describedby={descriptionId}>
         <div className={scrolledTop ? styles.headerBorder : styles.header}>
           <h1 className={styles.title} id="modal-title">{title}</h1>
           {!hideClose && (

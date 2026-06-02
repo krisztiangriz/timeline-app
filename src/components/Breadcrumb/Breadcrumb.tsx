@@ -50,7 +50,7 @@ export function BreadcrumbNav({
         </div>
       ) : (
         <>
-          <div className={styles.breadcrumbs}>
+          <nav className={styles.breadcrumbs} aria-label="Breadcrumb">
             {items.map((item, i) => {
               const isLast = i === items.length - 1
               return (
@@ -66,7 +66,7 @@ export function BreadcrumbNav({
                 </span>
               )
             })}
-          </div>
+          </nav>
 
           <button
             className={styles.actionButton}

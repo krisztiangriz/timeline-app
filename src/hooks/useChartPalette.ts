@@ -16,10 +16,17 @@ export const PALETTE_OPTIONS = [
   '#E07090', '#CC5C7C', '#B84A6A', '#F080A0',
 ]
 
+const HEX_COLOR_RE = /^#[0-9a-fA-F]{6}$/
+
 function readPalette(): string[] {
   try {
     const stored = safeGetItem(LS_KEY)
-    if (stored) return JSON.parse(stored)
+    if (stored) {
+      const parsed = JSON.parse(stored)
+      if (Array.isArray(parsed) && parsed.every((c) => typeof c === 'string' && HEX_COLOR_RE.test(c))) {
+        return parsed
+      }
+    }
   } catch { /* parse error */ }
   return CHART_COLORS
 }

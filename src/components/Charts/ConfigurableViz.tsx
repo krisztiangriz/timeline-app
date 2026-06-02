@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, memo } from 'react'
+import { useState, useEffect, useRef, useMemo, memo } from 'react'
 import { EmptyState } from '../EmptyState/EmptyState'
 import { CloseIcon } from '../Icons/Icons'
 import { RangeToggle, type RangeMonths } from '../RangeToggle/RangeToggle'
@@ -6,7 +6,7 @@ import { ChartRenderer, DATA_SOURCE_LABELS } from './ChartRenderer'
 import { AddChartModal } from './AddChartModal'
 import { useChartConfigs, addChartConfig, updateChartConfig, deleteChartConfig } from '../../hooks/useChartConfigs'
 import { useAutocomplete } from '../../hooks/useAutocomplete'
-import { useAllEntries } from '../../hooks/useChartData'
+import { useAllEntries, getCutoff } from '../../hooks/useChartData'
 import { useChartPalette } from '../../hooks/useChartPalette'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../../db/database'
@@ -32,16 +32,42 @@ export const ConfigurableViz = memo(function ConfigurableViz({ blockId, pageId }
     return stored === '0' ? 0 : stored === '3' ? 3 : stored === '6' ? 6 : 12
   })
   const allEntries = useAllEntries(range || undefined)
+
+  // Scope hub/property queries to hub IDs referenced by configs
+  const relevantHubIds = useMemo(() => {
+    const ids = new Set<number>()
+    for (const c of configs) {
+      for (const s of c.scopes ?? []) {
+        if (s.type === 'hub') ids.add(s.hubId)
+      }
+    }
+    // Also include the hub that owns this block's page
+    ids.add(pageId)
+    return [...ids]
+  }, [configs, pageId])
+
   const allHubProperties = useLiveQuery(
-    () => db.hubProperties.toArray(),
-    []
+    () => relevantHubIds.length > 0
+      ? db.hubProperties.where('hubId').anyOf(relevantHubIds).toArray()
+      : db.hubProperties.toArray(),
+    [relevantHubIds.join(',')]
   ) ?? []
+
+  // Get child page IDs of the relevant hubs to scope property values
+  const relevantPageIds = useMemo(
+    () => allPages.filter((p) => p.parentId && relevantHubIds.includes(p.parentId)).map((p) => p.id!),
+    [allPages, relevantHubIds]
+  )
+
   const allPropertyValues = useLiveQuery(
-    () => db.pagePropertyValues.toArray(),
-    []
+    () => relevantPageIds.length > 0
+      ? db.pagePropertyValues.where('pageId').anyOf(relevantPageIds).toArray()
+      : db.pagePropertyValues.toArray(),
+    [relevantPageIds.join(',')]
   ) ?? []
+
   const allFeedbacks = useLiveQuery(() => {
-    const cutoff = range ? new Date(Date.now() - range * 30 * 24 * 60 * 60 * 1000) : undefined
+    const cutoff = range > 0 ? getCutoff(range) : undefined
     return cutoff
       ? db.feedbacks.where('createdAt').aboveOrEqual(cutoff).toArray()
       : db.feedbacks.toArray()

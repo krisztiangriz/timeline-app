@@ -165,6 +165,7 @@ function TimelineRedirect() {
 function useEnsureDefaults() {
   useEffect(() => {
     ;(async () => {
+      try {
       // Clean up any orphaned draft pages (from crashes during hub creation)
       const drafts = await db.pages.filter((p) => !!p.isDraft).toArray()
       if (drafts.length > 0) {
@@ -207,6 +208,9 @@ function useEnsureDefaults() {
         // Projects hub
         await createHub('Projects', 'project-hub', '#')
       })
+      } catch {
+        // IndexedDB unavailable or migration failed — app will show empty state
+      }
     })()
   }, [])
 }
@@ -254,9 +258,11 @@ export default function App() {
         <AutocompleteProvider>
         <OnboardingGuidesProvider>
         <ToastProvider>
+        <a href="#main-content" className="skip-link">Skip to content</a>
         <StorageWarningListener />
         <BackupToastListener />
         <Suspense fallback={null}>
+        <main id="main-content">
         <Routes>
           <Route path="/" element={<RootPage />} />
           <Route path="/timeline" element={<TimelineRedirect />} />
@@ -268,6 +274,7 @@ export default function App() {
           <Route path="/projects/:id" element={<DetailPage routePrefix="projects" />} />
           <Route path="/page/:id" element={<DetailPage />} />
         </Routes>
+        </main>
         </Suspense>
         <GlobalOverlays />
         </ToastProvider>

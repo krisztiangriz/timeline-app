@@ -223,13 +223,15 @@ export function AddChartModal({ open, onClose, onAdd, editing, onUpdate, pageId,
               </svg>
             </button>
             <DropdownPortal anchorRef={scopeTriggerRef} open={scopeOpen} onClose={() => setScopeOpen(false)} autoFocus>
-              <div className={styles.scopePanel} data-dropdown-panel>
+              <div className={styles.scopePanel} data-dropdown-panel role="listbox" aria-multiselectable="true" aria-label="Scope">
                 {scopeOptions.map((opt) => (
                   <button
                     key={opt.key}
                     className={opt.isChild ? `${styles.scopeOption} ${styles.scopeOptionChild}` : styles.scopeOption}
                     onClick={() => setScopes(toggleScope(scopes, opt.scope))}
                     type="button"
+                    role="option"
+                    aria-selected={isScopeSelected(scopes, opt.scope)}
                   >
                     <div
                       className={styles.scopeCheckbox}
@@ -263,13 +265,15 @@ export function AddChartModal({ open, onClose, onAdd, editing, onUpdate, pageId,
               </svg>
             </button>
             <DropdownPortal anchorRef={sourceTriggerRef} open={sourceOpen} onClose={() => setSourceOpen(false)} autoFocus>
-              <div className={styles.scopePanel} data-dropdown-panel>
+              <div className={styles.scopePanel} data-dropdown-panel role="listbox" aria-label="Data source">
                 {ALL_SOURCES.map((s) => (
                   <button
                     key={s}
                     className={styles.scopeOption}
                     onClick={() => { setSource(s); setPropertyId(undefined); setSourceOpen(false); if (!userEditedName.current) setName(DATA_SOURCE_LABELS[s] ?? '') }}
                     type="button"
+                    role="option"
+                    aria-selected={source === s && !propertyId}
                   >
                     <div
                       className={styles.scopeRadio}
@@ -286,6 +290,8 @@ export function AddChartModal({ open, onClose, onAdd, editing, onUpdate, pageId,
                       className={styles.scopeOption}
                       onClick={() => { setSource('property-distribution'); setPropertyId(prop.id); setSourceOpen(false); if (!userEditedName.current) setName(prop.name ?? '') }}
                       type="button"
+                      role="option"
+                      aria-selected={source === 'property-distribution' && propertyId === prop.id}
                     >
                       <div
                         className={styles.scopeRadio}

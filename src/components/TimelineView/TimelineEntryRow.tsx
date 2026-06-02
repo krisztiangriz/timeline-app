@@ -103,12 +103,17 @@ export const TimelineEntryRow = memo(function TimelineEntryRow({
   return (
     <div
       className={crossRef ? styles.entryRowTextDisabled : styles.entryRowText}
-      onClick={!editing && !crossRef ? handleStartEditing : undefined}
-      onKeyDown={!editing && !crossRef ? handleKeyboardActivate : undefined}
-      tabIndex={!editing && !crossRef ? 0 : undefined}
-      role={!editing && !crossRef ? 'button' : undefined}
-      style={{ cursor: editing || crossRef ? 'auto' : 'text' }}
+      style={{ position: 'relative', cursor: editing || crossRef ? 'auto' : 'text' }}
     >
+      {!editing && !crossRef && (
+        <button
+          className={styles.entryEditOverlay}
+          onClick={handleStartEditing}
+          onKeyDown={handleKeyboardActivate}
+          aria-label="Edit entry"
+          tabIndex={0}
+        />
+      )}
       {editing ? (
         <RichTextEditor
           value={editHtml}

@@ -129,14 +129,19 @@ export async function deletePage(id: number) {
     }
     await deleteRecursive(id)
 
-    // Remove all deleted page IDs from tagRefs in other entries
-    for (const deletedId of deletedIds) {
-      const pageIdStr = String(deletedId)
-      const referencingEntries = await db.timelineEntries.where('tagRefs').equals(pageIdStr).toArray()
-      for (const entry of referencingEntries) {
-        const updatedRefs = entry.tagRefs.filter((ref) => ref !== pageIdStr)
-        await db.timelineEntries.update(entry.id!, { tagRefs: updatedRefs })
+    // Remove all deleted page IDs from tagRefs in other entries (batched)
+    const deletedIdStrs = new Set(deletedIds.map(String))
+    const affectedIds: number[] = []
+    for (const idStr of deletedIdStrs) {
+      const refs = await db.timelineEntries.where('tagRefs').equals(idStr).primaryKeys()
+      for (const pk of refs) {
+        if (!affectedIds.includes(pk as number)) affectedIds.push(pk as number)
       }
+    }
+    if (affectedIds.length > 0) {
+      await db.timelineEntries.where('id').anyOf(affectedIds).modify((entry) => {
+        entry.tagRefs = entry.tagRefs.filter((ref) => !deletedIdStrs.has(ref))
+      })
     }
   })
 }

@@ -34,7 +34,15 @@ export function BlockRenderer({ page, activeTabId }: BlockRendererProps) {
   const tabFilter = activeTabId === undefined ? null : activeTabId
   const blocks = useBlocks(pageId, tabFilter)
 
-  return <BlockList pageId={pageId} page={page} blocks={blocks} tabId={tabFilter ?? undefined} />
+  return (
+    <div
+      id={tabFilter != null ? `tabpanel-${tabFilter}` : undefined}
+      role={tabFilter != null ? 'tabpanel' : undefined}
+      aria-labelledby={tabFilter != null ? `tab-${tabFilter}` : undefined}
+    >
+      <BlockList pageId={pageId} page={page} blocks={blocks} tabId={tabFilter ?? undefined} />
+    </div>
+  )
 }
 
 // ---- Block list ----

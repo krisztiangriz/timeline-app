@@ -83,10 +83,12 @@ export const PageHeader = memo(function PageHeader({
             <Fragment key={tab.id}>
               {i > 0 && <div className={styles.tabSeparator} />}
               <button
+                id={`tab-${tab.id}`}
                 className={activeTabId === tab.id ? styles.tab : styles.tabInactive}
                 onClick={() => onTabChange?.(tab.id!)}
                 role="tab"
                 aria-selected={activeTabId === tab.id}
+                aria-controls={`tabpanel-${tab.id}`}
               >
                 {tab.name}
               </button>
