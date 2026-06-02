@@ -242,19 +242,23 @@ export function FeedbackModal({ open, onClose, onSuccess }: FeedbackModalProps) 
                 aria-label={prop.name}
                 onKeyDown={makeRadioKeyHandler(optValues, currentVal, (v) => setPropertyValue(prop.id!, v))}
               >
-                {prop.options.map((opt) => (
-                  <button
-                    key={opt.value}
-                    className={radio.radioOption}
-                    onClick={() => setPropertyValue(prop.id!, opt.value)}
-                    role="radio"
-                    aria-checked={currentVal === opt.value}
-                    tabIndex={currentVal === opt.value ? 0 : -1}
-                  >
-                    <div className={radio.radioCircle} data-checked={currentVal === opt.value} />
-                    {opt.label}
-                  </button>
-                ))}
+                {prop.options.map((opt, optIdx) => {
+                  const isSelected = currentVal === opt.value
+                  const noneSelected = !optValues.includes(currentVal)
+                  return (
+                    <button
+                      key={opt.value}
+                      className={radio.radioOption}
+                      onClick={() => setPropertyValue(prop.id!, opt.value)}
+                      role="radio"
+                      aria-checked={isSelected}
+                      tabIndex={isSelected || (noneSelected && optIdx === 0) ? 0 : -1}
+                    >
+                      <div className={radio.radioCircle} data-checked={isSelected} />
+                      {opt.label}
+                    </button>
+                  )
+                })}
               </div>
             )
           })()}
