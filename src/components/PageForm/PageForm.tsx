@@ -307,7 +307,7 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
                   style={{ width: 52, fontFamily: 'ui-monospace, monospace' }}
                 />
                 {trigger && (
-                  <button className={styles.labelToggle} onClick={() => setCollapsed(!collapsed)} type="button" role="checkbox" aria-checked={!collapsed}>
+                  <button className={styles.labelToggle} onClick={() => setCollapsed(!collapsed)} type="button" role="checkbox" aria-checked={!collapsed} tabIndex={0}>
                     <div className={styles.labelCheckbox} data-checked={!collapsed} />
                     <span className={styles.labelText}>Label</span>
                   </button>
@@ -349,6 +349,7 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
               aria-expanded={hubSelectOpen}
               aria-haspopup="listbox"
               type="button"
+              tabIndex={0}
             >
               <span>
                 {parentHubId
@@ -379,7 +380,7 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
         <div className={styles.tabHeader}>
           <span className={styles.label}>Layout</span>
           {!addingTab && (
-            <button className={styles.addButton} onClick={() => setAddingTab(true)} aria-label="Add tab">
+            <button className={styles.addButton} onClick={() => setAddingTab(true)} aria-label="Add tab" tabIndex={0}>
               <PlusIcon />
             </button>
           )}
@@ -404,7 +405,7 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
               value={tab.name}
               onChange={(e) => setTabs((t) => t.map((tt, j) => j === i ? { ...tt, name: e.target.value } : tt))}
             />
-            <button className={styles.deleteButton} onClick={() => setTabDeleteConfirm(i)} aria-label={`Delete ${tab.name}`}>
+            <button className={styles.deleteButton} onClick={() => setTabDeleteConfirm(i)} aria-label={`Delete ${tab.name}`} tabIndex={0}>
               <TrashIcon />
             </button>
           </div>
@@ -416,6 +417,7 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
                 className={styles.blockTypeSelectTrigger}
                 onClick={() => setBlockTypeSelectOpen((v) => !v)}
                 type="button"
+                tabIndex={0}
               >
                 {BLOCK_TYPE_LABELS[newTabType] ?? newTabType}
                 <svg width="10" height="6" viewBox="0 0 10 6" fill="none"><path d="M1 1L5 5L9 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>

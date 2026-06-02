@@ -154,7 +154,7 @@ export function Modal({
         <div className={scrolledTop ? styles.headerBorder : styles.header}>
           <h1 className={styles.title} id="modal-title">{title}</h1>
           {!hideClose && (
-            <button className={styles.closeButton} onClick={onClose} aria-label="Close">
+            <button className={styles.closeButton} onClick={onClose} aria-label="Close" tabIndex={0}>
               <CloseIcon />
             </button>
           )}
@@ -164,7 +164,7 @@ export function Modal({
 
         {!hideFooter && (
           <div className={scrolledBottom ? styles.footerBorder : styles.footer}>
-            <button className={styles.footerButton} onClick={onClose} aria-label="Cancel">
+            <button className={styles.footerButton} onClick={onClose} aria-label="Cancel" tabIndex={0}>
               <CloseIcon />
             </button>
             {onConfirm && (
@@ -173,6 +173,7 @@ export function Modal({
                 onClick={onConfirm}
                 disabled={confirmDisabled}
                 aria-label="Confirm"
+                tabIndex={0}
                 style={{ opacity: confirmDisabled ? 0.4 : 1 }}
               >
                 <CheckIcon />

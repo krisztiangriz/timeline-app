@@ -152,19 +152,19 @@ export function SettingsModal({ open, onClose, onToast }: SettingsModalProps) {
           Export or Import all your data as JSON. Import replaces all existing data. Merge adds entries and feedback from a file without removing existing data.
         </span>
         <div className={styles.buttonRow}>
-          <button className={styles.iconButton} onClick={handleExport}>
+          <button className={styles.iconButton} onClick={handleExport} tabIndex={0}>
             <svg width="16" height="16" viewBox="0 0 18 18" fill="none">
               <path d="M8.25 1.5V8.691L5.781 6.219L4.719 7.281L9 11.559L13.281 7.281L12.219 6.219L9.75 8.691V1.5H8.25ZM1.5 12.75V15C1.5 15.82 2.18 16.5 3 16.5H15C15.82 16.5 16.5 15.82 16.5 15V12.75H15V15H3V12.75H1.5Z" fill="currentColor" />
             </svg>
             Export
           </button>
-          <button className={styles.iconButton} onClick={handleImport}>
+          <button className={styles.iconButton} onClick={handleImport} tabIndex={0}>
             <svg width="16" height="16" viewBox="0 0 18 18" fill="none">
               <path d="M8.25 12V5.559L5.781 8.031L4.719 6.969L9 2.691L13.281 6.969L12.219 8.031L9.75 5.559V12H8.25ZM1.5 12.75V15C1.5 15.82 2.18 16.5 3 16.5H15C15.82 16.5 16.5 15.82 16.5 15V12.75H15V15H3V12.75H1.5Z" fill="currentColor" />
             </svg>
             Import
           </button>
-          <button className={styles.iconButton} onClick={() => setMerging(true)}>
+          <button className={styles.iconButton} onClick={() => setMerging(true)} tabIndex={0}>
             <svg width="16" height="16" viewBox="0 0 18 18" fill="none">
               <path d="M9 1.5C9.414 1.5 9.75 1.836 9.75 2.25V8.25H15.75C16.164 8.25 16.5 8.586 16.5 9C16.5 9.414 16.164 9.75 15.75 9.75H9.75V15.75C9.75 16.164 9.414 16.5 9 16.5C8.586 16.5 8.25 16.164 8.25 15.75V9.75H2.25C1.836 9.75 1.5 9.414 1.5 9C1.5 8.586 1.836 8.25 2.25 8.25H8.25V2.25C8.25 1.836 8.586 1.5 9 1.5Z" fill="currentColor" />
             </svg>
@@ -180,6 +180,7 @@ export function SettingsModal({ open, onClose, onToast }: SettingsModalProps) {
                   className={styles.mergeClearButton}
                   onClick={() => { setMergeSelected(null); setMergePageId(undefined) }}
                   aria-label="Clear selection"
+                  tabIndex={0}
                 >
                   <CloseIcon size={10} />
                 </button>
@@ -198,7 +199,7 @@ export function SettingsModal({ open, onClose, onToast }: SettingsModalProps) {
                   autoFocus
                 />
                 {mergeQuery && (
-                  <button className={styles.mergeClearButton} onClick={() => setMergeQuery('')} aria-label="Clear">
+                  <button className={styles.mergeClearButton} onClick={() => setMergeQuery('')} aria-label="Clear" tabIndex={0}>
                     <PlusIcon size={12} />
                   </button>
                 )}
@@ -219,9 +220,9 @@ export function SettingsModal({ open, onClose, onToast }: SettingsModalProps) {
               </DropdownPortal>
               </>
             )}
-            <button className={styles.confirmButton} onClick={handleMergeImport} aria-label="Choose file"
+            <button className={styles.confirmButton} onClick={handleMergeImport} aria-label="Choose file" tabIndex={0}
               style={{ opacity: mergeSelected ? 1 : 0.4, pointerEvents: mergeSelected ? 'auto' : 'none' }}>{<CheckIcon />}</button>
-            <button className={styles.deleteButton} onClick={cancelMerge} aria-label="Cancel merge">{<TrashIcon />}</button>
+            <button className={styles.deleteButton} onClick={cancelMerge} aria-label="Cancel merge" tabIndex={0}>{<TrashIcon />}</button>
           </div>
         )}
       </div>
@@ -248,7 +249,7 @@ export function SettingsModal({ open, onClose, onToast }: SettingsModalProps) {
       <div className={styles.section}>
         <div className={styles.listHeader}>
           <span className={styles.sectionTitle}>Chart colors</span>
-          <button className={styles.iconButton} onClick={resetPalette}>
+          <button className={styles.iconButton} onClick={resetPalette} tabIndex={0}>
             <ResetIcon />
             Reset
           </button>
@@ -269,6 +270,7 @@ export function SettingsModal({ open, onClose, onToast }: SettingsModalProps) {
                   }
                 }}
                 aria-label={`Color ${i + 1}`}
+                tabIndex={0}
               />
               {palettePickerIndex === i && (
                 <ColorPicker
@@ -288,7 +290,7 @@ export function SettingsModal({ open, onClose, onToast }: SettingsModalProps) {
       <div className={styles.section}>
         <div className={styles.listHeader}>
           <span className={styles.sectionTitle}>Onboarding</span>
-          <button className={styles.iconButton} onClick={() => {
+          <button className={styles.iconButton} tabIndex={0} onClick={() => {
             safeRemoveItem('onboarding-completed')
             safeRemoveItem('user-created-page')
             resetAllGuides()

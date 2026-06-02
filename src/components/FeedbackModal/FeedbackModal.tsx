@@ -177,7 +177,7 @@ export function FeedbackModal({ open, onClose, onSuccess }: FeedbackModalProps) 
             aria-label="Subject"
           />
           {subjectQuery && (
-            <button className={styles.clearSearch} onClick={() => setSubjectQuery('')} aria-label="Clear">
+            <button className={styles.clearSearch} onClick={() => setSubjectQuery('')} aria-label="Clear" tabIndex={0}>
               <PlusIcon size={12} />
             </button>
           )}
@@ -206,7 +206,7 @@ export function FeedbackModal({ open, onClose, onSuccess }: FeedbackModalProps) 
                     {hub?.mentionTrigger && <span className={styles.triggerChar}>{hub.mentionTrigger}</span>}
                     {s.name}
                   </span>
-                  <button className={styles.chipRemove} onClick={() => handleRemoveSubject(s.id!)} aria-label={`Remove ${s.name}`}>
+                  <button className={styles.chipRemove} onClick={() => handleRemoveSubject(s.id!)} aria-label={`Remove ${s.name}`} tabIndex={0}>
                     <CloseIcon size={10} />
                   </button>
                 </div>

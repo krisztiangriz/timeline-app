@@ -13,7 +13,7 @@
   --color-input-border: #B8C5DB;       /* N300 */
 
   /* Focus */
-  --color-focus: #2563EB;              /* Blue-600 — 3:1+ on white */
+  --color-focus: var(--color-text-primary);
 
   /* Semantic — used in visualizations & feedback only */
   --color-accent-blue: #6699FF;        /* Primary */
@@ -101,7 +101,7 @@
   --color-input-border: #3A4250;
 
   /* Focus */
-  --color-focus: #60A5FA;              /* Blue-400 — 3:1+ on dark bg */
+  --color-focus: var(--color-text-primary);
 
   /* Semantic */
   --color-accent-blue: #7AABFF;
