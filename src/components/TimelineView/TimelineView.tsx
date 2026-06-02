@@ -14,6 +14,7 @@ import { RichTextDisplay } from '../RichTextEditor/RichTextDisplay'
 import type { TimelineEntry, Page } from '../../types'
 import { useOnboardingActions } from '../../hooks/useOnboardingGuides'
 import { OnboardingGuide } from '../OnboardingGuide/OnboardingGuide'
+import { sanitizeForEditor } from '../../utils/domPurify'
 import styles from './TimelineView.module.css'
 
 /** Lightweight read-only row for cross-referenced entries — avoids unstable object spread */
@@ -39,7 +40,7 @@ function ensureCheckboxes(html: string): string {
 function splitPendingLines(html: string): string[] {
   if (!html.trim()) return []
   const container = document.createElement('div')
-  container.innerHTML = html
+  container.innerHTML = sanitizeForEditor(html)
   const lines: string[] = []
   for (const child of Array.from(container.children)) {
     if (child.tagName === 'DIV' && child.innerHTML.trim()) {
@@ -528,9 +529,9 @@ export function TimelineView({ pageId, title, readOnly = false, page }: Timeline
       const targetLine = filteredLines[lineIndex]
       const cleanText = stripCheckboxHtml(targetLine).replace(/\u00A0/g, ' ').replace(/&nbsp;/g, ' ').trim()
 
-      // Find the target line in the fresh data
-      const originalIndex = freshLines.indexOf(targetLine)
-      if (originalIndex === -1) { showToast('Task was already completed'); return }
+      // Use the pre-computed original index (avoids false matches on duplicate content)
+      const originalIndex = filteredOriginalIndices[lineIndex]
+      if (originalIndex == null || originalIndex >= freshLines.length) { showToast('Task was already completed'); return }
       const remaining = [...freshLines]
       remaining.splice(originalIndex, 1)
       const newHtml = remaining.length > 0 ? remaining.map((l) => `<div>${l}</div>`).join('') : ''

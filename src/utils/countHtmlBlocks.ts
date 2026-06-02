@@ -40,7 +40,5 @@ export function countMentionBlocks(html: string, pageId: number): number {
 
   const marker = `data-page-id="${pageId}"`
   const lines = splitHtmlLines(html)
-  const count = lines.filter((l) => l.includes(marker)).length
-  // At least 1 if tagRefs matched this page (the mention exists somewhere)
-  return Math.max(count, 1)
+  return lines.filter((l) => l.includes(marker)).length
 }

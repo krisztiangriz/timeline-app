@@ -28,6 +28,5 @@ export function splitHtmlLines(html: string): string[] {
 export function filterHtmlToMentionLines(html: string, pageId: number): string[] {
   const marker = `data-page-id="${String(pageId)}"`
   const lines = splitHtmlLines(html)
-  const matching = lines.filter((line) => line.includes(marker))
-  return matching.length > 0 ? matching : [html]
+  return lines.filter((line) => line.includes(marker))
 }

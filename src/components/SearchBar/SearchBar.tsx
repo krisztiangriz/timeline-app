@@ -100,6 +100,12 @@ export function SearchBar({ open, onClose, onAddPage }: SearchBarProps) {
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Search pages..."
+            aria-label="Search pages"
+            role="combobox"
+            aria-expanded={!!query.trim()}
+            aria-haspopup="listbox"
+            aria-controls="search-listbox"
+            aria-activedescendant={activeIndex >= 0 ? `search-option-${activeIndex}` : undefined}
           />
           {query && (
             <button className={styles.clearButton} onClick={() => setQuery('')} aria-label="Clear search">
@@ -111,13 +117,14 @@ export function SearchBar({ open, onClose, onAddPage }: SearchBarProps) {
         </div>
 
         {query.trim() && (
-          <div className={styles.dropdown} ref={listRef}>
+          <div className={styles.dropdown} ref={listRef} id="search-listbox" role="listbox">
             {results.map((page, i) => (
               <button
                 key={page.id}
-                className={
-                  i === activeIndex ? styles.resultActive : styles.result
-                }
+                id={`search-option-${i}`}
+                className={i === activeIndex ? styles.resultActive : styles.result}
+                role="option"
+                aria-selected={i === activeIndex}
                 onClick={() => {
                   navigate(getPagePath(page, allPages))
                   onClose()
@@ -131,11 +138,10 @@ export function SearchBar({ open, onClose, onAddPage }: SearchBarProps) {
               </button>
             ))}
             <button
-              className={
-                activeIndex === results.length
-                  ? styles.addNewActive
-                  : styles.addNew
-              }
+              id={`search-option-${results.length}`}
+              className={activeIndex === results.length ? styles.addNewActive : styles.addNew}
+              role="option"
+              aria-selected={activeIndex === results.length}
               onClick={() => {
                 onAddPage()
                 onClose()

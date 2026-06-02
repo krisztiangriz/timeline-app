@@ -9,6 +9,7 @@ import {
 import { useAutocomplete } from '../../hooks/useAutocomplete'
 import { useModalContext } from '../../hooks/useAppContext'
 import { enrichMentionHtml } from '../../utils/mentionEnricher'
+import { sanitizeForEditor } from '../../utils/domPurify'
 import { formatTableDate } from '../../utils/dateUtils'
 import { CloseIcon } from '../Icons/Icons'
 import { useMentionDetection } from './useMentionDetection'
@@ -132,7 +133,7 @@ export function RichTextEditor({
     const el = editorRef.current
     if (!el) return
     if (value !== lastSetValue.current) {
-      el.innerHTML = enrichMentionHtml(value, allPages, collapseMentions)
+      el.innerHTML = enrichMentionHtml(sanitizeForEditor(value), allPages, collapseMentions)
       lastSetValue.current = value
     }
     const text = el.textContent?.trim() ?? ''
@@ -305,7 +306,13 @@ export function RichTextEditor({
 
   function applyLink() {
     if (!linkUrl.trim()) { cancelLink(); return }
-    const url = linkUrl.startsWith('http') ? linkUrl : `https://${linkUrl}`
+    const raw = linkUrl.startsWith('http') || linkUrl.startsWith('mailto:') ? linkUrl : `https://${linkUrl}`
+    let url: string
+    try {
+      const parsed = new URL(raw)
+      if (!['http:', 'https:', 'mailto:'].includes(parsed.protocol)) { cancelLink(); return }
+      url = parsed.href
+    } catch { cancelLink(); return }
     const el = editorRef.current
     if (el) {
       const marker = el.querySelector('[data-link-pending]')
@@ -313,7 +320,7 @@ export function RichTextEditor({
         const link = document.createElement('a')
         link.href = url
         link.target = '_blank'
-        link.rel = 'noopener'
+        link.rel = 'noopener noreferrer'
         link.contentEditable = 'false'
         link.innerHTML = marker.innerHTML
         marker.replaceWith(link)
@@ -486,7 +493,7 @@ export function RichTextEditor({
     const link = target.closest('a[href]') as HTMLAnchorElement | null
     if (link) {
       e.preventDefault()
-      window.open(link.href, '_blank', 'noopener')
+      window.open(link.href, '_blank', 'noopener,noreferrer')
       return
     }
 

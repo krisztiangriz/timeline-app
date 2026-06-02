@@ -2,6 +2,15 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { CloseIcon, CheckIcon } from '../Icons/Icons'
 import styles from './Modal.module.css'
 
+// Reference-count open modals so nested modals don't prematurely restore scroll
+let openModalCount = 0
+function lockScroll() {
+  if (openModalCount++ === 0) document.body.style.overflow = 'hidden'
+}
+function unlockScroll() {
+  if (--openModalCount <= 0) { openModalCount = 0; document.body.style.overflow = '' }
+}
+
 interface ModalProps {
   title: string
   open: boolean
@@ -108,16 +117,22 @@ export function Modal({
     if (!open) didAutoFocus.current = false
   }, [open])
 
-  // Prevent body scroll when modal is open
+  // Return focus to the element that opened the modal
+  const triggerRef = useRef<Element | null>(null)
   useEffect(() => {
     if (open) {
-      document.body.style.overflow = 'hidden'
-    } else {
-      document.body.style.overflow = ''
+      triggerRef.current = document.activeElement
+    } else if (triggerRef.current instanceof HTMLElement) {
+      triggerRef.current.focus()
+      triggerRef.current = null
     }
-    return () => {
-      document.body.style.overflow = ''
-    }
+  }, [open])
+
+  // Prevent body scroll when modal is open (reference-counted for nested modals)
+  useEffect(() => {
+    if (!open) return
+    lockScroll()
+    return unlockScroll
   }, [open])
 
   if (!open) return null

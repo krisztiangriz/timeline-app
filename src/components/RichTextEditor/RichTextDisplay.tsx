@@ -5,25 +5,7 @@ import { useAutocomplete } from '../../hooks/useAutocomplete'
 import { enrichMentionHtml } from '../../utils/mentionEnricher'
 import styles from './RichTextEditor.module.css'
 
-// Lazy-load DOMPurify — loaded once, subscribers notified via useSyncExternalStore
-let purifyInstance: { sanitize: (html: string) => string } | null = null
-let purifyLoaded = !!purifyInstance
-const listeners = new Set<() => void>()
-
-function subscribePurify(cb: () => void) {
-  listeners.add(cb)
-  return () => { listeners.delete(cb) }
-}
-function getPurifyLoaded() { return purifyLoaded }
-
-// Trigger load immediately (module-level)
-if (!purifyInstance) {
-  import('dompurify').then((mod) => {
-    purifyInstance = mod.default
-    purifyLoaded = true
-    listeners.forEach((cb) => cb())
-  })
-}
+import { subscribePurify, getPurifyLoaded, sanitizeForDisplay } from '../../utils/domPurify'
 
 interface RichTextDisplayProps {
   html: string
@@ -46,11 +28,12 @@ export const RichTextDisplay = memo(function RichTextDisplay({ html, className, 
   const isLoaded = useSyncExternalStore(subscribePurify, getPurifyLoaded)
 
   const cleanHtml = useMemo(() => {
-    if (!purifyInstance) return ''
-    let sanitized = enrichMentionHtml(purifyInstance.sanitize(html), allPages, collapseMentions)
+    const sanitized = sanitizeForDisplay(html)
+    if (!sanitized) return ''
+    let enriched = enrichMentionHtml(sanitized, allPages, collapseMentions)
     // Ensure all links open in new tab (only add if not already present)
-    sanitized = sanitized.replace(/<a(?![^>]*target=)/g, '<a target="_blank" rel="noopener"')
-    return sanitized
+    enriched = enriched.replace(/<a(?![^>]*target=)/g, '<a target="_blank" rel="noopener noreferrer"')
+    return enriched
   }, [html, allPages, collapseMentions, isLoaded])
 
   if (!html || html === '<br>' || !isLoaded) {
@@ -65,7 +48,7 @@ export const RichTextDisplay = memo(function RichTextDisplay({ html, className, 
     if (link) {
       e.stopPropagation()
       e.preventDefault()
-      window.open(link.href, '_blank', 'noopener')
+      window.open(link.href, '_blank', 'noopener,noreferrer')
       return
     }
 

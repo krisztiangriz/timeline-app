@@ -164,7 +164,13 @@ export function DetailPage({ routePrefix }: DetailPageProps) {
           ? `Are you sure you want to delete "${page.name}"? This will also delete all child pages.`
           : `Are you sure you want to delete "${page.name}"? This cannot be undone.`}
         onClose={() => setDeleteConfirm(false)}
-        onConfirm={async () => { await deletePage(page.id!); navigate(hubPath); setDeleteConfirm(false) }}
+        onConfirm={async () => {
+          try {
+            await deletePage(page.id!)
+            navigate(hubPath)
+            setDeleteConfirm(false)
+          } catch { showToast('Failed to delete page') }
+        }}
       />
     </div>
   )

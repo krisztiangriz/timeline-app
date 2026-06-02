@@ -434,8 +434,10 @@ class TimelineDB extends Dexie {
       timelineEntries: '++id, pageId, date, *tagRefs, [pageId+date]',
     })
     // v20: isDraft field on pages (for placeholder hubs during creation)
+    // isDraft intentionally NOT indexed — optional boolean fields store as undefined for false,
+    // making IndexedDB indexes unusable. Filter with .filter(p => !p.isDraft) in JS instead.
     this.version(20).stores({
-      pages: '++id, parentId, role, isDraft',
+      pages: '++id, parentId, role',
     })
   }
 }
