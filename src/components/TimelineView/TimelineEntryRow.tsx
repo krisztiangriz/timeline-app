@@ -102,6 +102,7 @@ export const TimelineEntryRow = memo(function TimelineEntryRow({
 
   return (
     <div
+      data-entry-row
       className={crossRef ? styles.entryRowTextDisabled : styles.entryRowText}
       style={{ position: 'relative', cursor: editing || crossRef ? 'auto' : 'text' }}
     >

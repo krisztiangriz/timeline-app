@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, useCallback } from 'react'
 import { CloseIcon, CheckIcon } from '../Icons/Icons'
+import { lastMenuAnchorRef } from '../ContextMenu/ContextMenu'
 import styles from './Modal.module.css'
 
 // Reference-count open modals so nested modals don't prematurely restore scroll
@@ -128,9 +129,12 @@ export function Modal({
   }, [open])
   useEffect(() => {
     if (!open && triggerRef.current instanceof HTMLElement) {
-      if (document.contains(triggerRef.current)) {
-        triggerRef.current.focus()
-      }
+      const anchor = lastMenuAnchorRef.current
+      const target = document.contains(triggerRef.current)
+        ? triggerRef.current
+        : (anchor && document.contains(anchor) ? anchor : null)
+      target?.focus()
+      lastMenuAnchorRef.current = null
       triggerRef.current = null
     }
   }, [open])

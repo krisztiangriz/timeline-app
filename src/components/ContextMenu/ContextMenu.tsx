@@ -1,6 +1,10 @@
 import { useState, useRef, useEffect, useCallback, useMemo, type ReactNode, type ReactElement, cloneElement } from 'react'
 import styles from './ContextMenu.module.css'
 
+// Stored before menu unmounts so Modal can restore focus to the anchor button.
+// Mutable object so Modal can clear it without needing a setter export.
+export const lastMenuAnchorRef: { current: HTMLElement | null } = { current: null }
+
 export type MenuEntry =
   | { type: 'item'; label: string; onClick: () => void }
   | { type: 'separator' }
@@ -102,6 +106,9 @@ export function ContextMenu({ items, trigger }: ContextMenuProps) {
                   role="menuitem"
                   tabIndex={itemIndex === activeIndex ? 0 : -1}
                   onClick={() => {
+                    lastMenuAnchorRef.current = triggerRef.current?.querySelector<HTMLElement>(
+                      'button, [tabindex="0"]'
+                    ) ?? null
                     entry.onClick()
                     setOpen(false)
                   }}
