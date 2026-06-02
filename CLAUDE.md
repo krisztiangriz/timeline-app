@@ -124,6 +124,8 @@ git push         # triggers GitHub Actions deploy
 - Mention detection extracted to `useMentionDetection.ts` hook
 - Pending mention insert extracted to `usePendingMentionInsert.ts` hook
 - Checkbox handling extracted to `useCheckboxHandling.ts` hook
+- `onEscape` prop fires when Escape pressed and mention dropdown is closed —
+  used by TimelineView to exit editing mode
 
 ### Mentions
 - `enrichMentionHtml` uses a module-level cache keyed by `allPages` reference
@@ -142,6 +144,13 @@ git push         # triggers GitHub Actions deploy
 - `usePendingEntry` uses `pageId` index + JS filter (booleans not valid IndexedDB keys)
 - Delete actions (pending/today/history) show undo toast (5s, preserves original date)
 - Undo guards: skips restore if user already started new content
+- **Section navigation:** Tab/ArrowDown moves between sections, Enter edits,
+  Escape exits editing, Backspace deletes (with undo toast)
+- **Enter-to-edit pattern:** Pending, Today, and History sections show
+  `RichTextDisplay` by default; mount `RichTextEditor` only when editing
+- `TimelineEntryRow` supports controlled `editing` prop from parent
+- Cross-ref rows skipped during keyboard navigation (read-only, no tabIndex)
+- Delete buttons have `tabIndex={-1}` — only accessible via hover/Backspace
 
 ### Charts
 - Recharts lazy-loaded via `ConfigurableViz` (separate vendor chunk: ~110KB gz)
@@ -157,10 +166,18 @@ git push         # triggers GitHub Actions deploy
 
 ### Modal System
 - `Modal.tsx` has focus trap (Tab/Shift+Tab cycling), auto-focus on open
+- Focus trap always active — works for `ConfirmModal` and `OnboardingModal`
+  too (no longer gated on `hideClose`)
+- `contains()` check: if focus escapes modal DOM (e.g., into a portal),
+  next Tab clamps it back to first/last focusable element
 - Auto-focus uses `didAutoFocus` ref — fires only ONCE per open, not on
   every `confirmDisabled` change
+- Auto-focus selector includes `input`, `textarea`, `select`, `button`,
+  and `[tabindex]:not([tabindex="-1"])`
 - `overflow: hidden` on `.modal` is intentional — do NOT remove
 - Dropdowns inside modals MUST use `DropdownPortal` to escape overflow clipping
+- `DropdownPortal` has `autoFocus` prop — when true, focuses first item on
+  open, traps Tab/Escape within portal items, returns focus to anchor on exit
 
 ### Auto-Backup
 - `useAutoBackup()` called in `App` (top-level) — NOT inside any provider
@@ -174,16 +191,19 @@ git push         # triggers GitHub Actions deploy
 
 ## Accessibility Standards
 - All interactive `<div>`/`<span>` need `tabIndex={0}`, `role`, `onKeyDown`
+- Explicit `tabIndex={0}` on buttons/links for Safari PWA compatibility
 - Hover-only actions need `:focus-within` CSS fallback
 - Toast container: `aria-live="polite"`, `role="status"`
 - Search dropdowns: use `DropdownPortal` + tracks scroll via capture listener
-- ContextMenu: full keyboard nav (ArrowUp/Down, Enter, Escape), `role="menu"`
+- ContextMenu: uses `cloneElement` to inject ARIA props onto trigger (no
+  wrapper div); full keyboard nav (ArrowUp/Down, Enter, Escape), `role="menu"`
 - PropertyRow: full keyboard nav (ArrowUp/Down, Enter, Escape), `role="listbox"`
 - ColorPicker: arrow grid nav + Enter/Escape, `role="listbox"`
 - Custom radio/checkbox buttons: `role="radio"`/`role="checkbox"` + `aria-checked`
 - Form inputs: `aria-label` for inputs without `<label>` elements
 - Tab groups: `role="tablist"` + `role="tab"` + `aria-selected`
 - Read-only mentions: `tabindex="0"`, `role="link"`, Enter/Space to navigate
+- Timeline sections: `role="region"` + `aria-label`, Tab/Arrow/Enter/Escape nav
 - Dropdown search results: Escape dismisses results (stops propagation)
 - Delete buttons: descriptive `aria-label` for screen readers
 - Toast action buttons: `:focus-visible` outline
