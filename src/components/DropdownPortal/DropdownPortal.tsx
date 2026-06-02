@@ -1,5 +1,5 @@
 import { createPortal } from 'react-dom'
-import { useLayoutEffect, useState, useEffect, useCallback, type ReactNode, type RefObject } from 'react'
+import { useLayoutEffect, useState, useEffect, useCallback, useRef, type ReactNode, type RefObject } from 'react'
 import styles from './DropdownPortal.module.css'
 
 interface DropdownPortalProps {
@@ -7,6 +7,8 @@ interface DropdownPortalProps {
   children: ReactNode
   open: boolean
   onClose?: () => void
+  /** When true, focuses the first focusable item on open and traps Tab within the portal */
+  autoFocus?: boolean
 }
 
 /**
@@ -14,9 +16,11 @@ interface DropdownPortalProps {
  * Escapes any overflow clipping from parent containers (modals, scroll areas).
  * Re-measures on scroll and resize to stay aligned with the anchor.
  * When onClose is provided, renders an invisible backdrop that closes the dropdown on click.
+ * When autoFocus is true, focuses first item on open and traps Tab/Escape within the portal.
  */
-export function DropdownPortal({ anchorRef, children, open, onClose }: DropdownPortalProps) {
+export function DropdownPortal({ anchorRef, children, open, onClose, autoFocus }: DropdownPortalProps) {
   const [pos, setPos] = useState({ top: 0, left: 0, width: 0 })
+  const portalRef = useRef<HTMLDivElement>(null)
 
   const measure = useCallback(() => {
     if (!anchorRef.current) return
@@ -39,12 +43,68 @@ export function DropdownPortal({ anchorRef, children, open, onClose }: DropdownP
     }
   }, [open, measure])
 
+  // Auto-focus first focusable item when portal opens
+  useEffect(() => {
+    if (!open || !autoFocus || !portalRef.current) return
+    // Delay to ensure children are rendered
+    const frame = requestAnimationFrame(() => {
+      if (!portalRef.current) return
+      const first = portalRef.current.querySelector<HTMLElement>(
+        'button:not([disabled]), [href], input:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      )
+      first?.focus()
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [open, autoFocus])
+
+  // Keyboard handling: Tab trap + Escape when autoFocus is enabled
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (!autoFocus || !portalRef.current) return
+
+    if (e.key === 'Escape') {
+      e.preventDefault()
+      e.stopPropagation()
+      onClose?.()
+      anchorRef.current?.focus()
+      return
+    }
+
+    if (e.key === 'Tab') {
+      const focusables = portalRef.current.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), [href], input:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      )
+      if (focusables.length === 0) return
+
+      const first = focusables[0]
+      const last = focusables[focusables.length - 1]
+
+      if (e.shiftKey) {
+        if (document.activeElement === first) {
+          e.preventDefault()
+          onClose?.()
+          anchorRef.current?.focus()
+        }
+      } else {
+        if (document.activeElement === last) {
+          e.preventDefault()
+          onClose?.()
+          anchorRef.current?.focus()
+        }
+      }
+    }
+  }, [autoFocus, onClose, anchorRef])
+
   if (!open) return null
 
   return createPortal(
     <>
       {onClose && <div className={styles.backdrop} onClick={onClose} />}
-      <div className={styles.portal} style={{ top: pos.top, left: pos.left, width: pos.width }}>
+      <div
+        ref={portalRef}
+        className={styles.portal}
+        style={{ top: pos.top, left: pos.left, width: pos.width }}
+        onKeyDown={autoFocus ? handleKeyDown : undefined}
+      >
         {children}
       </div>
     </>,

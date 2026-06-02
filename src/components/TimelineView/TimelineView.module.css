@@ -17,6 +17,21 @@
   align-self: stretch;
 }
 
+.sectionFocusable {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: var(--space-xl);
+  align-self: stretch;
+  border-radius: var(--radius-sm);
+  cursor: text;
+}
+
+.sectionFocusable:focus-visible {
+  outline: 2px solid var(--color-text-secondary);
+  outline-offset: 2px;
+}
+
 .sectionDateContainer {
   width: 72px;
   height: 24px;
@@ -96,6 +111,12 @@
   word-break: break-word;
   flex: 1;
   min-width: 0;
+}
+
+.placeholderText {
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-base);
+  color: var(--color-text-placeholder);
 }
 
 /* ---- Section label (for embedded timelines) ---- */

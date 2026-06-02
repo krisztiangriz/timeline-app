@@ -222,7 +222,7 @@ export function AddChartModal({ open, onClose, onAdd, editing, onUpdate, pageId,
                 <path d="M12 13.0729L7.42708 8.5L5.92708 10L12 16.0729L18.0729 10L16.5729 8.5L12 13.0729Z" fill="currentColor" />
               </svg>
             </button>
-            <DropdownPortal anchorRef={scopeTriggerRef} open={scopeOpen}>
+            <DropdownPortal anchorRef={scopeTriggerRef} open={scopeOpen} onClose={() => setScopeOpen(false)} autoFocus>
               <div className={styles.scopePanel} data-dropdown-panel>
                 {scopeOptions.map((opt) => (
                   <button
@@ -262,7 +262,7 @@ export function AddChartModal({ open, onClose, onAdd, editing, onUpdate, pageId,
                 <path d="M12 13.0729L7.42708 8.5L5.92708 10L12 16.0729L18.0729 10L16.5729 8.5L12 13.0729Z" fill="currentColor" />
               </svg>
             </button>
-            <DropdownPortal anchorRef={sourceTriggerRef} open={sourceOpen}>
+            <DropdownPortal anchorRef={sourceTriggerRef} open={sourceOpen} onClose={() => setSourceOpen(false)} autoFocus>
               <div className={styles.scopePanel} data-dropdown-panel>
                 {ALL_SOURCES.map((s) => (
                   <button

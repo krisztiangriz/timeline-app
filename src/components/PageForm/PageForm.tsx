@@ -83,19 +83,7 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
   const [tabDeleteConfirm, setTabDeleteConfirm] = useState<number | null>(null)
   const tabKeyCounter = useRef(0)
 
-  // Close dropdown portals on Escape
-  useEffect(() => {
-    if (!hubSelectOpen && !blockTypeSelectOpen) return
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.preventDefault()
-        setHubSelectOpen(false)
-        setBlockTypeSelectOpen(false)
-      }
-    }
-    window.addEventListener('keydown', handler)
-    return () => window.removeEventListener('keydown', handler)
-  }, [hubSelectOpen, blockTypeSelectOpen])
+
 
   // Creating a new hub — properties appear immediately when Hub type is selected
   const isCreatingHub = !isEdit && isHubType
@@ -358,7 +346,7 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
               <svg width="10" height="6" viewBox="0 0 10 6" fill="none"><path d="M1 1L5 5L9 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
             </button>
           </div>
-          <DropdownPortal anchorRef={hubSelectAnchorRef} open={hubSelectOpen} onClose={() => setHubSelectOpen(false)}>
+          <DropdownPortal anchorRef={hubSelectAnchorRef} open={hubSelectOpen} onClose={() => setHubSelectOpen(false)} autoFocus>
               <div className={styles.hubSelectMenu} role="listbox">
                 <button className={!parentHubId ? styles.hubSelectItemActive : styles.hubSelectItem} role="option" onClick={() => { setParentHubId(undefined); setHubSelectOpen(false) }}>
                   None (standalone page)
@@ -421,7 +409,7 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
                 <svg width="10" height="6" viewBox="0 0 10 6" fill="none"><path d="M1 1L5 5L9 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
               </button>
             </div>
-            <DropdownPortal anchorRef={blockTypeAnchorRef} open={blockTypeSelectOpen} onClose={() => setBlockTypeSelectOpen(false)}>
+            <DropdownPortal anchorRef={blockTypeAnchorRef} open={blockTypeSelectOpen} onClose={() => setBlockTypeSelectOpen(false)} autoFocus>
                 <div className={styles.hubSelectMenu} role="listbox">
                   {(['timeline', 'feedback', 'visualization', 'text'] as BlockType[]).map((type) => {
                     const disabled = type !== 'text' && usedTypes.has(type)

@@ -264,7 +264,7 @@ export function TimelineView({ pageId, title, readOnly = false, page }: Timeline
     } catch { showToast('Failed to save') }
   }
 
-  async function handleDeletePending() {
+  const handleDeletePending = useCallback(async () => {
     if (pendingEntryId.current) {
       const entryId = pendingEntryId.current
       const savedHtml = pendingHtml
@@ -283,9 +283,9 @@ export function TimelineView({ pageId, title, readOnly = false, page }: Timeline
         },
       })
     }
-  }
+  }, [pendingHtml, pageId, showToast])
 
-  async function handleDeleteToday() {
+  const handleDeleteToday = useCallback(async () => {
     if (todayEntryId.current) {
       const entryId = todayEntryId.current
       const savedHtml = todayHtml
@@ -304,7 +304,7 @@ export function TimelineView({ pageId, title, readOnly = false, page }: Timeline
         },
       })
     }
-  }
+  }, [todayHtml, pageId, showToast])
 
   // Auto-save handlers (persist only, no UI state changes)
   const autoSaveToday = useCallback(async (html: string) => {
@@ -344,8 +344,130 @@ export function TimelineView({ pageId, title, readOnly = false, page }: Timeline
 
   const handleMentionClick = useNavigateToPage()
 
-  // ---- Filtered pending (for non-main-timeline pages) ----
+  // ---- Page type determination (needed before section nav and filtered pending) ----
   const isMainTimeline = page?.role === 'main-timeline'
+
+  // ---- Section navigation state ----
+  // Sections: 'pending' | 'today' | `history-${dateKey}` (one per history group with a direct entry)
+  const [editingSection, setEditingSection] = useState<string | null>(null)
+  const sectionRefsMap = useRef<Map<string, HTMLDivElement>>(new Map())
+
+  const setSectionRef = useCallback((key: string) => (el: HTMLDivElement | null) => {
+    if (el) {
+      sectionRefsMap.current.set(key, el)
+    } else {
+      sectionRefsMap.current.delete(key)
+    }
+  }, [])
+
+  // Build ordered list of navigable section keys
+  const sectionKeys = useMemo(() => {
+    const keys: string[] = []
+    if (!readOnly && isMainTimeline) keys.push('pending')
+    if (!readOnly) keys.push('today')
+    for (const [dateKey, entries] of historyGroups) {
+      if (entries.some((e) => directIds.has(e.id!))) {
+        keys.push(`history-${dateKey}`)
+      }
+    }
+    return keys
+  }, [readOnly, isMainTimeline, historyGroups, directIds])
+
+  const focusSection = useCallback((key: string) => {
+    const el = sectionRefsMap.current.get(key)
+    el?.focus()
+  }, [])
+
+  const handleSectionKeyDown = useCallback((sectionKey: string, e: React.KeyboardEvent) => {
+    // Only handle when the section div itself is focused (not a child editor)
+    if (e.target !== e.currentTarget) return
+
+    if (e.key === 'ArrowDown' || (e.key === 'Tab' && !e.shiftKey)) {
+      const idx = sectionKeys.indexOf(sectionKey)
+      if (idx < sectionKeys.length - 1) {
+        e.preventDefault()
+        focusSection(sectionKeys[idx + 1])
+      } else if (e.key === 'Tab') {
+        // Let Tab leave the timeline at the end
+        return
+      } else {
+        e.preventDefault()
+      }
+      return
+    }
+
+    if (e.key === 'ArrowUp' || (e.key === 'Tab' && e.shiftKey)) {
+      const idx = sectionKeys.indexOf(sectionKey)
+      if (idx > 0) {
+        e.preventDefault()
+        focusSection(sectionKeys[idx - 1])
+      } else if (e.key === 'Tab') {
+        // Let Shift+Tab leave the timeline at the beginning
+        return
+      } else {
+        e.preventDefault()
+      }
+      return
+    }
+
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      setEditingSection(sectionKey)
+      return
+    }
+
+    if (e.key === 'Backspace') {
+      e.preventDefault()
+      // Move focus to adjacent section before deleting
+      const idx = sectionKeys.indexOf(sectionKey)
+      const nextKey = sectionKeys[idx + 1] ?? sectionKeys[idx - 1]
+      if (nextKey) focusSection(nextKey)
+
+      if (sectionKey === 'pending') handleDeletePending()
+      else if (sectionKey === 'today') handleDeleteToday()
+      else if (sectionKey.startsWith('history-')) {
+        const dateKey = sectionKey.replace('history-', '')
+        const group = historyGroups.find(([k]) => k === dateKey)
+        const directEntry = group?.[1].find((ent) => directIds.has(ent.id!))
+        if (directEntry) {
+          const savedText = directEntry.text
+          const savedDate = directEntry.date
+          const savedCreatedAt = directEntry.createdAt
+          deleteEntry(directEntry.id!).then(() => {
+            showToast('Deleted', {
+              label: 'Undo',
+              onClick: async () => {
+                await db.timelineEntries.add({
+                  pageId, text: savedText, isPending: false,
+                  date: savedDate,
+                  tagRefs: extractMentionPageIds(savedText),
+                  createdAt: savedCreatedAt, updatedAt: new Date(),
+                })
+              },
+            })
+          }).catch(() => showToast('Failed to delete'))
+        }
+      }
+    }
+  }, [sectionKeys, focusSection, handleDeletePending, handleDeleteToday, historyGroups, directIds, pageId, showToast])
+
+  const handleSectionEscape = useCallback((sectionKey: string) => {
+    setEditingSection(null)
+    // Return focus to the section div
+    requestAnimationFrame(() => focusSection(sectionKey))
+  }, [focusSection])
+
+  const handleSectionClick = useCallback((sectionKey: string, e: React.MouseEvent) => {
+    // Don't enter edit mode if clicking on a mention link
+    const target = e.target as HTMLElement
+    if (target.closest('[data-page-id]')) return
+    // Don't enter edit mode if clicking on a button (delete, checkbox)
+    if (target.closest('button')) return
+
+    setEditingSection(sectionKey)
+  }, [])
+
+  // ---- Filtered pending (for non-main-timeline pages) ----
   const mainTimelinePage = usePageByRole(isMainTimeline ? undefined : 'main-timeline')
   const mainPendingEntry = usePendingEntry(isMainTimeline ? undefined : mainTimelinePage?.id)
   const hubChildren = useChildPages(page?.type === 'hub' ? page.id : undefined)
@@ -431,25 +553,41 @@ export function TimelineView({ pageId, title, readOnly = false, page }: Timeline
 
       {/* Pending section */}
       {!readOnly && isMainTimeline && (
-        <div className={styles.section} ref={pendingSectionRef}>
+        <div
+          className={editingSection === 'pending' ? styles.section : styles.sectionFocusable}
+          ref={(el) => { pendingSectionRef.current = el; setSectionRef('pending')(el) }}
+          tabIndex={editingSection === 'pending' ? undefined : 0}
+          role="region"
+          aria-label="Pending tasks"
+          onKeyDown={(e) => handleSectionKeyDown('pending', e)}
+          onClick={(e) => handleSectionClick('pending', e)}
+        >
           <div className={styles.sectionContent}>
-            <div onFocus={() => { pendingFocusedRef.current = true; triggerGuide('pending-tasks') }}>
-              <RichTextEditor
-                value={pendingHtml}
-                onChange={setPendingHtml}
-                onBlur={handlePendingSave}
-                onAutoSave={autoSavePending}
-                onMentionClick={handleMentionClick}
-                placeholder="Add a task…"
-                autoCheckbox
-                onCheckboxComplete={handleCheckboxComplete}
-                collapseMentions
-              />
-            </div>
+            {editingSection === 'pending' ? (
+              <div onFocus={() => { pendingFocusedRef.current = true; triggerGuide('pending-tasks') }}>
+                <RichTextEditor
+                  value={pendingHtml}
+                  onChange={setPendingHtml}
+                  onBlur={handlePendingSave}
+                  onAutoSave={autoSavePending}
+                  onMentionClick={handleMentionClick}
+                  onEscape={() => handleSectionEscape('pending')}
+                  placeholder="Add a task…"
+                  autoFocus
+                  autoCheckbox
+                  onCheckboxComplete={handleCheckboxComplete}
+                  collapseMentions
+                />
+              </div>
+            ) : pendingHtml ? (
+              <RichTextDisplay html={pendingHtml} collapseMentions />
+            ) : (
+              <span className={styles.placeholderText}>Add a task…</span>
+            )}
           </div>
           <div className={styles.sectionDateContainer}>
             <span className={styles.sectionDate}>Pending</span>
-            <button className={styles.sectionDeleteLabel} onClick={handleDeletePending} aria-label="Delete pending tasks">Delete</button>
+            <button className={styles.sectionDeleteLabel} onClick={handleDeletePending} aria-label="Delete pending tasks" tabIndex={-1}>Delete</button>
           </div>
         </div>
       )}
@@ -480,10 +618,18 @@ export function TimelineView({ pageId, title, readOnly = false, page }: Timeline
         </div>
       )}
 
-      {/* Today section — editor only in write mode, cross-refs always */}
-      <div className={styles.section}>
+      {/* Today section — editor in write mode, cross-refs always */}
+      <div
+        className={editingSection === 'today' ? styles.section : styles.sectionFocusable}
+        ref={setSectionRef('today')}
+        tabIndex={!readOnly && editingSection !== 'today' ? 0 : undefined}
+        role="region"
+        aria-label="Today"
+        onKeyDown={(e) => handleSectionKeyDown('today', e)}
+        onClick={(e) => handleSectionClick('today', e)}
+      >
         <div className={styles.sectionContent}>
-          {!readOnly && (
+          {!readOnly && editingSection === 'today' ? (
             <div onFocus={() => { todayFocusedRef.current = true }}>
               <RichTextEditor
                 value={todayHtml}
@@ -491,11 +637,17 @@ export function TimelineView({ pageId, title, readOnly = false, page }: Timeline
                 onBlur={handleTodaySave}
                 onAutoSave={autoSaveToday}
                 onMentionClick={handleMentionClick}
+                onEscape={() => handleSectionEscape('today')}
                 placeholder="Type here…"
+                autoFocus
                 collapseMentions
               />
             </div>
-          )}
+          ) : !readOnly && todayHtml ? (
+            <RichTextDisplay html={todayHtml} collapseMentions />
+          ) : !readOnly ? (
+            <span className={styles.placeholderText}>Type here…</span>
+          ) : null}
           {todayCrossRefLines.flatMap(({ entry, lines }) =>
             lines.map((lineHtml, li) => (
               <CrossRefRow
@@ -507,15 +659,26 @@ export function TimelineView({ pageId, title, readOnly = false, page }: Timeline
         </div>
         <div className={styles.sectionDateContainer}>
           <span className={styles.sectionDate}>Today</span>
-          <button className={styles.sectionDeleteLabel} onClick={handleDeleteToday} aria-label="Delete today's entry">Delete</button>
+          <button className={styles.sectionDeleteLabel} onClick={handleDeleteToday} aria-label="Delete today's entry" tabIndex={-1}>Delete</button>
         </div>
       </div>
 
       {/* History sections */}
       {historyGroups.map(([dateKey, entries]) => {
         const directEntry = entries.find((e) => directIds.has(e.id!))
+        const sectionKey = `history-${dateKey}`
+        const isEditing = editingSection === sectionKey
         return (
-          <div key={dateKey} className={styles.section}>
+          <div
+            key={dateKey}
+            className={isEditing ? styles.section : styles.sectionFocusable}
+            ref={directEntry ? setSectionRef(sectionKey) : undefined}
+            tabIndex={directEntry && !isEditing ? 0 : undefined}
+            role="region"
+            aria-label={formatEntryDate(new Date(dateKey))}
+            onKeyDown={directEntry ? (e) => handleSectionKeyDown(sectionKey, e) : undefined}
+            onClick={directEntry ? (e) => handleSectionClick(sectionKey, e) : undefined}
+          >
             <div className={styles.sectionContent}>
               {entries.flatMap((entry) => {
                 const isCrossRef = !directIds.has(entry.id!)
@@ -534,6 +697,10 @@ export function TimelineView({ pageId, title, readOnly = false, page }: Timeline
                     entry={entry}
                     onUpdate={updateEntry}
                     onDelete={deleteEntry}
+                    editing={isEditing}
+                    onStartEditing={() => setEditingSection(sectionKey)}
+                    onEscape={() => handleSectionEscape(sectionKey)}
+                    onMentionClick={handleMentionClick}
                   />
                 )]
               })}
@@ -559,7 +726,7 @@ export function TimelineView({ pageId, title, readOnly = false, page }: Timeline
                       })
                     },
                   })
-                }} aria-label="Delete entry">Delete</button>
+                }} aria-label="Delete entry" tabIndex={-1}>Delete</button>
               )}
             </div>
           </div>

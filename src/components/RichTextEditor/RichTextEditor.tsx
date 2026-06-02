@@ -37,6 +37,8 @@ interface RichTextEditorProps {
   onCheckboxComplete?: (lineHtml: string, remainingHtml: string) => void
   /** Debounced auto-save callback — fires 500ms after last input. Only persists data, no UI state changes. */
   onAutoSave?: (html: string) => void
+  /** Called when Escape is pressed (and mention dropdown is not open). Used for exiting edit mode. */
+  onEscape?: () => void
 }
 
 export function RichTextEditor({
@@ -54,6 +56,7 @@ export function RichTextEditor({
   autoCheckbox,
   onCheckboxComplete,
   onAutoSave,
+  onEscape,
 }: RichTextEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null)
   const isFocusedRef = useRef(false)
@@ -371,6 +374,13 @@ export function RichTextEditor({
         setMentionQuery(null)
         return
       }
+    }
+
+    // Escape exits editing when no mention dropdown is open
+    if (e.key === 'Escape' && onEscape) {
+      e.preventDefault()
+      onEscape()
+      return
     }
 
     // Atomic deletion of non-editable spans (mentions) + checkbox line removal

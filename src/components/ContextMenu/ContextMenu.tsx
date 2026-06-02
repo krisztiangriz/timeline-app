@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback, useMemo, type ReactNode } from 'react'
+import { useState, useRef, useEffect, useCallback, useMemo, type ReactNode, type ReactElement, cloneElement } from 'react'
 import styles from './ContextMenu.module.css'
 
 export type MenuEntry =
@@ -69,22 +69,18 @@ export function ContextMenu({ items, trigger }: ContextMenuProps) {
       case 'Escape':
         e.preventDefault()
         setOpen(false)
-        triggerRef.current?.querySelector<HTMLElement>('[tabindex]')?.focus()
+        triggerRef.current?.querySelector<HTMLElement>('button, [tabindex="0"]')?.focus()
         break
     }
   }, [open, activeIndex, actionItems])
 
   return (
     <div className={styles.wrapper} ref={triggerRef} onKeyDown={handleKeyDown}>
-      <div
-        onClick={() => setOpen((v) => !v)}
-        tabIndex={0}
-        role="button"
-        aria-expanded={open}
-        aria-haspopup="menu"
-      >
-        {trigger}
-      </div>
+      {cloneElement(trigger as ReactElement<Record<string, unknown>>, {
+        onClick: () => setOpen((v) => !v),
+        'aria-expanded': open,
+        'aria-haspopup': 'menu',
+      })}
       {open && (
         <>
           <div className={styles.backdrop} onClick={() => setOpen(false)} />

@@ -68,40 +68,45 @@ export function Modal({
         onConfirm()
       }
 
-      // Focus trap (skip for modals without close button, e.g., onboarding)
-      if (e.key === 'Tab' && !hideClose && modalRef.current) {
+      // Focus trap — always active when modal is open
+      if (e.key === 'Tab' && modalRef.current) {
         const focusables = modalRef.current.querySelectorAll<HTMLElement>(
           'button:not([disabled]), [href], input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
         )
         if (focusables.length === 0) return
         const first = focusables[0]
         const last = focusables[focusables.length - 1]
-        if (e.shiftKey && document.activeElement === first) {
-          e.preventDefault()
-          last.focus()
-        } else if (!e.shiftKey && document.activeElement === last) {
-          e.preventDefault()
-          first.focus()
+        const isInsideModal = modalRef.current.contains(document.activeElement)
+        if (e.shiftKey) {
+          if (!isInsideModal || document.activeElement === first) {
+            e.preventDefault()
+            last.focus()
+          }
+        } else {
+          if (!isInsideModal || document.activeElement === last) {
+            e.preventDefault()
+            first.focus()
+          }
         }
       }
     }
     window.addEventListener('keydown', handler)
 
     return () => window.removeEventListener('keydown', handler)
-  }, [open, onClose, onConfirm, confirmDisabled, hideClose])
+  }, [open, onClose, onConfirm, confirmDisabled])
 
   // Auto-focus first focusable element when modal opens (once per open)
   const didAutoFocus = useRef(false)
   useEffect(() => {
-    if (open && !didAutoFocus.current && !hideClose && modalRef.current) {
+    if (open && !didAutoFocus.current && modalRef.current) {
       const first = modalRef.current.querySelector<HTMLElement>(
-        'input:not([disabled]), textarea:not([disabled]), button:not([disabled])'
+        'input:not([disabled]), textarea:not([disabled]), select:not([disabled]), button:not([disabled]), [tabindex]:not([tabindex="-1"])'
       )
       first?.focus()
       didAutoFocus.current = true
     }
     if (!open) didAutoFocus.current = false
-  }, [open, hideClose])
+  }, [open])
 
   // Prevent body scroll when modal is open
   useEffect(() => {

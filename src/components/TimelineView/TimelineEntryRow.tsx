@@ -15,6 +15,14 @@ interface TimelineEntryRowProps {
   onDelete: (id: number) => void
   /** If true, entry is a cross-reference (read-only, muted style) */
   crossRef?: boolean
+  /** Controlled editing state from parent */
+  editing?: boolean
+  /** Called when the user wants to start editing (click or Enter) */
+  onStartEditing?: (clickPos?: { x: number; y: number }) => void
+  /** Called when user presses Escape to exit editing */
+  onEscape?: () => void
+  /** Called when user clicks a mention link */
+  onMentionClick?: (pageId: number) => void
 }
 
 export const TimelineEntryRow = memo(function TimelineEntryRow({
@@ -22,8 +30,14 @@ export const TimelineEntryRow = memo(function TimelineEntryRow({
   onUpdate,
   onDelete,
   crossRef,
+  editing: controlledEditing,
+  onStartEditing,
+  onEscape,
+  onMentionClick,
 }: TimelineEntryRowProps) {
-  const [editing, setEditing] = useState(false)
+  // Support both controlled (parent manages editing) and uncontrolled (self-managed) modes
+  const [internalEditing, setInternalEditing] = useState(false)
+  const editing = controlledEditing !== undefined ? controlledEditing : internalEditing
   const [editHtml, setEditHtml] = useState(entry.text)
   const clickPos = useRef<{ x: number; y: number } | undefined>(undefined)
 
@@ -34,7 +48,9 @@ export const TimelineEntryRow = memo(function TimelineEntryRow({
     } else if (editHtml !== entry.text) {
       onUpdate(entry.id!, { text: editHtml })
     }
-    setEditing(false)
+    if (controlledEditing === undefined) {
+      setInternalEditing(false)
+    }
     clickPos.current = undefined
   }
 
@@ -51,9 +67,14 @@ export const TimelineEntryRow = memo(function TimelineEntryRow({
     const target = e.target as HTMLElement
     if (target.closest('[data-page-id]')) return
 
-    clickPos.current = { x: e.clientX, y: e.clientY }
+    const pos = { x: e.clientX, y: e.clientY }
+    clickPos.current = pos
     setEditHtml(entry.text)
-    setEditing(true)
+    if (onStartEditing) {
+      onStartEditing(pos)
+    } else {
+      setInternalEditing(true)
+    }
   }
 
   function handleKeyboardActivate(e: React.KeyboardEvent) {
@@ -61,7 +82,19 @@ export const TimelineEntryRow = memo(function TimelineEntryRow({
       e.preventDefault()
       clickPos.current = undefined
       setEditHtml(entry.text)
-      setEditing(true)
+      if (onStartEditing) {
+        onStartEditing()
+      } else {
+        setInternalEditing(true)
+      }
+    }
+  }
+
+  function handleEscape() {
+    if (onEscape) {
+      onEscape()
+    } else {
+      setInternalEditing(false)
     }
   }
 
@@ -82,6 +115,8 @@ export const TimelineEntryRow = memo(function TimelineEntryRow({
           onChange={setEditHtml}
           onBlur={handleSave}
           onAutoSave={handleAutoSave}
+          onEscape={handleEscape}
+          onMentionClick={onMentionClick}
           autoFocus
           initialClickPosition={clickPos.current}
           collapseMentions
