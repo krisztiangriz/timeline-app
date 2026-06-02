@@ -103,11 +103,13 @@ export function OnboardingGuidesProvider({ children }: { children: ReactNode }) 
   const [registry, setRegistry] = useState<Map<string, GuideDefinition>>(new Map())
   const [activeGuide, setActiveGuide] = useState<ActiveGuide | null>(null)
 
-  // Refs for stable callbacks (ref pattern — avoids recreating triggerGuide on guidesDisabled/dismissed changes)
+  // Refs for stable callbacks (ref pattern — avoids recreating callbacks on state changes)
   const guidesDisabledRef = useRef(guidesDisabled)
   guidesDisabledRef.current = guidesDisabled
   const dismissedRef = useRef(dismissed)
   dismissedRef.current = dismissed
+  const registryRef = useRef(registry)
+  registryRef.current = registry
 
   const disableAllGuides = useCallback(() => {
     setGuidesDisabled(true)
@@ -145,9 +147,9 @@ export function OnboardingGuidesProvider({ children }: { children: ReactNode }) 
   const triggerGuide = useCallback((id: string) => {
     if (guidesDisabledRef.current) return
     if (dismissedRef.current.includes(id)) return
-    if (!registry.has(id)) return
+    if (!registryRef.current.has(id)) return
     setActiveGuide({ id, currentStep: 0 })
-  }, [registry])
+  }, [])
 
   const dismissGuide = useCallback((id: string) => {
     setDismissed((prev) => {
@@ -162,7 +164,7 @@ export function OnboardingGuidesProvider({ children }: { children: ReactNode }) 
   const nextStep = useCallback((id: string) => {
     setActiveGuide((current) => {
       if (!current || current.id !== id) return current
-      const definition = registry.get(id)
+      const definition = registryRef.current.get(id)
       if (!definition) return current
       const maxStep = definition.steps.length - 1
       if (current.currentStep >= maxStep) {
@@ -177,7 +179,7 @@ export function OnboardingGuidesProvider({ children }: { children: ReactNode }) 
       }
       return { ...current, currentStep: current.currentStep + 1 }
     })
-  }, [registry])
+  }, [])
 
   const prevStep = useCallback((id: string) => {
     setActiveGuide((current) => {
@@ -193,8 +195,8 @@ export function OnboardingGuidesProvider({ children }: { children: ReactNode }) 
   }, [])
 
   const getGuideDefinition = useCallback((id: string) => {
-    return registry.get(id)
-  }, [registry])
+    return registryRef.current.get(id)
+  }, [])
 
   // Actions context — stable (callbacks never change identity)
   const actionsValue = useMemo<OnboardingActionsContextValue>(() => ({
@@ -210,20 +212,8 @@ export function OnboardingGuidesProvider({ children }: { children: ReactNode }) 
     isGuideDismissed,
     resetAllGuides,
     getGuideDefinition,
-  }), [
-    guidesDisabled,
-    disableAllGuides,
-    enableAllGuides,
-    toggleGuides,
-    registerGuide,
-    triggerGuide,
-    dismissGuide,
-    nextStep,
-    prevStep,
-    isGuideDismissed,
-    resetAllGuides,
-    getGuideDefinition,
-  ])
+  }), [guidesDisabled, disableAllGuides, enableAllGuides, toggleGuides, registerGuide,
+    triggerGuide, dismissGuide, nextStep, prevStep, isGuideDismissed, resetAllGuides, getGuideDefinition])
 
   // State context — only changes when activeGuide changes
   const stateValue = useMemo<OnboardingStateContextValue>(() => ({

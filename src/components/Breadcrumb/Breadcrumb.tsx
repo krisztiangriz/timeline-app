@@ -57,7 +57,7 @@ export function BreadcrumbNav({
                 <span key={item.path} style={{ display: 'contents' }}>
                   {i > 0 && <span className={styles.separator}>/</span>}
                   {isLast ? (
-                    <span className={styles.crumbCurrent}>{item.label}</span>
+                    <span className={styles.crumbCurrent} aria-current="page">{item.label}</span>
                   ) : (
                     <Link to={item.path} className={styles.crumb} tabIndex={0}>
                       {item.label}

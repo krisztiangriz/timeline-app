@@ -268,6 +268,8 @@ export function TimelineView({ pageId, title, readOnly = false, page }: Timeline
     if (pendingEntryId.current) {
       const entryId = pendingEntryId.current
       const savedHtml = pendingHtml
+      const savedDate = pendingEntry?.date
+      const savedCreatedAt = pendingEntry?.createdAt
       try {
         await deleteEntry(entryId)
       } catch { showToast('Failed to delete'); return }
@@ -277,18 +279,26 @@ export function TimelineView({ pageId, title, readOnly = false, page }: Timeline
         label: 'Undo',
         onClick: async () => {
           if (pendingEntryId.current) return
-          const id = await addEntry({ pageId, text: savedHtml, isPending: true })
-          pendingEntryId.current = id
+          const id = await db.timelineEntries.add({
+            pageId, text: savedHtml, isPending: true,
+            date: savedDate ?? new Date(),
+            tagRefs: extractMentionPageIds(savedHtml),
+            createdAt: savedCreatedAt ?? new Date(),
+            updatedAt: new Date(),
+          })
+          pendingEntryId.current = id as number
           setPendingHtml(savedHtml)
         },
       })
     }
-  }, [pendingHtml, pageId, showToast])
+  }, [pendingHtml, pendingEntry, pageId, showToast])
 
   const handleDeleteToday = useCallback(async () => {
     if (todayEntryId.current) {
       const entryId = todayEntryId.current
       const savedHtml = todayHtml
+      const savedDate = todayEntry?.date
+      const savedCreatedAt = todayEntry?.createdAt
       try {
         await deleteEntry(entryId)
       } catch { showToast('Failed to delete'); return }
@@ -298,13 +308,19 @@ export function TimelineView({ pageId, title, readOnly = false, page }: Timeline
         label: 'Undo',
         onClick: async () => {
           if (todayEntryId.current) return
-          const id = await addEntry({ pageId, text: savedHtml, isPending: false })
-          todayEntryId.current = id
+          const id = await db.timelineEntries.add({
+            pageId, text: savedHtml, isPending: false,
+            date: savedDate ?? new Date(),
+            tagRefs: extractMentionPageIds(savedHtml),
+            createdAt: savedCreatedAt ?? new Date(),
+            updatedAt: new Date(),
+          })
+          todayEntryId.current = id as number
           setTodayHtml(savedHtml)
         },
       })
     }
-  }, [todayHtml, pageId, showToast])
+  }, [todayHtml, todayEntry, pageId, showToast])
 
   // Auto-save handlers (persist only, no UI state changes)
   const autoSaveToday = useCallback(async (html: string) => {

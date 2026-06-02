@@ -205,7 +205,7 @@ export function FeedbackModal({ open, onClose, onSuccess }: FeedbackModalProps) 
                     {hub?.mentionTrigger && <span className={styles.triggerChar}>{hub.mentionTrigger}</span>}
                     {s.name}
                   </span>
-                  <button className={styles.chipRemove} onClick={() => handleRemoveSubject(s.id!)}>
+                  <button className={styles.chipRemove} onClick={() => handleRemoveSubject(s.id!)} aria-label={`Remove ${s.name}`}>
                     <CloseIcon size={10} />
                   </button>
                 </div>
