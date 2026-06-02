@@ -16,6 +16,9 @@ import type { Page } from '../../types'
 import { safeRemoveItem } from '../../utils/safeStorage'
 import styles from './SettingsModal.module.css'
 
+const THEME_OPTIONS: Theme[] = ['light', 'dark']
+const BACKUP_OPTIONS: BackupFrequency[] = ['daily', 'weekly', 'monthly', 'off']
+
 interface SettingsModalProps {
   open: boolean
   onClose: () => void
@@ -30,8 +33,6 @@ export function SettingsModal({ open, onClose, onToast }: SettingsModalProps) {
   const { resetAllGuides, isGuideDismissed } = useOnboardingActions()
   const { palette, updateColor, resetPalette } = useChartPalette()
   const { theme, setTheme } = useTheme()
-  const THEME_OPTIONS: Theme[] = ['light', 'dark']
-  const BACKUP_OPTIONS: BackupFrequency[] = ['daily', 'weekly', 'monthly', 'off']
   const { groupRef: themeGroupRef, handleKeyDown: themeKeyDown } = useRadioGroupKeyboard(THEME_OPTIONS, theme, setTheme)
   const { groupRef: backupGroupRef, handleKeyDown: backupKeyDown } = useRadioGroupKeyboard(BACKUP_OPTIONS, frequency, setFrequency)
   const [palettePickerIndex, setPalettePickerIndex] = useState<number | null>(null)

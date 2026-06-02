@@ -14,7 +14,7 @@ export function makeRadioKeyHandler<T>(
       ? (idx + 1) % options.length
       : (idx - 1 + options.length) % options.length
     onChange(options[next])
-    const buttons = (e.currentTarget as HTMLDivElement).querySelectorAll<HTMLElement>('[role="radio"]')
+    const buttons = (e.currentTarget as HTMLDivElement).querySelectorAll<HTMLElement>('[role="radio"]:not([disabled])')
     buttons[next]?.focus()
   }
 }
