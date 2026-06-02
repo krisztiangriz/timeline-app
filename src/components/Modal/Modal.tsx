@@ -83,7 +83,7 @@ export function Modal({
       // Focus trap — always active when modal is open
       if (e.key === 'Tab' && modalRef.current) {
         const focusables = modalRef.current.querySelectorAll<HTMLElement>(
-          'button:not([disabled]), [href], input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
+          'button:not([disabled]):not([tabindex="-1"]), [href], input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
         )
         if (focusables.length === 0) return
         const first = focusables[0]
@@ -112,7 +112,7 @@ export function Modal({
   useEffect(() => {
     if (open && !didAutoFocus.current && modalRef.current) {
       const first = modalRef.current.querySelector<HTMLElement>(
-        'input:not([disabled]), textarea:not([disabled]), select:not([disabled]), button:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        'input:not([disabled]), textarea:not([disabled]), select:not([disabled]), button:not([disabled]):not([tabindex="-1"]), [tabindex]:not([tabindex="-1"])'
       )
       first?.focus()
       didAutoFocus.current = true

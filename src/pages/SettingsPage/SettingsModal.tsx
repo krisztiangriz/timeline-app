@@ -306,7 +306,7 @@ export function SettingsModal({ open, onClose, onToast }: SettingsModalProps) {
       <div className={styles.section}>
         <div className={styles.listHeader}>
           <span className={styles.sectionTitle}>Archived pages</span>
-          <button className={styles.checkboxRow} onClick={() => setShowArchived(!showArchived)} role="checkbox" aria-checked={showArchived}>
+          <button className={styles.checkboxRow} onClick={() => setShowArchived(!showArchived)} role="checkbox" aria-checked={showArchived} tabIndex={0}>
             <div className={styles.checkbox} data-checked={showArchived} />
             <span className={styles.checkboxLabel}>Show archived</span>
           </button>
