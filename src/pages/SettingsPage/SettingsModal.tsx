@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
+import { useRadioGroupKeyboard } from '../../hooks/useRadioGroupKeyboard'
 import { Modal } from '../../components/Modal/Modal'
 import { useAutocomplete } from '../../hooks/useAutocomplete'
 import { useModalContext, usePreferences } from '../../hooks/useAppContext'
@@ -29,6 +30,10 @@ export function SettingsModal({ open, onClose, onToast }: SettingsModalProps) {
   const { resetAllGuides, isGuideDismissed } = useOnboardingActions()
   const { palette, updateColor, resetPalette } = useChartPalette()
   const { theme, setTheme } = useTheme()
+  const THEME_OPTIONS: Theme[] = ['light', 'dark']
+  const BACKUP_OPTIONS: BackupFrequency[] = ['daily', 'weekly', 'monthly', 'off']
+  const { groupRef: themeGroupRef, handleKeyDown: themeKeyDown } = useRadioGroupKeyboard(THEME_OPTIONS, theme, setTheme)
+  const { groupRef: backupGroupRef, handleKeyDown: backupKeyDown } = useRadioGroupKeyboard(BACKUP_OPTIONS, frequency, setFrequency)
   const [palettePickerIndex, setPalettePickerIndex] = useState<number | null>(null)
   const paletteAnchorRef = useRef<HTMLButtonElement>(null)
 
@@ -129,9 +134,9 @@ export function SettingsModal({ open, onClose, onToast }: SettingsModalProps) {
       {/* Theme */}
       <div className={styles.section}>
         <span className={styles.sectionTitle}>Theme</span>
-        <div className={styles.backupRow} role="radiogroup" aria-label="Theme">
-          {(['light', 'dark'] as Theme[]).map((opt) => (
-            <button key={opt} className={styles.checkboxRow} onClick={() => setTheme(opt)} role="radio" aria-checked={theme === opt}>
+        <div ref={themeGroupRef} className={styles.backupRow} role="radiogroup" aria-label="Theme" onKeyDown={themeKeyDown}>
+          {THEME_OPTIONS.map((opt) => (
+            <button key={opt} className={styles.checkboxRow} onClick={() => setTheme(opt)} role="radio" aria-checked={theme === opt} tabIndex={theme === opt ? 0 : -1}>
               <div className={styles.radio} data-checked={theme === opt} />
               <span className={styles.checkboxLabel}>{opt.charAt(0).toUpperCase() + opt.slice(1)}</span>
             </button>
@@ -223,9 +228,9 @@ export function SettingsModal({ open, onClose, onToast }: SettingsModalProps) {
       {/* Auto-backup */}
       <div className={styles.section}>
         <span className={styles.sectionTitle}>Auto-backup</span>
-        <div className={styles.backupRow} role="radiogroup" aria-label="Auto-backup frequency">
-          {(['daily', 'weekly', 'monthly', 'off'] as BackupFrequency[]).map((opt) => (
-            <button key={opt} className={styles.checkboxRow} onClick={() => setFrequency(opt)} role="radio" aria-checked={frequency === opt}>
+        <div ref={backupGroupRef} className={styles.backupRow} role="radiogroup" aria-label="Auto-backup frequency" onKeyDown={backupKeyDown}>
+          {BACKUP_OPTIONS.map((opt) => (
+            <button key={opt} className={styles.checkboxRow} onClick={() => setFrequency(opt)} role="radio" aria-checked={frequency === opt} tabIndex={frequency === opt ? 0 : -1}>
               <div className={styles.radio} data-checked={frequency === opt} />
               <span className={styles.checkboxLabel}>{opt.charAt(0).toUpperCase() + opt.slice(1)}</span>
             </button>

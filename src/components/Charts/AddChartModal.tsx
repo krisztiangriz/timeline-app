@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
+import { useRadioGroupKeyboard } from '../../hooks/useRadioGroupKeyboard'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../../db/database'
 import { Modal } from '../Modal/Modal'
@@ -171,6 +172,7 @@ export function AddChartModal({ open, onClose, onAdd, editing, onUpdate, pageId,
 
   const validTypes = VALID_CHART_TYPES[source] ?? (['bar'] as ChartType[])
   const effectiveType = validTypes.includes(type) ? type : validTypes[0]
+  const { groupRef: chartTypeGroupRef, handleKeyDown: chartTypeKeyDown } = useRadioGroupKeyboard(validTypes, effectiveType, setType)
 
   function handleConfirm() {
     const chartName = name.trim() || (DATA_SOURCE_LABELS[source] ?? 'Chart')
@@ -309,9 +311,9 @@ export function AddChartModal({ open, onClose, onAdd, editing, onUpdate, pageId,
         {/* Chart type */}
         <div className={styles.formSection}>
           <span className={styles.formLabel}>Chart type</span>
-          <div className={styles.radioRow} role="radiogroup" aria-label="Chart type">
+          <div ref={chartTypeGroupRef} className={styles.radioRow} role="radiogroup" aria-label="Chart type" onKeyDown={chartTypeKeyDown}>
             {validTypes.map((t) => (
-              <button key={t} className={radio.radioOption} onClick={() => setType(t)} role="radio" aria-checked={effectiveType === t}>
+              <button key={t} className={radio.radioOption} onClick={() => setType(t)} role="radio" aria-checked={effectiveType === t} tabIndex={effectiveType === t ? 0 : -1}>
                 <div className={radio.radioCircle} data-checked={effectiveType === t} />
                 {CHART_TYPE_LABELS[t]}
               </button>

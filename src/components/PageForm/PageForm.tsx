@@ -6,6 +6,7 @@ import { DragHandleIcon, TrashIcon, CheckIcon, PlusIcon, CloseIcon } from '../Ic
 import { DropdownPortal } from '../DropdownPortal/DropdownPortal'
 import { db } from '../../db/database'
 import { useToast } from '../../hooks/useToast'
+import { makeRadioKeyHandler } from '../../utils/radioKeyHandler'
 import type { BlockType } from '../../types'
 import styles from './PageForm.module.css'
 import radio from '../../styles/radio.module.css'
@@ -40,11 +41,17 @@ interface PageFormProps {
   hubId?: number  // when editing a hub, enables step 2 (property config)
 }
 
-function RadioOption({ selected, onChange, label, description, disabled }: {
-  selected: boolean; onChange: () => void; label: string; description?: string; disabled?: boolean
+function RadioOption({ selected, onChange, label, description, disabled, tabIdx }: {
+  selected: boolean; onChange: () => void; label: string; description?: string; disabled?: boolean; tabIdx?: number
 }) {
   return (
-    <button className={disabled ? styles.radioOptionDisabled : radio.radioOption} onClick={disabled ? undefined : onChange} role="radio" aria-checked={selected}>
+    <button
+      className={disabled ? styles.radioOptionDisabled : radio.radioOption}
+      onClick={disabled ? undefined : onChange}
+      role="radio"
+      aria-checked={selected}
+      tabIndex={disabled ? -1 : (tabIdx ?? (selected ? 0 : -1))}
+    >
       <div className={radio.radioCircle} data-checked={selected} />
       <span>{label}</span>
       {description && <span className={styles.radioDescription}>{description}</span>}
@@ -319,7 +326,12 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
       {!isEdit && !isHubProp && (
         <div className={styles.section}>
           <span className={styles.label}>Type</span>
-          <div className={styles.radioCol} role="radiogroup" aria-label="Page type">
+          <div
+            className={styles.radioCol}
+            role="radiogroup"
+            aria-label="Page type"
+            onKeyDown={makeRadioKeyHandler([false, true], isHubType, setIsHubType)}
+          >
             <RadioOption selected={!isHubType} onChange={() => setIsHubType(false)} label="Page" />
             <RadioOption selected={isHubType} onChange={() => setIsHubType(true)} label="Hub" />
           </div>

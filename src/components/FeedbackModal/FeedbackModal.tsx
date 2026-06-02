@@ -8,6 +8,7 @@ import { db } from '../../db/database'
 import { CloseIcon, SearchIcon, PlusIcon } from '../Icons/Icons'
 import { DropdownPortal } from '../DropdownPortal/DropdownPortal'
 import type { Page } from '../../types'
+import { makeRadioKeyHandler } from '../../utils/radioKeyHandler'
 import styles from './FeedbackModal.module.css'
 import radio from '../../styles/radio.module.css'
 
@@ -231,23 +232,32 @@ export function FeedbackModal({ open, onClose, onSuccess }: FeedbackModalProps) 
       {feedbackProperties.map((prop, index) => (
         <div key={prop.id} className={styles.section}>
           <span className={styles.label}>{prop.name}</span>
-          <div className={prop.options.length > 3 ? styles.optionsVertical : styles.optionsRow} role="radiogroup" aria-label={prop.name}>
-            {prop.options.map((opt) => (
-              <button
-                key={opt.value}
-                className={radio.radioOption}
-                onClick={() => setPropertyValue(prop.id!, opt.value)}
-                role="radio"
-                aria-checked={(propertyValues[prop.id!] || (index === 0 ? prop.options[0]?.value : '')) === opt.value}
+          {(() => {
+            const optValues = prop.options.map((o) => o.value)
+            const currentVal = propertyValues[prop.id!] || (index === 0 ? prop.options[0]?.value : '')
+            return (
+              <div
+                className={prop.options.length > 3 ? styles.optionsVertical : styles.optionsRow}
+                role="radiogroup"
+                aria-label={prop.name}
+                onKeyDown={makeRadioKeyHandler(optValues, currentVal, (v) => setPropertyValue(prop.id!, v))}
               >
-                <div
-                  className={radio.radioCircle}
-                  data-checked={(propertyValues[prop.id!] || (index === 0 ? prop.options[0]?.value : '')) === opt.value}
-                />
-                {opt.label}
-              </button>
-            ))}
-          </div>
+                {prop.options.map((opt) => (
+                  <button
+                    key={opt.value}
+                    className={radio.radioOption}
+                    onClick={() => setPropertyValue(prop.id!, opt.value)}
+                    role="radio"
+                    aria-checked={currentVal === opt.value}
+                    tabIndex={currentVal === opt.value ? 0 : -1}
+                  >
+                    <div className={radio.radioCircle} data-checked={currentVal === opt.value} />
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            )
+          })()}
         </div>
       ))}
     </Modal>
