@@ -18,7 +18,7 @@ export function BreadcrumbNav({
   const { searchOpen, setSearchOpen, setAddPageOpen, setFeedbackOpen } = useModalContext()
 
   const addTrigger = (
-    <button className={styles.actionButton} aria-label="Add">
+    <button className={styles.actionButton} aria-label="Add" tabIndex={0}>
       <PlusIcon />
     </button>
   )
@@ -29,7 +29,7 @@ export function BreadcrumbNav({
   ]
 
   const moreTrigger = (
-    <button className={styles.actionButton} aria-label="More">
+    <button className={styles.actionButton} aria-label="More" tabIndex={0}>
       <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
         <circle cx="4" cy="9" r="1.5" fill="currentColor" />
         <circle cx="9" cy="9" r="1.5" fill="currentColor" />
@@ -59,7 +59,7 @@ export function BreadcrumbNav({
                   {isLast ? (
                     <span className={styles.crumbCurrent}>{item.label}</span>
                   ) : (
-                    <Link to={item.path} className={styles.crumb}>
+                    <Link to={item.path} className={styles.crumb} tabIndex={0}>
                       {item.label}
                     </Link>
                   )}
@@ -72,6 +72,7 @@ export function BreadcrumbNav({
             className={styles.actionButton}
             onClick={() => setSearchOpen(true)}
             aria-label="Search"
+            tabIndex={0}
           >
             <SearchIcon />
           </button>
