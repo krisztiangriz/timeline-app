@@ -100,6 +100,7 @@ git push         # triggers GitHub Actions deploy
 - All design tokens in `src/styles/tokens.css` (light + dark theme)
 - `--color-text-placeholder`: `#8B9BB5` (light), `#7B8FA6` (dark) — meets 4.5:1
 - `--color-negative`: `#E53E3E` (light) — meets 4.5:1 on white
+- `--color-focus`: `var(--color-text-primary)` — used by all `:focus-visible` rules
 - Trigger characters: always `ui-monospace, 'SF Mono', Monaco, 'Cascadia Mono',
   monospace`
 
@@ -172,8 +173,9 @@ git push         # triggers GitHub Actions deploy
   next Tab clamps it back to first/last focusable element
 - Auto-focus uses `didAutoFocus` ref — fires only ONCE per open, not on
   every `confirmDisabled` change
-- Auto-focus selector includes `input`, `textarea`, `select`, `button`,
-  and `[tabindex]:not([tabindex="-1"])`
+- Auto-focus and focus-trap selectors include `input`, `textarea`, `select`,
+  `button:not([tabindex="-1"])`, and `[tabindex]:not([tabindex="-1"])`
+  (respects roving tabIndex — buttons with tabIndex={-1} are skipped)
 - `overflow: hidden` on `.modal` is intentional — do NOT remove
 - Dropdowns inside modals MUST use `DropdownPortal` to escape overflow clipping
 - `DropdownPortal` has `autoFocus` prop — when true, focuses first item on
@@ -200,6 +202,8 @@ git push         # triggers GitHub Actions deploy
 - PropertyRow: full keyboard nav (ArrowUp/Down, Enter, Escape), `role="listbox"`
 - ColorPicker: arrow grid nav + Enter/Escape, `role="listbox"`
 - Custom radio/checkbox buttons: `role="radio"`/`role="checkbox"` + `aria-checked`
+- Radio groups: roving tabIndex (selected=0, others=-1) + arrow-key nav
+  via `useRadioGroupKeyboard` hook or `makeRadioKeyHandler` utility
 - Form inputs: `aria-label` for inputs without `<label>` elements
 - Tab groups: `role="tablist"` + `role="tab"` + `aria-selected`
 - Read-only mentions: `tabindex="0"`, `role="link"`, Enter/Space to navigate
@@ -207,6 +211,8 @@ git push         # triggers GitHub Actions deploy
 - Dropdown search results: Escape dismisses results (stops propagation)
 - Delete buttons: descriptive `aria-label` for screen readers
 - Toast action buttons: `:focus-visible` outline
+- Focus ring: `--color-focus` token (= `--color-text-primary`) for all
+  `:focus-visible` outlines; component-level rules override global fallback
 
 ## Commit Style
 - Short imperative: `Fix auto-backup timer: use ref pattern for stable deps`
@@ -221,4 +227,6 @@ git push         # triggers GitHub Actions deploy
 - `src/components/DropdownPortal/DropdownPortal.tsx` — portal for modal dropdowns
 - `src/components/DropdownPortal/DropdownPortal.module.css` — backdrop + portal z-index
 - `src/constants/colors.ts` — chart color palette (source of truth)
+- `src/hooks/useRadioGroupKeyboard.ts` — roving tabIndex + arrow-key nav hook
+- `src/utils/radioKeyHandler.ts` — non-hook radio key handler factory (for use in loops)
 - `scripts/generate-sw.mjs` — post-build SW manifest generator
