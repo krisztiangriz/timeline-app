@@ -9,7 +9,8 @@ import {
 import { useAutocomplete } from '../../hooks/useAutocomplete'
 import { useModalContext } from '../../hooks/useAppContext'
 import { enrichMentionHtml } from '../../utils/mentionEnricher'
-import { sanitizeForEditor } from '../../utils/domPurify'
+import { sanitizeForEditor, sanitizeForPaste } from '../../utils/domPurify'
+import { normalizeExternalHtml } from '../../utils/pasteNormalizer'
 import { formatTableDate } from '../../utils/dateUtils'
 import { CloseIcon } from '../Icons/Icons'
 import { useMentionDetection } from './useMentionDetection'
@@ -528,9 +529,44 @@ export function RichTextEditor({
     detectMention()
   }
 
+  function removeEmptyLineAtCursor() {
+    const sel = window.getSelection()
+    if (!sel || !sel.rangeCount) return
+    const el = editorRef.current
+    if (!el) return
+    let container: Node | null = sel.anchorNode
+    while (container && container !== el && container.parentNode !== el) {
+      container = container.parentNode
+    }
+    if (container && container !== el && container.nodeType === Node.ELEMENT_NODE) {
+      const block = container as HTMLElement
+      if (!block.textContent?.trim() && !block.querySelector('[data-checkbox], [data-mention]')) {
+        block.remove()
+      }
+    }
+  }
+
   function handlePaste(e: React.ClipboardEvent) {
     e.preventDefault()
-    document.execCommand('insertText', false, e.clipboardData.getData('text/plain'))
+
+    if (e.shiftKey) {
+      document.execCommand('insertText', false, e.clipboardData.getData('text/plain'))
+      return
+    }
+
+    const html = e.clipboardData.getData('text/html')
+    if (html) {
+      const normalized = normalizeExternalHtml(html)
+      const sanitized = sanitizeForPaste(normalized)
+      if (sanitized) {
+        removeEmptyLineAtCursor()
+        document.execCommand('insertHTML', false, sanitized)
+      } else {
+        document.execCommand('insertText', false, e.clipboardData.getData('text/plain'))
+      }
+    } else {
+      document.execCommand('insertText', false, e.clipboardData.getData('text/plain'))
+    }
   }
 
   const editorClassName = [styles.editor, className].filter(Boolean).join(' ')

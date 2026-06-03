@@ -1,6 +1,5 @@
-// Lazy-loaded DOMPurify singleton — loaded once at module level, all instances
-// notified via useSyncExternalStore (see RichTextDisplay).
-type PurifyInstance = { sanitize: (html: string, config?: { ADD_ATTR?: string[] }) => string }
+type PurifyConfig = Record<string, unknown>
+type PurifyInstance = { sanitize: (html: string, config?: PurifyConfig) => string }
 
 let purifyInstance: PurifyInstance | null = null
 let purifyLoaded = false
@@ -19,18 +18,30 @@ import('dompurify').then((mod) => {
   listeners.forEach((cb) => cb())
 })
 
-/** For read-only display — strips dangerous content, preserves data-* (DOMPurify default). */
 export function sanitizeForDisplay(html: string): string {
   if (!purifyInstance) return ''
   return purifyInstance.sanitize(html)
 }
 
-/**
- * For editor and DOM parsing — strips event handlers/scripts while preserving
- * contenteditable and target attributes used by editor-inserted links.
- * Returns html unchanged if DOMPurify has not loaded yet (same as current behaviour).
- */
 export function sanitizeForEditor(html: string): string {
   if (!purifyInstance) return html
   return purifyInstance.sanitize(html, { ADD_ATTR: ['contenteditable', 'target'] })
+}
+
+const PASTE_ALLOWED_TAGS = [
+  'b', 'strong', 'i', 'em', 'u', 'a', 'h1', 'h2', 'h3',
+  'pre', 'code', 'ul', 'ol', 'li', 'blockquote', 'br', 'span', 'div', 'p',
+]
+const PASTE_ALLOWED_ATTR = [
+  'href', 'target', 'rel', 'data-list-style', 'data-checkbox',
+  'data-mention', 'data-page-id', 'data-trigger', 'data-collapsed',
+  'contenteditable',
+]
+
+export function sanitizeForPaste(html: string): string {
+  if (!purifyInstance) return ''
+  return purifyInstance.sanitize(html, {
+    ALLOWED_TAGS: PASTE_ALLOWED_TAGS,
+    ALLOWED_ATTR: PASTE_ALLOWED_ATTR,
+  })
 }
