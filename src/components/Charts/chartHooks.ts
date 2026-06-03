@@ -17,7 +17,14 @@ export function useScopedFeedbacks(allFeedbacks: Feedback[], pages: Page[], scop
     if (scopes.length === 0) return allFeedbacks
     const pageIds = new Set<number>()
     for (const s of scopes) {
-      if (s.type === 'page') pageIds.add(s.pageId)
+      if (s.type === 'page') {
+        const page = pages.find((p) => p.id === s.pageId)
+        if (page?.type === 'hub') {
+          for (const p of pages) { if (p.parentId === s.pageId) pageIds.add(p.id!) }
+        } else {
+          pageIds.add(s.pageId)
+        }
+      }
       if (s.type === 'hub') {
         for (const p of pages) { if (p.parentId === s.hubId) pageIds.add(p.id!) }
       }

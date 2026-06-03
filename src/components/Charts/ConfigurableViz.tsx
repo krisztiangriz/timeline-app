@@ -39,12 +39,20 @@ export const ConfigurableViz = memo(function ConfigurableViz({ blockId, pageId }
     for (const c of configs) {
       for (const s of c.scopes ?? []) {
         if (s.type === 'hub') ids.add(s.hubId)
+        if (s.type === 'page') {
+          const page = allPages.find((p) => p.id === s.pageId)
+          if (page?.type === 'hub') ids.add(s.pageId)
+          else if (page?.parentId) ids.add(page.parentId)
+        }
       }
     }
-    // Also include the hub that owns this block's page
-    ids.add(pageId)
+    // Also include the hub that owns this block's page (or the page itself if it's a hub)
+    const currentPage = allPages.find((p) => p.id === pageId)
+    if (currentPage?.type === 'hub') ids.add(pageId)
+    else if (currentPage?.parentId) ids.add(currentPage.parentId)
+    else ids.add(pageId)
     return [...ids]
-  }, [configs, pageId])
+  }, [configs, pageId, allPages])
 
   const allHubProperties = useLiveQuery(
     () => relevantHubIds.length > 0
