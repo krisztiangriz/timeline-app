@@ -65,6 +65,7 @@ export function RichTextEditor({
   const lastSetValue = useRef('')
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout>>(null)
   const blurTimer = useRef<ReturnType<typeof setTimeout>>(null)
+  const plainPasteRef = useRef(false)
   const [showLinkInput, setShowLinkInput] = useState(false)
   const [linkUrl, setLinkUrl] = useState('')
   const [linkPos, setLinkPos] = useState({ top: 0, left: 0 })
@@ -346,6 +347,10 @@ export function RichTextEditor({
   // ---- Keyboard handler ----
 
   function handleKeyDown(e: KeyboardEvent<HTMLDivElement>) {
+    if (e.key === 'v' && (e.metaKey || e.ctrlKey) && e.shiftKey) {
+      plainPasteRef.current = true
+    }
+
     // If mention dropdown is showing, handle arrow/enter/escape
     if (mentionQuery && autocompleteOptions.length > 0) {
       if (e.key === 'ArrowDown') {
@@ -549,7 +554,8 @@ export function RichTextEditor({
   function handlePaste(e: React.ClipboardEvent) {
     e.preventDefault()
 
-    if (e.shiftKey) {
+    if (plainPasteRef.current) {
+      plainPasteRef.current = false
       document.execCommand('insertText', false, e.clipboardData.getData('text/plain'))
       return
     }
