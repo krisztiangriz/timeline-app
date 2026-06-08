@@ -27,6 +27,41 @@ const CrossRefRow = memo(function CrossRefRow({ html }: { html: string }) {
   )
 })
 
+/** Filtered pending tasks shown on non-main-timeline pages (read-only cross-refs) */
+const FilteredPendingSection = memo(function FilteredPendingSection({
+  filteredLines,
+  filteredOriginalIndices,
+  onComplete,
+}: {
+  filteredLines: string[]
+  filteredOriginalIndices: number[]
+  onComplete: (lineIndex: number) => void
+}) {
+  return (
+    <div className={styles.section}>
+      <div className={styles.sectionContent}>
+        {filteredLines.map((lineHtml, i) => (
+          <div key={filteredOriginalIndices[i]} className={styles.filteredPendingLine}>
+            <span
+              className={styles.filteredCheckbox}
+              onClick={() => onComplete(i)}
+              role="checkbox"
+              aria-checked="false"
+              aria-label="Complete task"
+              tabIndex={0}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onComplete(i) } }}
+            />
+            <RichTextDisplay html={stripCheckboxHtml(lineHtml)} collapseMentions />
+          </div>
+        ))}
+      </div>
+      <div className={styles.sectionDateContainer}>
+        <span className={styles.sectionDate}>Pending</span>
+      </div>
+    </div>
+  )
+})
+
 /** Ensure each line in pending HTML has a checkbox. Used when migrating old entries. */
 function ensureCheckboxes(html: string): string {
   if (!html.trim()) return ''
@@ -617,27 +652,11 @@ export function TimelineView({ pageId, title, readOnly = false, page }: Timeline
 
       {/* Filtered pending section (non-main-timeline pages) */}
       {!readOnly && !isMainTimeline && filteredLines.length > 0 && (
-        <div className={styles.section}>
-          <div className={styles.sectionContent}>
-            {filteredLines.map((lineHtml, i) => (
-              <div key={filteredOriginalIndices[i]} className={styles.filteredPendingLine}>
-                <span
-                  className={styles.filteredCheckbox}
-                  onClick={() => handleFilteredComplete(i)}
-                  role="checkbox"
-                  aria-checked="false"
-                  aria-label="Complete task"
-                  tabIndex={0}
-                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleFilteredComplete(i) } }}
-                />
-                <RichTextDisplay html={stripCheckboxHtml(lineHtml)} collapseMentions />
-              </div>
-            ))}
-          </div>
-          <div className={styles.sectionDateContainer}>
-            <span className={styles.sectionDate}>Pending</span>
-          </div>
-        </div>
+        <FilteredPendingSection
+          filteredLines={filteredLines}
+          filteredOriginalIndices={filteredOriginalIndices}
+          onComplete={handleFilteredComplete}
+        />
       )}
 
       {/* Today section — editor in write mode, cross-refs always */}

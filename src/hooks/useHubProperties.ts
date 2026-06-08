@@ -17,8 +17,9 @@ export function useHubProperties(hubId?: number): HubProperty[] {
 export function useHubPageProperties(hubId?: number): HubProperty[] {
   return useLiveQuery(
     () => hubId
-      ? db.hubProperties.where('[hubId+order]').between([hubId, -Infinity], [hubId, Infinity]).toArray()
-          .then((props) => props.filter((p) => !p.scope || p.scope === 'page'))
+      ? db.hubProperties.where('[hubId+order]').between([hubId, -Infinity], [hubId, Infinity])
+          .filter((p) => !p.scope || p.scope === 'page')
+          .toArray()
       : [],
     [hubId]
   ) ?? []
@@ -28,8 +29,9 @@ export function useHubPageProperties(hubId?: number): HubProperty[] {
 export function useHubFeedbackProperties(hubId?: number): HubProperty[] {
   return useLiveQuery(
     () => hubId
-      ? db.hubProperties.where('[hubId+order]').between([hubId, -Infinity], [hubId, Infinity]).toArray()
-          .then((props) => props.filter((p) => p.scope === 'feedback'))
+      ? db.hubProperties.where('[hubId+order]').between([hubId, -Infinity], [hubId, Infinity])
+          .filter((p) => p.scope === 'feedback')
+          .toArray()
       : [],
     [hubId]
   ) ?? []

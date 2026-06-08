@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect, useCallback, memo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useSearch } from '../../hooks/useSearch'
 import { getPagePath } from '../../hooks/usePages'
@@ -13,7 +13,7 @@ interface SearchBarProps {
   onAddPage: () => void
 }
 
-export function SearchBar({ open, onClose, onAddPage }: SearchBarProps) {
+export const SearchBar = memo(function SearchBar({ open, onClose, onAddPage }: SearchBarProps) {
   const [query, setQuery] = useState('')
   const [activeIndex, setActiveIndex] = useState(-1)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -156,4 +156,4 @@ export function SearchBar({ open, onClose, onAddPage }: SearchBarProps) {
       </div>
     </>
   )
-}
+})

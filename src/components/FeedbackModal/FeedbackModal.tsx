@@ -28,6 +28,8 @@ export function FeedbackModal({ open, onClose, onSuccess }: FeedbackModalProps) 
     return new Set(allHubProperties.filter((p) => p.scope === 'feedback').map((p) => p.hubId))
   }, [allHubProperties])
 
+  const hubsKey = useMemo(() => [...hubsWithFeedback].sort().join(','), [hubsWithFeedback])
+
   // Page IDs that have a feedback block — query by type index on pageId scoped to known hubs
   const feedbackPageIds = useLiveQuery(async () => {
     // Get child pages of hubs with feedback config, then check their blocks
@@ -38,7 +40,7 @@ export function FeedbackModal({ open, onClose, onSuccess }: FeedbackModalProps) 
     if (childPageIds.length === 0) return new Set<number>()
     const blocks = await db.blocks.where('pageId').anyOf(childPageIds).filter((b) => b.type === 'feedback').toArray()
     return new Set(blocks.map((b) => b.pageId))
-  }, [hubsWithFeedback]) ?? new Set<number>()
+  }, [hubsKey]) ?? new Set<number>()
 
   // Pages searchable for feedback (under hubs with feedback config AND have a feedback block)
   const searchablePages = useMemo(() => {

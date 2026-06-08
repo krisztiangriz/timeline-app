@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback, type CSSProperties } from 'react'
+import { useEffect, useRef, useState, useCallback, memo, type CSSProperties } from 'react'
 import { useOnboardingGuides } from '../../hooks/useOnboardingGuides'
 import { CheckIcon, ArrowLeftIcon, ArrowRightIcon } from '../Icons/Icons'
 import styles from './OnboardingGuide.module.css'
@@ -33,7 +33,7 @@ interface OnboardingGuideProps {
 /*  Component                                                          */
 /* ------------------------------------------------------------------ */
 
-export function OnboardingGuide({
+export const OnboardingGuide = memo(function OnboardingGuide({
   guideId,
   anchorRef,
   position = 'bottom-left',
@@ -230,4 +230,4 @@ export function OnboardingGuide({
       )}
     </div>
   )
-}
+})

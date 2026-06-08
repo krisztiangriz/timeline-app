@@ -315,7 +315,7 @@ export function SettingsModal({ open, onClose, onToast }: SettingsModalProps) {
         </div>
       </div>
 
-      <span className={styles.version}>v{__APP_VERSION__}</span>
+      <span className={styles.version}>Release {__APP_VERSION__}</span>
     </Modal>
   )
 }

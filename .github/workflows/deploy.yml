@@ -29,7 +29,7 @@ jobs:
       - run: npm ci
       - name: Build with version
         run: |
-          export APP_VERSION="1.$(git rev-list --count HEAD)"
+          export APP_VERSION="$(git rev-list --count HEAD)"
           npm run build
       - uses: actions/upload-pages-artifact@v3
         with:
