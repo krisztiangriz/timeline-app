@@ -89,6 +89,7 @@ export const PageHeader = memo(function PageHeader({
                 role="tab"
                 aria-selected={activeTabId === tab.id}
                 aria-controls={`tabpanel-${tab.id}`}
+                tabIndex={0}
               >
                 {tab.name}
               </button>
