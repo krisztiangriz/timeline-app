@@ -383,7 +383,7 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
         <div className={styles.tabHeader}>
           <span className={styles.label}>Layout</span>
           {!addingTab && (
-            <button className={styles.addButton} onClick={() => setAddingTab(true)} onKeyDown={(e) => { if (e.key === 'Enter') e.preventDefault() }} aria-label="Add tab" tabIndex={0}>
+            <button className={styles.addButton} onClick={() => setAddingTab(true)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') e.preventDefault() }} aria-label="Add tab" tabIndex={0}>
               <PlusIcon />
             </button>
           )}
@@ -413,6 +413,7 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
                   ;(e.target as HTMLElement).blur()
                 }
               }}
+              tabIndex={0}
             />
             <button className={styles.deleteButton} onClick={() => setTabDeleteConfirm(i)} aria-label={`Delete ${tab.name}`} tabIndex={0}>
               <TrashIcon />
@@ -426,7 +427,8 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
               setAddingTab(false)
               setNewTabType('text')
             }
-            if (e.key === 'Enter') {
+            if (e.key === 'Enter' || e.key === ' ') {
+              if ((e.target as HTMLElement).tagName === 'BUTTON') return
               e.preventDefault()
               confirmTab()
             }

@@ -64,6 +64,10 @@ export function Modal({
     const handler = (e: KeyboardEvent) => {
       if (e.defaultPrevented) return
 
+      // Don't handle keys if a nested dialog has focus
+      const activeDialog = (document.activeElement as HTMLElement)?.closest('[role="dialog"]')
+      if (activeDialog && activeDialog !== modalRef.current && !modalRef.current?.contains(activeDialog)) return
+
       if (e.key === 'Escape') {
         onClose()
         return
@@ -83,6 +87,10 @@ export function Modal({
 
       // Focus trap — always active when modal is open
       if (e.key === 'Tab' && modalRef.current) {
+        // Don't trap if focus is inside a nested dialog (e.g. ConfirmModal on top)
+        const activeDialog = document.activeElement?.closest('[role="dialog"]')
+        if (activeDialog && activeDialog !== modalRef.current && !modalRef.current.contains(activeDialog)) return
+
         const focusables = modalRef.current.querySelectorAll<HTMLElement>(
           'button:not([disabled]):not([tabindex="-1"]), [href], input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
         )
