@@ -57,7 +57,7 @@ export function DropdownPortal({ anchorRef, children, open, onClose, autoFocus }
     return () => cancelAnimationFrame(frame)
   }, [open, autoFocus])
 
-  // Keyboard handling: Tab trap + Escape when autoFocus is enabled
+  // Keyboard handling: arrow nav, Tab trap + Escape when autoFocus is enabled
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (!autoFocus || !portalRef.current) return
 
@@ -69,12 +69,34 @@ export function DropdownPortal({ anchorRef, children, open, onClose, autoFocus }
       return
     }
 
-    if (e.key === 'Tab') {
-      const focusables = portalRef.current.querySelectorAll<HTMLElement>(
-        'button:not([disabled]), [href], input:not([disabled]), [tabindex]:not([tabindex="-1"])'
-      )
-      if (focusables.length === 0) return
+    const focusables = portalRef.current.querySelectorAll<HTMLElement>(
+      'button:not([disabled]), [href], input:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    )
+    if (focusables.length === 0) return
 
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      const idx = Array.from(focusables).indexOf(document.activeElement as HTMLElement)
+      const next = idx < focusables.length - 1 ? idx + 1 : 0
+      focusables[next].focus()
+      return
+    }
+
+    if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      const idx = Array.from(focusables).indexOf(document.activeElement as HTMLElement)
+      const prev = idx > 0 ? idx - 1 : focusables.length - 1
+      focusables[prev].focus()
+      return
+    }
+
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      ;(document.activeElement as HTMLElement)?.click()
+      return
+    }
+
+    if (e.key === 'Tab') {
       const first = focusables[0]
       const last = focusables[focusables.length - 1]
 

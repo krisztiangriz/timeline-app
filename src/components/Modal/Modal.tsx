@@ -71,11 +71,12 @@ export function Modal({
 
       if (e.key === 'Enter' && onConfirm && !confirmDisabled) {
         const active = document.activeElement
-        const inFormControl = active?.tagName === 'INPUT' ||
+        const inInteractive = active?.tagName === 'INPUT' ||
           active?.tagName === 'TEXTAREA' ||
           active?.tagName === 'SELECT' ||
+          active?.tagName === 'BUTTON' ||
           (active as HTMLElement)?.isContentEditable
-        if (inFormControl) return
+        if (inInteractive) return
         e.preventDefault()
         onConfirm()
       }
