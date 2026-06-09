@@ -87,10 +87,13 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
   const hubSelectAnchorRef = useRef<HTMLDivElement>(null)
   const [blockTypeSelectOpen, setBlockTypeSelectOpen] = useState(false)
   const blockTypeAnchorRef = useRef<HTMLDivElement>(null)
+  const blockTypeBtnRef = useRef<HTMLButtonElement>(null)
   const [tabDeleteConfirm, setTabDeleteConfirm] = useState<number | null>(null)
   const tabKeyCounter = useRef(0)
 
-
+  useEffect(() => {
+    if (addingTab) blockTypeBtnRef.current?.focus()
+  }, [addingTab])
 
   // Creating a new hub — properties appear immediately when Hub type is selected
   const isCreatingHub = !isEdit && isHubType
@@ -380,7 +383,7 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
         <div className={styles.tabHeader}>
           <span className={styles.label}>Layout</span>
           {!addingTab && (
-            <button className={styles.addButton} onClick={() => setAddingTab(true)} aria-label="Add tab" tabIndex={0}>
+            <button className={styles.addButton} onClick={() => setAddingTab(true)} onKeyDown={(e) => { if (e.key === 'Enter') e.preventDefault() }} aria-label="Add tab" tabIndex={0}>
               <PlusIcon />
             </button>
           )}
@@ -430,6 +433,7 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
           }}>
             <div ref={blockTypeAnchorRef} style={{ flex: 1, minWidth: 0, display: 'flex' }}>
               <button
+                ref={blockTypeBtnRef}
                 className={styles.blockTypeSelectTrigger}
                 onClick={() => setBlockTypeSelectOpen((v) => !v)}
                 type="button"
@@ -457,10 +461,10 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
                   })}
                 </div>
             </DropdownPortal>
-            <button className={styles.tabInputAction} onClick={confirmTab} aria-label="Confirm tab">
+            <button className={styles.tabInputAction} onClick={confirmTab} aria-label="Confirm tab" type="button" tabIndex={0}>
               <CheckIcon />
             </button>
-            <button className={styles.tabInputAction} onClick={() => { setAddingTab(false); setNewTabType('text') }} aria-label="Cancel">
+            <button className={styles.tabInputAction} onClick={() => { setAddingTab(false); setNewTabType('text') }} aria-label="Cancel" type="button" tabIndex={0}>
               <CloseIcon />
             </button>
           </div>
