@@ -404,6 +404,12 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
               style={{ width: 200, height: 32 }}
               value={tab.name}
               onChange={(e) => setTabs((t) => t.map((tt, j) => j === i ? { ...tt, name: e.target.value } : tt))}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') {
+                  e.preventDefault()
+                  ;(e.target as HTMLElement).blur()
+                }
+              }}
             />
             <button className={styles.deleteButton} onClick={() => setTabDeleteConfirm(i)} aria-label={`Delete ${tab.name}`} tabIndex={0}>
               <TrashIcon />
@@ -411,7 +417,17 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
           </div>
         ))}
         {addingTab && (
-          <div className={styles.tabRow}>
+          <div className={styles.tabRow} onKeyDown={(e) => {
+            if (e.key === 'Escape') {
+              e.preventDefault()
+              setAddingTab(false)
+              setNewTabType('text')
+            }
+            if (e.key === 'Enter') {
+              e.preventDefault()
+              confirmTab()
+            }
+          }}>
             <div ref={blockTypeAnchorRef} style={{ flex: 1, minWidth: 0, display: 'flex' }}>
               <button
                 className={styles.blockTypeSelectTrigger}
