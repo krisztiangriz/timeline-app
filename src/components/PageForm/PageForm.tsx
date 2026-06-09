@@ -383,7 +383,7 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
         <div className={styles.tabHeader}>
           <span className={styles.label}>Layout</span>
           {!addingTab && (
-            <button className={styles.addButton} onClick={() => setAddingTab(true)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') e.preventDefault() }} aria-label="Add tab" tabIndex={0}>
+            <button className={styles.addButton} onClick={() => setAddingTab(true)} aria-label="Add tab" tabIndex={0}>
               <PlusIcon />
             </button>
           )}
@@ -394,6 +394,9 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
         {/* All tabs — editable rows with drag, type label, name input, delete */}
         {tabs.map((tab, i) => (
           <div key={tab.key} className={styles.tabRow}
+            tabIndex={0}
+            role="group"
+            aria-label={`${tab.name || 'Unnamed'} tab (${tab.type === 'visualization' ? 'charts' : tab.type})`}
             draggable
             onDragStart={(e) => { e.dataTransfer.effectAllowed = 'move'; setBlockDragIdx({ group: 'tabs', idx: i }) }}
             onDragOver={(e) => { e.preventDefault() }}
