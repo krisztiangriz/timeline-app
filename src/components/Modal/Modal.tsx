@@ -158,7 +158,7 @@ export function Modal({
   if (!open) return null
 
   return (
-    <div className={styles.overlay} style={zIndex ? { zIndex } : undefined} onClick={onClose}>
+    <div className={styles.overlay} style={zIndex ? { zIndex } : undefined} onClick={onClose} role="presentation">
       <div ref={modalRef} className={compact ? `${styles.modal} ${styles.modalCompact}` : styles.modal} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="modal-title" aria-describedby={descriptionId}>
         <div className={scrolledTop ? styles.headerBorder : styles.header}>
           <h1 className={styles.title} id="modal-title">{title}</h1>

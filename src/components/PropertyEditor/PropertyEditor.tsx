@@ -60,6 +60,9 @@ function PropertyBlock({ prop, renamingPropertyId, renamingPropertyName, setRena
           <span
             className={styles.propertyName}
             onClick={() => { setRenamingPropertyId(prop.id!); setRenamingPropertyName(prop.name) }}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setRenamingPropertyId(prop.id!); setRenamingPropertyName(prop.name) } }}
+            role="button"
+            tabIndex={0}
           >
             {prop.name}
           </span>
@@ -112,6 +115,9 @@ function PropertyBlock({ prop, renamingPropertyId, renamingPropertyName, setRena
               <span
                 className={styles.optionLabel}
                 onClick={() => { setRenamingOption({ propertyId: prop.id!, value: opt.value }); setRenamingOptionLabel(opt.label) }}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setRenamingOption({ propertyId: prop.id!, value: opt.value }); setRenamingOptionLabel(opt.label) } }}
+                role="button"
+                tabIndex={0}
               >
                 {opt.label}
               </span>

@@ -24,10 +24,10 @@ export function ChartContainer({ className, children }: { className: string; chi
 
 export function cellLegend(items: { name: string; color: string }[]) {
   return () => (
-    <div style={{ display: 'flex', justifyContent: 'center', gap: 12, flexWrap: 'wrap', paddingTop: 4 }}>
+    <div className={styles.legendContainer}>
       {items.map((item) => (
-        <span key={item.name} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, color: 'var(--color-text-body)' }}>
-          <span style={{ width: 8, height: 8, borderRadius: '50%', background: item.color, flexShrink: 0 }} />
+        <span key={item.name} className={styles.legendItem}>
+          <span className={styles.legendDot} style={{ background: item.color }} />
           {item.name}
         </span>
       ))}

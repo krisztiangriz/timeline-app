@@ -87,7 +87,7 @@ export function ContextMenu({ items, trigger }: ContextMenuProps) {
       })}
       {open && (
         <>
-          <div className={styles.backdrop} onClick={() => setOpen(false)} />
+          <div className={styles.backdrop} onClick={() => setOpen(false)} role="presentation" />
           <div
             ref={menuRef}
             className={styles.menu}
