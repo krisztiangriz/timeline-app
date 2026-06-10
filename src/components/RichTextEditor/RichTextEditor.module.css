@@ -177,8 +177,7 @@
   display: inline-flex;
   align-items: center;
   cursor: pointer;
-  vertical-align: middle;
-  line-height: var(--line-height-base);
+  height: var(--line-height-base);
   margin-right: 4px;
 }
 
