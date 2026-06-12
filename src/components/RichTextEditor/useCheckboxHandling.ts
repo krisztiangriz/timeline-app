@@ -88,6 +88,8 @@ export function useCheckboxHandling(
       // Remove the checkbox span
       prevSib.remove()
       if (prevBlock) {
+        // Save merge point: count text length of prevBlock before merge
+        const mergeOffset = prevBlock.textContent?.length ?? 0
         // Merge remaining content into previous block
         const content = parentDiv.innerHTML
         const cleanContent = content.replace(/^\s*&nbsp;\s*$/, '').replace(/^\u00A0$/, '')
@@ -95,10 +97,27 @@ export function useCheckboxHandling(
           prevBlock.innerHTML += cleanContent
         }
         parentDiv.remove()
-        // Place cursor at end of previous block
+        // Place cursor at the exact merge point
         const range = document.createRange()
-        range.selectNodeContents(prevBlock)
-        range.collapse(false)
+        let charCount = 0
+        let placed = false
+        const walker = document.createTreeWalker(prevBlock, NodeFilter.SHOW_TEXT)
+        let textNode = walker.nextNode()
+        while (textNode) {
+          const len = textNode.textContent?.length ?? 0
+          if (charCount + len >= mergeOffset) {
+            range.setStart(textNode, mergeOffset - charCount)
+            range.collapse(true)
+            placed = true
+            break
+          }
+          charCount += len
+          textNode = walker.nextNode()
+        }
+        if (!placed) {
+          range.selectNodeContents(prevBlock)
+          range.collapse(false)
+        }
         sel.removeAllRanges()
         sel.addRange(range)
       } else {

@@ -415,7 +415,18 @@ export function RichTextEditor({
             const prev = node.previousSibling as HTMLElement | null
             if (prev?.nodeType === Node.ELEMENT_NODE && prev.getAttribute('contenteditable') === 'false') {
               e.preventDefault()
+              const anchor = prev.previousSibling
               prev.remove()
+              // Position cursor at the end of the preceding text node, or start of current
+              const range = document.createRange()
+              if (anchor?.nodeType === Node.TEXT_NODE) {
+                range.setStart(anchor, anchor.textContent?.length ?? 0)
+              } else {
+                range.setStart(node, 0)
+              }
+              range.collapse(true)
+              sel.removeAllRanges()
+              sel.addRange(range)
               emitChange()
               return
             }
@@ -425,7 +436,21 @@ export function RichTextEditor({
             const child = (node as HTMLElement).childNodes[offset - 1] as HTMLElement | undefined
             if (child?.nodeType === Node.ELEMENT_NODE && child.getAttribute('contenteditable') === 'false') {
               e.preventDefault()
+              const prevNode = child.previousSibling
+              const nextNode = child.nextSibling
               child.remove()
+              // Position cursor between adjacent nodes
+              const range = document.createRange()
+              if (prevNode?.nodeType === Node.TEXT_NODE) {
+                range.setStart(prevNode, prevNode.textContent?.length ?? 0)
+              } else if (nextNode?.nodeType === Node.TEXT_NODE) {
+                range.setStart(nextNode, 0)
+              } else {
+                range.setStart(node, offset - 1)
+              }
+              range.collapse(true)
+              sel.removeAllRanges()
+              sel.addRange(range)
               emitChange()
               return
             }
