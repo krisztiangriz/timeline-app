@@ -76,10 +76,14 @@ export const ConfigurableViz = memo(function ConfigurableViz({ blockId, pageId }
 
   const allFeedbacks = useLiveQuery(() => {
     const cutoff = range > 0 ? getCutoff(range) : undefined
+    if (relevantPageIds.length > 0) {
+      const q = db.feedbacks.where('subjectId').anyOf(relevantPageIds)
+      return cutoff ? q.filter(f => f.createdAt >= cutoff).toArray() : q.toArray()
+    }
     return cutoff
       ? db.feedbacks.where('createdAt').aboveOrEqual(cutoff).toArray()
       : db.feedbacks.toArray()
-  }, [range]) ?? []
+  }, [range, relevantPageIds.join(',')]) ?? []
   const [addOpen, setAddOpen] = useState(false)
   const [editing, setEditing] = useState<ChartConfig | undefined>()
 

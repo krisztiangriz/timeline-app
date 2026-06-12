@@ -157,8 +157,19 @@ function TableBlock({ page }: { page: Page }) {
   const { showArchived } = usePreferences()
   const navigate = useNavigate()
   const { toggleSort, sortPages, arrow } = useTableSort(`page-${page.id}-table`)
-  const filtered = showArchived ? children : children.filter((c) => !c.archived)
-  const sorted = sortPages(filtered)
+  const filtered = useMemo(
+    () => showArchived ? children : children.filter((c) => !c.archived),
+    [children, showArchived]
+  )
+  const sorted = useMemo(() => sortPages(filtered), [filtered, sortPages])
+
+  const handleRowNav = useCallback((e: React.MouseEvent<HTMLDivElement> | React.KeyboardEvent<HTMLDivElement>) => {
+    if ('key' in e && e.key !== 'Enter' && e.key !== ' ') return
+    if ('key' in e) e.preventDefault()
+    const id = Number((e.currentTarget as HTMLElement).dataset.pageId)
+    const child = children.find(c => c.id === id)
+    if (child) navigate(getPagePath(child, allPages))
+  }, [children, allPages, navigate])
 
   return (
     <div className={tableStyles.table} style={{ padding: 0 }}>
@@ -168,7 +179,7 @@ function TableBlock({ page }: { page: Page }) {
         <button className={tableStyles.thDate} onClick={() => toggleSort('updatedAt')}>Last updated <span className={tableStyles.sortArrow}>{arrow('updatedAt')}</span></button>
       </div>
       {sorted.map((child) => (
-        <div key={child.id} className={child.archived ? `${tableStyles.row} ${tableStyles.rowArchived}` : tableStyles.row} tabIndex={0} role="link" onClick={() => navigate(getPagePath(child, allPages))} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(getPagePath(child, allPages)) } }}>
+        <div key={child.id} data-page-id={child.id} className={child.archived ? `${tableStyles.row} ${tableStyles.rowArchived}` : tableStyles.row} tabIndex={0} role="link" onClick={handleRowNav} onKeyDown={handleRowNav}>
           <div className={tableStyles.nameCell}><span className={tableStyles.rowName}>{child.name}</span></div>
           <span className={tableStyles.dateCell}>{formatTableDate(child.createdAt)}</span>
           <span className={tableStyles.dateCell}>{formatTableDate(child.updatedAt)}</span>

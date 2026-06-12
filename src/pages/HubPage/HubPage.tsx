@@ -88,7 +88,7 @@ export function HubPage({ role }: HubPageProps) {
       <ConfirmModal
         open={deleteConfirm}
         title="Delete hub"
-        message={`Are you sure you want to delete "${hub.name}"? This will also delete ${allPages.filter(p => p.parentId === hub.id).length} child page${allPages.filter(p => p.parentId === hub.id).length === 1 ? '' : 's'}.`}
+        message={(() => { const count = allPages.filter(p => p.parentId === hub.id).length; return `Are you sure you want to delete "${hub.name}"? This will also delete ${count} child page${count === 1 ? '' : 's'}.` })()}
         onClose={() => setDeleteConfirm(false)}
         onConfirm={async () => {
           try {
