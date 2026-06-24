@@ -135,6 +135,94 @@ export function useCheckboxHandling(
   }, [autoCheckbox, editorRef, emitChange])
 
   /**
+   * Handles Enter key in a checkbox line: creates a new checkbox line or exits continuation.
+   * Returns true if the event was handled.
+   */
+  const handleCheckboxEnter = useCallback((): boolean => {
+    if (!autoCheckbox) return false
+    const el = editorRef.current
+    if (!el) return false
+
+    const sel = window.getSelection()
+    if (!sel || sel.rangeCount === 0) return false
+
+    let container: Node | null = sel.anchorNode
+    while (container && container !== el && container.parentNode !== el) {
+      container = container.parentNode
+    }
+
+    if (!container || container === el || container.nodeType !== Node.ELEMENT_NODE) return false
+    const currentDiv = container as HTMLElement
+    if (!currentDiv.querySelector('[data-checkbox]')) return false
+
+    const textContent = currentDiv.textContent?.replace(/​/g, '').replace(/ /g, '').trim() ?? ''
+    if (textContent === '') {
+      const emptyDiv = document.createElement('div')
+      emptyDiv.innerHTML = '<br>'
+      currentDiv.replaceWith(emptyDiv)
+      const range = document.createRange()
+      range.setStart(emptyDiv, 0)
+      range.collapse(true)
+      sel.removeAllRanges()
+      sel.addRange(range)
+      emitChange()
+      return true
+    }
+
+    const cursorRange = sel.getRangeAt(0)
+    const afterRange = document.createRange()
+    afterRange.setStart(cursorRange.startContainer, cursorRange.startOffset)
+    afterRange.setEndAfter(currentDiv.lastChild!)
+    const afterFragment = afterRange.extractContents()
+
+    const newDiv = document.createElement('div')
+    const newCheckbox = document.createElement('span')
+    newCheckbox.setAttribute('data-checkbox', 'false')
+    newCheckbox.textContent = '​'
+    newDiv.appendChild(newCheckbox)
+
+    const hasContent = afterFragment.textContent?.replace(/​/g, '').replace(/ /g, '').trim()
+    if (hasContent) {
+      newDiv.appendChild(afterFragment)
+    } else {
+      newDiv.appendChild(document.createTextNode(' '))
+    }
+
+    currentDiv.after(newDiv)
+
+    const currentCheckbox = currentDiv.querySelector('[data-checkbox]')
+    if (currentCheckbox) {
+      let hasText = false
+      let sibling = currentCheckbox.nextSibling
+      while (sibling) {
+        if (sibling.textContent?.replace(/​/g, '').replace(/ /g, '').trim()) {
+          hasText = true
+          break
+        }
+        sibling = sibling.nextSibling
+      }
+      if (!hasText) {
+        while (currentCheckbox.nextSibling) currentCheckbox.nextSibling.remove()
+        currentDiv.appendChild(document.createTextNode(' '))
+      }
+    }
+
+    const cursorTarget = newCheckbox.nextSibling
+    const newRange = document.createRange()
+    if (cursorTarget && cursorTarget.nodeType === Node.TEXT_NODE) {
+      newRange.setStart(cursorTarget, 0)
+    } else {
+      newRange.setStartAfter(newCheckbox)
+    }
+    newRange.collapse(true)
+    sel.removeAllRanges()
+    sel.addRange(newRange)
+
+    emitChange()
+    return true
+  }, [autoCheckbox, editorRef, emitChange])
+
+  /**
    * Detects `[]` pattern typed by user and converts to a checkbox span.
    */
   const detectCheckboxPattern = useCallback((sel: Selection): void => {
@@ -156,7 +244,7 @@ export function useCheckboxHandling(
         parent.replaceChild(textNode, node)
         parent.insertBefore(checkbox, textNode)
         const range = document.createRange()
-        range.setStart(checkbox.firstChild!, 1)
+        range.setStart(textNode, 0)
         range.collapse(true)
         sel.removeAllRanges()
         sel.addRange(range)
@@ -167,6 +255,7 @@ export function useCheckboxHandling(
   return {
     handleCheckboxClick,
     handleCheckboxBackspace,
+    handleCheckboxEnter,
     detectCheckboxPattern,
   }
 }

@@ -127,6 +127,7 @@ export function RichTextEditor({
   const {
     handleCheckboxClick,
     handleCheckboxBackspace,
+    handleCheckboxEnter,
     detectCheckboxPattern,
   } = useCheckboxHandling(editorRef, autoCheckbox, onCheckboxComplete, emitChange)
 
@@ -507,6 +508,13 @@ export function RichTextEditor({
       e.preventDefault()
       exec(e.shiftKey ? 'outdent' : 'indent')
       return
+    }
+
+    if (e.key === 'Enter' && !e.shiftKey && autoCheckbox) {
+      if (handleCheckboxEnter()) {
+        e.preventDefault()
+        return
+      }
     }
 
     if (e.key === 'Enter' && !e.shiftKey && onEnter) {
