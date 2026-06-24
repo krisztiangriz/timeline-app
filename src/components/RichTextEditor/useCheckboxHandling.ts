@@ -149,14 +149,14 @@ export function useCheckboxHandling(
       const remaining = (before + after).trimStart() || '\u00A0'
       const checkbox = document.createElement('span')
       checkbox.setAttribute('data-checkbox', 'false')
-      checkbox.textContent = ''
+      checkbox.textContent = '​'
       const parent = node.parentNode
       if (parent) {
         const textNode = document.createTextNode(remaining)
         parent.replaceChild(textNode, node)
         parent.insertBefore(checkbox, textNode)
         const range = document.createRange()
-        range.setStartAfter(checkbox)
+        range.setStart(checkbox.firstChild!, 1)
         range.collapse(true)
         sel.removeAllRanges()
         sel.addRange(range)

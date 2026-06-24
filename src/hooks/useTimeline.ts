@@ -125,7 +125,7 @@ export async function mergePendingEntries(pageId: number): Promise<number | unde
       const text = e.text.trim()
       // If the text already contains a data-checkbox span, keep as-is
       if (text.includes('data-checkbox')) return `<div>${text}</div>`
-      return `<div><span data-checkbox="false">\u00A0</span>${text}</div>`
+      return `<div><span data-checkbox="false">\u200B</span>${text}</div>`
     })
     const mergedHtml = lines.join('')
 

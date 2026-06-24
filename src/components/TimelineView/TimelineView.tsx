@@ -69,7 +69,7 @@ function ensureCheckboxes(html: string): string {
   if (html.includes('data-checkbox')) return html
 
   // Wrap plain text in a div with checkbox
-  return `<div><span data-checkbox="false">\u00A0</span>${html}</div>`
+  return `<div><span data-checkbox="false">\u200B</span>${html}</div>`
 }
 
 /** Split pending HTML into individual line strings (inner content of each top-level <div>) */
