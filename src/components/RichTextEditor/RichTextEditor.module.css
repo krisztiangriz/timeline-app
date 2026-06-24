@@ -308,7 +308,6 @@
 /* Inline mention span */
 .editor [data-mention] {
   color: inherit;
-  font-family: ui-monospace, 'SF Mono', Monaco, 'Cascadia Mono', monospace;
   font-weight: var(--font-weight-medium);
   cursor: pointer;
   text-decoration: underline;
