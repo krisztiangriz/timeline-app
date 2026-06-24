@@ -176,6 +176,7 @@
 .editor [data-checkbox] {
   display: inline-flex;
   align-items: center;
+  vertical-align: middle;
   cursor: pointer;
   height: var(--line-height-base);
   margin-right: 4px;
