@@ -38,18 +38,20 @@ export function FeedbackByTypeChart({ config, pages, hubProperties, feedbacks, c
   }
 
   return (
-    <ChartContainer className={cls}>
-      <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-        <BarChart data={data}>
-          <XAxis dataKey="name" tick={tickStyle} stroke={axisStroke} interval={0} />
-          <Tooltip {...TP} />
-          <Bar dataKey="value" name="Feedback">
-            {data.map((d, i) => <Cell key={i} fill={d.color} fillOpacity={opacity(d.name)} />)}
-          </Bar>
-        </BarChart>
-      </ResponsiveContainer>
+    <>
+      <ChartContainer className={cls}>
+        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+          <BarChart data={data}>
+            <XAxis dataKey="name" tick={tickStyle} stroke={axisStroke} interval={0} />
+            <Tooltip {...TP} />
+            <Bar dataKey="value" name="Feedback">
+              {data.map((d, i) => <Cell key={i} fill={d.color} fillOpacity={opacity(d.name)} />)}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </ChartContainer>
       {data.length > 1 && <InteractiveLegend items={data.map(d => ({ name: d.name, color: d.color }))} isActive={isActive} onToggle={toggle} />}
-    </ChartContainer>
+    </>
   )
 }
 
@@ -83,18 +85,20 @@ export function FeedbackByDimensionChart({ config, pages, hubProperties, feedbac
   }
 
   return (
-    <ChartContainer className={cls}>
-      <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-        <BarChart data={data}>
-          <XAxis dataKey="name" tick={tickStyle} stroke={axisStroke} interval={0} />
-          <Tooltip {...TP} />
-          <Bar dataKey="value" name="Feedback">
-            {data.map((d, i) => <Cell key={i} fill={d.color} fillOpacity={opacity(d.name)} />)}
-          </Bar>
-        </BarChart>
-      </ResponsiveContainer>
+    <>
+      <ChartContainer className={cls}>
+        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+          <BarChart data={data}>
+            <XAxis dataKey="name" tick={tickStyle} stroke={axisStroke} interval={0} />
+            <Tooltip {...TP} />
+            <Bar dataKey="value" name="Feedback">
+              {data.map((d, i) => <Cell key={i} fill={d.color} fillOpacity={opacity(d.name)} />)}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </ChartContainer>
       {data.length > 1 && <InteractiveLegend items={data.map(d => ({ name: d.name, color: d.color }))} isActive={isActive} onToggle={toggle} />}
-    </ChartContainer>
+    </>
   )
 }
 
@@ -160,27 +164,29 @@ export function FeedbackOverTimeChart({ config, monthCount = 12, pages, hubPrope
   const { chartType } = config
 
   return (
-    <ChartContainer className={cls}>
-      <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-        {(() => {
-          const ChartComp = chartType === 'line' ? LineChart : chartType === 'area' ? AreaChart : BarChart
-          return (
-            <ChartComp data={data}>
-              <XAxis dataKey="month" tick={tickStyle} stroke={axisStroke} interval="preserveStartEnd" />
-              <Tooltip {...TP} />
-              {chartType === 'line' ? (
-                keys.map((key) => <Line key={key} type="monotone" dataKey={key} stroke={colorMap.get(key) ?? FALLBACK_COLOR} strokeWidth={2} dot={false} strokeOpacity={opacity(key)} />)
-              ) : chartType === 'area' ? (
-                keys.map((key) => <Area key={key} type="monotone" dataKey={key} stackId="fb" fill={colorMap.get(key) ?? FALLBACK_COLOR} stroke={colorMap.get(key) ?? FALLBACK_COLOR} fillOpacity={opacity(key) * 0.6} strokeOpacity={opacity(key)} />)
-              ) : (
-                keys.map((key) => <Bar key={key} dataKey={key} stackId="fb" fill={colorMap.get(key) ?? FALLBACK_COLOR} fillOpacity={opacity(key)} />)
-              )}
-            </ChartComp>
-          )
-        })()}
-      </ResponsiveContainer>
+    <>
+      <ChartContainer className={cls}>
+        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+          {(() => {
+            const ChartComp = chartType === 'line' ? LineChart : chartType === 'area' ? AreaChart : BarChart
+            return (
+              <ChartComp data={data}>
+                <XAxis dataKey="month" tick={tickStyle} stroke={axisStroke} interval="preserveStartEnd" />
+                <Tooltip {...TP} />
+                {chartType === 'line' ? (
+                  keys.map((key) => <Line key={key} type="monotone" dataKey={key} stroke={colorMap.get(key) ?? FALLBACK_COLOR} strokeWidth={2} dot={false} strokeOpacity={opacity(key)} />)
+                ) : chartType === 'area' ? (
+                  keys.map((key) => <Area key={key} type="monotone" dataKey={key} stackId="fb" fill={colorMap.get(key) ?? FALLBACK_COLOR} stroke={colorMap.get(key) ?? FALLBACK_COLOR} fillOpacity={opacity(key) * 0.6} strokeOpacity={opacity(key)} />)
+                ) : (
+                  keys.map((key) => <Bar key={key} dataKey={key} stackId="fb" fill={colorMap.get(key) ?? FALLBACK_COLOR} fillOpacity={opacity(key)} />)
+                )}
+              </ChartComp>
+            )
+          })()}
+        </ResponsiveContainer>
+      </ChartContainer>
       {keys.length > 1 && <InteractiveLegend items={keys.map(key => ({ name: key, color: colorMap.get(key) ?? FALLBACK_COLOR }))} isActive={isActive} onToggle={toggle} />}
-    </ChartContainer>
+    </>
   )
 }
 
@@ -250,16 +256,18 @@ export function FeedbackPerPageChart({ config, pages, hubProperties, feedbacks, 
   }
 
   return (
-    <ChartContainer className={cls}>
-      <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-        <BarChart data={data}>
-          <XAxis dataKey="name" tick={tickStyle} stroke={axisStroke} interval={0} />
-          <Tooltip {...TP} />
-          {keys.map((key) => <Bar key={key} dataKey={key} stackId="fp" fill={colorMap.get(key) ?? FALLBACK_COLOR} fillOpacity={opacityFp(key)} />)}
-        </BarChart>
-      </ResponsiveContainer>
+    <>
+      <ChartContainer className={cls}>
+        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+          <BarChart data={data}>
+            <XAxis dataKey="name" tick={tickStyle} stroke={axisStroke} interval={0} />
+            <Tooltip {...TP} />
+            {keys.map((key) => <Bar key={key} dataKey={key} stackId="fp" fill={colorMap.get(key) ?? FALLBACK_COLOR} fillOpacity={opacityFp(key)} />)}
+          </BarChart>
+        </ResponsiveContainer>
+      </ChartContainer>
       {keys.length > 1 && <InteractiveLegend items={keys.map(key => ({ name: key, color: colorMap.get(key) ?? FALLBACK_COLOR }))} isActive={isActiveFp} onToggle={toggleFp} />}
-    </ChartContainer>
+    </>
   )
 }
 

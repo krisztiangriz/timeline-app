@@ -45,17 +45,19 @@ export function PropertyDistributionChart({ config, pages, hubProperties, proper
   }
 
   return (
-    <ChartContainer className={cls}>
-      <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-        <BarChart data={data}>
-          <XAxis dataKey="name" tick={tickStyle} stroke={axisStroke} interval={0} />
-          <Tooltip {...TP} />
-          <Bar dataKey="value" name="Count">
-            {data.map((s, i) => <Cell key={s.name || i} fill={s.color} fillOpacity={opacity(s.name)} />)}
-          </Bar>
-        </BarChart>
-      </ResponsiveContainer>
+    <>
+      <ChartContainer className={cls}>
+        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+          <BarChart data={data}>
+            <XAxis dataKey="name" tick={tickStyle} stroke={axisStroke} interval={0} />
+            <Tooltip {...TP} />
+            <Bar dataKey="value" name="Count">
+              {data.map((s, i) => <Cell key={s.name || i} fill={s.color} fillOpacity={opacity(s.name)} />)}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </ChartContainer>
       {data.length > 1 && <InteractiveLegend items={data.map(d => ({ name: d.name, color: d.color }))} isActive={isActive} onToggle={toggle} />}
-    </ChartContainer>
+    </>
   )
 }
