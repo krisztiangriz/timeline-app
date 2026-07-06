@@ -1,6 +1,6 @@
 import {
   BarChart, Bar, XAxis, Tooltip, ResponsiveContainer,
-  Legend, LineChart, Line, AreaChart, Area,
+  LineChart, Line, AreaChart, Area,
 } from 'recharts'
 import {
   useEntryCount,
@@ -8,9 +8,10 @@ import {
   usePageCount,
 } from '../../hooks/useChartData'
 import { getColor } from '../../constants/colors'
-import { getSeriesColor, FALLBACK_COLOR, TP, axisStroke, tickStyle, legendStyle } from './chartConstants'
+import { getSeriesColor, FALLBACK_COLOR, TP, axisStroke, tickStyle } from './chartConstants'
 import { useScopedEntries, useContainerClass, EMPTY_SCOPES } from './chartHooks'
-import { ChartContainer, DonutWithLabels } from './ChartContainer'
+import { ChartContainer, DonutWithLabels, InteractiveLegend } from './ChartContainer'
+import { useSeriesFilter } from './useSeriesFilter'
 import type { ChartRendererProps } from './ChartRenderer'
 
 export function EntryCountChart({ config, monthCount = 12, entries, pages, containerClass, palette }: ChartRendererProps) {
@@ -19,6 +20,8 @@ export function EntryCountChart({ config, monthCount = 12, entries, pages, conta
   const data = useEntryCount(scopedEntries, pages, scopes, monthCount)
   const cls = useContainerClass(config, containerClass)
   const { chartType } = config
+  const { toggle, opacity, isActive } = useSeriesFilter(data.keys)
+  const total = data.keys.length
 
   return (
     <ChartContainer className={cls}>
@@ -28,27 +31,28 @@ export function EntryCountChart({ config, monthCount = 12, entries, pages, conta
           colorFn={(i) => getColor(i, palette)}
           containerClass={cls}
           tooltipProps={TP}
+          isActive={total > 1 ? isActive : undefined}
+          onToggle={total > 1 ? toggle : undefined}
         />
       ) : (
       <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
         {(() => {
           const ChartComp = chartType === 'line' ? LineChart : chartType === 'area' ? AreaChart : BarChart
-          const total = data.keys.length
           return (
             <ChartComp data={data.data}>
               <XAxis dataKey="month" tick={tickStyle} stroke={axisStroke} interval="preserveStartEnd" />
               <Tooltip {...TP} />
-              {total > 1 && <Legend iconType="circle" iconSize={8} wrapperStyle={legendStyle} />}
               {data.keys.map((key, i) =>
-                chartType === 'line' ? <Line key={key} type="monotone" dataKey={key} stroke={getSeriesColor(i, total, palette)} strokeWidth={2} dot={false} />
-                : chartType === 'area' ? <Area key={key} type="monotone" dataKey={key} stackId="s" fill={getSeriesColor(i, total, palette)} stroke={getSeriesColor(i, total, palette)} fillOpacity={0.6} />
-                : <Bar key={key} dataKey={key} stackId="s" fill={getSeriesColor(i, total, palette)} />
+                chartType === 'line' ? <Line key={key} type="monotone" dataKey={key} stroke={getSeriesColor(i, total, palette)} strokeWidth={2} dot={false} strokeOpacity={opacity(key)} />
+                : chartType === 'area' ? <Area key={key} type="monotone" dataKey={key} stackId="s" fill={getSeriesColor(i, total, palette)} stroke={getSeriesColor(i, total, palette)} fillOpacity={opacity(key) * 0.6} strokeOpacity={opacity(key)} />
+                : <Bar key={key} dataKey={key} stackId="s" fill={getSeriesColor(i, total, palette)} fillOpacity={opacity(key)} />
               )}
             </ChartComp>
           )
         })()}
       </ResponsiveContainer>
       )}
+      {total > 1 && <InteractiveLegend items={data.keys.map((key, i) => ({ name: key, color: getSeriesColor(i, total, palette) }))} isActive={isActive} onToggle={toggle} />}
     </ChartContainer>
   )
 }
@@ -59,27 +63,28 @@ export function EntryByWeekdayChart({ config, monthCount = 12, entries, pages, c
   const data = useEntryByWeekday(scopedEntries, pages, scopes, monthCount)
   const cls = useContainerClass(config, containerClass)
   const { chartType } = config
+  const { toggle, opacity, isActive } = useSeriesFilter(data.keys)
+  const total = data.keys.length
 
   return (
     <ChartContainer className={cls}>
       <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
         {(() => {
           const ChartComp = chartType === 'area' ? AreaChart : BarChart
-          const total = data.keys.length
           return (
             <ChartComp data={data.data}>
               <XAxis dataKey="name" tick={tickStyle} stroke={axisStroke} interval={0} />
               <Tooltip {...TP} />
-              {total > 1 && <Legend iconType="circle" iconSize={8} wrapperStyle={legendStyle} />}
               {data.keys.map((key, i) =>
                 chartType === 'area'
-                  ? <Area key={key} type="monotone" dataKey={key} stackId="s" fill={getSeriesColor(i, total, palette)} stroke={getSeriesColor(i, total, palette)} fillOpacity={0.6} />
-                  : <Bar key={key} dataKey={key} stackId="s" fill={getSeriesColor(i, total, palette)} />
+                  ? <Area key={key} type="monotone" dataKey={key} stackId="s" fill={getSeriesColor(i, total, palette)} stroke={getSeriesColor(i, total, palette)} fillOpacity={opacity(key) * 0.6} strokeOpacity={opacity(key)} />
+                  : <Bar key={key} dataKey={key} stackId="s" fill={getSeriesColor(i, total, palette)} fillOpacity={opacity(key)} />
               )}
             </ChartComp>
           )
         })()}
       </ResponsiveContainer>
+      {total > 1 && <InteractiveLegend items={data.keys.map((key, i) => ({ name: key, color: getSeriesColor(i, total, palette) }))} isActive={isActive} onToggle={toggle} />}
     </ChartContainer>
   )
 }

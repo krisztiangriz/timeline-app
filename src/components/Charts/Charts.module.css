@@ -336,6 +336,13 @@
   gap: 4px;
   font-size: 10px;
   color: var(--color-text-body);
+  cursor: pointer;
+  user-select: none;
+  transition: opacity 0.15s;
+}
+
+.legendItemFaded {
+  opacity: 0.35;
 }
 
 .legendDot {
@@ -343,4 +350,10 @@
   height: 8px;
   border-radius: 50%;
   flex-shrink: 0;
+}
+
+.pieLabelClickable {
+  cursor: pointer;
+  user-select: none;
+  transition: opacity 0.15s;
 }

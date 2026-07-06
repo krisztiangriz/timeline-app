@@ -22,11 +22,19 @@ export function ChartContainer({ className, children }: { className: string; chi
   return <div ref={ref} className={className}>{mounted && children}</div>
 }
 
-export function cellLegend(items: { name: string; color: string }[]) {
-  return () => (
+export function InteractiveLegend({ items, isActive, onToggle }: {
+  items: { name: string; color: string }[]
+  isActive: (key: string) => boolean
+  onToggle: (key: string) => void
+}) {
+  return (
     <div className={styles.legendContainer}>
       {items.map((item) => (
-        <span key={item.name} className={styles.legendItem}>
+        <span
+          key={item.name}
+          className={`${styles.legendItem} ${!isActive(item.name) ? styles.legendItemFaded : ''}`}
+          onClick={() => onToggle(item.name)}
+        >
           <span className={styles.legendDot} style={{ background: item.color }} />
           {item.name}
         </span>
@@ -35,11 +43,13 @@ export function cellLegend(items: { name: string; color: string }[]) {
   )
 }
 
-export function DonutWithLabels({ data, colorFn, containerClass, tooltipProps }: {
+export function DonutWithLabels({ data, colorFn, containerClass, tooltipProps, isActive, onToggle }: {
   data: { name: string; value: number }[]
   colorFn: (i: number) => string
   containerClass: string
   tooltipProps?: Record<string, unknown>
+  isActive?: (key: string) => boolean
+  onToggle?: (key: string) => void
 }) {
   const total = data.reduce((s, d) => s + d.value, 0)
   return (
@@ -47,13 +57,17 @@ export function DonutWithLabels({ data, colorFn, containerClass, tooltipProps }:
       <div className={styles.pieLayout}>
         <PieChart width={200} height={200} className={styles.pieChartDonut}>
           <Pie data={data} dataKey="value" nameKey="name" innerRadius="55%" outerRadius="85%" isAnimationActive={false}>
-            {data.map((_: unknown, i: number) => <Cell key={i} fill={colorFn(i)} />)}
+            {data.map((_: unknown, i: number) => <Cell key={i} fill={colorFn(i)} fillOpacity={isActive && !isActive(data[i].name) ? 0.25 : 1} />)}
           </Pie>
           <Tooltip {...(tooltipProps ?? TP)} />
         </PieChart>
         <div className={styles.pieLabels}>
           {data.map((item, i) => (
-            <span key={item.name} className={styles.pieLabelItem}>
+            <span
+              key={item.name}
+              className={`${styles.pieLabelItem} ${onToggle ? styles.pieLabelClickable : ''} ${isActive && !isActive(item.name) ? styles.legendItemFaded : ''}`}
+              onClick={onToggle ? () => onToggle(item.name) : undefined}
+            >
               <span className={styles.pieLabelDot} style={{ background: colorFn(i) }} />
               {item.name} {total > 0 ? Math.round(item.value / total * 100) : 0}%
             </span>

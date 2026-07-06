@@ -31,7 +31,7 @@ export const TP = {
 }
 export const axisStroke = 'var(--color-border)'
 export const tickStyle = { fontSize: 10, fill: 'var(--color-text-body)' }
-export const legendStyle: React.CSSProperties = { fontSize: 10, color: 'var(--color-text-body)', paddingTop: 4 }
+
 
 // ---- Exports for AddChartModal ----
 

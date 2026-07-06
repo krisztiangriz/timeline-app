@@ -1,13 +1,14 @@
 import { useMemo } from 'react'
 import {
   BarChart, Bar, XAxis, Tooltip, ResponsiveContainer,
-  Cell, Legend, LineChart, Line, AreaChart, Area,
+  Cell, LineChart, Line, AreaChart, Area,
 } from 'recharts'
 import { getColor } from '../../constants/colors'
 import { EmptyState } from '../EmptyState/EmptyState'
-import { FALLBACK_COLOR, TP, axisStroke, tickStyle, legendStyle } from './chartConstants'
+import { FALLBACK_COLOR, TP, axisStroke, tickStyle } from './chartConstants'
 import { useScopedFeedbacks, useHubFromScopes, useContainerClass, EMPTY_SCOPES } from './chartHooks'
-import { ChartContainer, DonutWithLabels } from './ChartContainer'
+import { ChartContainer, DonutWithLabels, InteractiveLegend } from './ChartContainer'
+import { useSeriesFilter } from './useSeriesFilter'
 import type { ChartRendererProps } from './ChartRenderer'
 
 // ---- Feedback by type (1st property) ----
@@ -28,10 +29,12 @@ export function FeedbackByTypeChart({ config, pages, hubProperties, feedbacks, c
       .filter((d) => d.value > 0)
   }, [scopedFeedbacks, typeProp])
 
+  const { toggle, opacity, isActive } = useSeriesFilter(data.map(d => d.name))
+
   if (data.length === 0) return <ChartContainer className={cls}><EmptyState compact message="No feedback data" /></ChartContainer>
 
   if (config.chartType === 'pie') {
-    return <DonutWithLabels data={data} colorFn={(i) => data[i]?.color ?? '#7B8FA6'} containerClass={cls} tooltipProps={TP} />
+    return <DonutWithLabels data={data} colorFn={(i) => data[i]?.color ?? '#7B8FA6'} containerClass={cls} tooltipProps={TP} isActive={data.length > 1 ? isActive : undefined} onToggle={data.length > 1 ? toggle : undefined} />
   }
 
   return (
@@ -41,10 +44,11 @@ export function FeedbackByTypeChart({ config, pages, hubProperties, feedbacks, c
           <XAxis dataKey="name" tick={tickStyle} stroke={axisStroke} interval={0} />
           <Tooltip {...TP} />
           <Bar dataKey="value" name="Feedback">
-            {data.map((d, i) => <Cell key={i} fill={d.color} />)}
+            {data.map((d, i) => <Cell key={i} fill={d.color} fillOpacity={opacity(d.name)} />)}
           </Bar>
         </BarChart>
       </ResponsiveContainer>
+      {data.length > 1 && <InteractiveLegend items={data.map(d => ({ name: d.name, color: d.color }))} isActive={isActive} onToggle={toggle} />}
     </ChartContainer>
   )
 }
@@ -70,10 +74,12 @@ export function FeedbackByDimensionChart({ config, pages, hubProperties, feedbac
       .filter((d) => d.value > 0)
   }, [scopedFeedbacks, dimProp])
 
+  const { toggle, opacity, isActive } = useSeriesFilter(data.map(d => d.name))
+
   if (data.length === 0) return <ChartContainer className={cls}><EmptyState compact message="No feedback data" /></ChartContainer>
 
   if (config.chartType === 'pie') {
-    return <DonutWithLabels data={data} colorFn={(i) => data[i]?.color ?? '#7B8FA6'} containerClass={cls} tooltipProps={TP} />
+    return <DonutWithLabels data={data} colorFn={(i) => data[i]?.color ?? '#7B8FA6'} containerClass={cls} tooltipProps={TP} isActive={data.length > 1 ? isActive : undefined} onToggle={data.length > 1 ? toggle : undefined} />
   }
 
   return (
@@ -83,10 +89,11 @@ export function FeedbackByDimensionChart({ config, pages, hubProperties, feedbac
           <XAxis dataKey="name" tick={tickStyle} stroke={axisStroke} interval={0} />
           <Tooltip {...TP} />
           <Bar dataKey="value" name="Feedback">
-            {data.map((d, i) => <Cell key={i} fill={d.color} />)}
+            {data.map((d, i) => <Cell key={i} fill={d.color} fillOpacity={opacity(d.name)} />)}
           </Bar>
         </BarChart>
       </ResponsiveContainer>
+      {data.length > 1 && <InteractiveLegend items={data.map(d => ({ name: d.name, color: d.color }))} isActive={isActive} onToggle={toggle} />}
     </ChartContainer>
   )
 }
@@ -146,6 +153,8 @@ export function FeedbackOverTimeChart({ config, monthCount = 12, pages, hubPrope
     return { data, keys, colorMap }
   }, [scopedFeedbacks, typeProp, monthCount, palette])
 
+  const { toggle, opacity, isActive } = useSeriesFilter(keys)
+
   if (keys.length === 0) return <ChartContainer className={cls}><EmptyState compact message="No feedback properties configured" /></ChartContainer>
 
   const { chartType } = config
@@ -159,18 +168,18 @@ export function FeedbackOverTimeChart({ config, monthCount = 12, pages, hubPrope
             <ChartComp data={data}>
               <XAxis dataKey="month" tick={tickStyle} stroke={axisStroke} interval="preserveStartEnd" />
               <Tooltip {...TP} />
-              {keys.length > 1 && <Legend iconType="circle" iconSize={8} wrapperStyle={legendStyle} />}
               {chartType === 'line' ? (
-                keys.map((key) => <Line key={key} type="monotone" dataKey={key} stroke={colorMap.get(key) ?? FALLBACK_COLOR} strokeWidth={2} dot={false} />)
+                keys.map((key) => <Line key={key} type="monotone" dataKey={key} stroke={colorMap.get(key) ?? FALLBACK_COLOR} strokeWidth={2} dot={false} strokeOpacity={opacity(key)} />)
               ) : chartType === 'area' ? (
-                keys.map((key) => <Area key={key} type="monotone" dataKey={key} stackId="fb" fill={colorMap.get(key) ?? FALLBACK_COLOR} stroke={colorMap.get(key) ?? FALLBACK_COLOR} fillOpacity={0.6} />)
+                keys.map((key) => <Area key={key} type="monotone" dataKey={key} stackId="fb" fill={colorMap.get(key) ?? FALLBACK_COLOR} stroke={colorMap.get(key) ?? FALLBACK_COLOR} fillOpacity={opacity(key) * 0.6} strokeOpacity={opacity(key)} />)
               ) : (
-                keys.map((key) => <Bar key={key} dataKey={key} stackId="fb" fill={colorMap.get(key) ?? FALLBACK_COLOR} />)
+                keys.map((key) => <Bar key={key} dataKey={key} stackId="fb" fill={colorMap.get(key) ?? FALLBACK_COLOR} fillOpacity={opacity(key)} />)
               )}
             </ChartComp>
           )
         })()}
       </ResponsiveContainer>
+      {keys.length > 1 && <InteractiveLegend items={keys.map(key => ({ name: key, color: colorMap.get(key) ?? FALLBACK_COLOR }))} isActive={isActive} onToggle={toggle} />}
     </ChartContainer>
   )
 }
@@ -228,6 +237,8 @@ export function FeedbackPerPageChart({ config, pages, hubProperties, feedbacks, 
     return { data, keys, colorMap }
   }, [scopedFeedbacks, pages, typeProp, palette])
 
+  const { toggle: toggleFp, opacity: opacityFp, isActive: isActiveFp } = useSeriesFilter(keys)
+
   if (data.length === 0) return <ChartContainer className={cls}><EmptyState compact message="No feedback data" /></ChartContainer>
 
   if (config.chartType === 'pie') {
@@ -244,10 +255,10 @@ export function FeedbackPerPageChart({ config, pages, hubProperties, feedbacks, 
         <BarChart data={data}>
           <XAxis dataKey="name" tick={tickStyle} stroke={axisStroke} interval={0} />
           <Tooltip {...TP} />
-          {keys.length > 1 && <Legend iconType="circle" iconSize={8} wrapperStyle={legendStyle} />}
-          {keys.map((key) => <Bar key={key} dataKey={key} stackId="fp" fill={colorMap.get(key) ?? FALLBACK_COLOR} />)}
+          {keys.map((key) => <Bar key={key} dataKey={key} stackId="fp" fill={colorMap.get(key) ?? FALLBACK_COLOR} fillOpacity={opacityFp(key)} />)}
         </BarChart>
       </ResponsiveContainer>
+      {keys.length > 1 && <InteractiveLegend items={keys.map(key => ({ name: key, color: colorMap.get(key) ?? FALLBACK_COLOR }))} isActive={isActiveFp} onToggle={toggleFp} />}
     </ChartContainer>
   )
 }

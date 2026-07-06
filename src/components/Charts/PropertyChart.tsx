@@ -1,13 +1,14 @@
 import {
   BarChart, Bar, XAxis, Tooltip, ResponsiveContainer,
-  Cell, Legend,
+  Cell,
 } from 'recharts'
 import { usePagesByProperty } from '../../hooks/useChartData'
 import { getColor } from '../../constants/colors'
 import { EmptyState } from '../EmptyState/EmptyState'
 import { TP, axisStroke, tickStyle } from './chartConstants'
 import { useContainerClass } from './chartHooks'
-import { ChartContainer, DonutWithLabels, cellLegend } from './ChartContainer'
+import { ChartContainer, DonutWithLabels, InteractiveLegend } from './ChartContainer'
+import { useSeriesFilter } from './useSeriesFilter'
 import type { ChartRendererProps } from './ChartRenderer'
 
 export function PropertyDistributionChart({ config, pages, hubProperties, propertyValues, containerClass, palette }: ChartRendererProps) {
@@ -20,6 +21,7 @@ export function PropertyDistributionChart({ config, pages, hubProperties, proper
   const data = usePagesByProperty(pages, statusProperty, propertyValues)
   const cls = useContainerClass(config, containerClass)
   const { chartType } = config
+  const { toggle, opacity, isActive } = useSeriesFilter(data.map(d => d.name))
 
   if (!statusProperty) {
     return (
@@ -36,6 +38,8 @@ export function PropertyDistributionChart({ config, pages, hubProperties, proper
         colorFn={(i) => data[i]?.color ?? getColor(i, palette)}
         containerClass={cls}
         tooltipProps={TP}
+        isActive={data.length > 1 ? isActive : undefined}
+        onToggle={data.length > 1 ? toggle : undefined}
       />
     )
   }
@@ -46,12 +50,12 @@ export function PropertyDistributionChart({ config, pages, hubProperties, proper
         <BarChart data={data}>
           <XAxis dataKey="name" tick={tickStyle} stroke={axisStroke} interval={0} />
           <Tooltip {...TP} />
-          {data.length > 1 && <Legend content={cellLegend(data.map((s) => ({ name: s.name, color: s.color })))} />}
           <Bar dataKey="value" name="Count">
-            {data.map((s, i) => <Cell key={s.name || i} fill={s.color} />)}
+            {data.map((s, i) => <Cell key={s.name || i} fill={s.color} fillOpacity={opacity(s.name)} />)}
           </Bar>
         </BarChart>
       </ResponsiveContainer>
+      {data.length > 1 && <InteractiveLegend items={data.map(d => ({ name: d.name, color: d.color }))} isActive={isActive} onToggle={toggle} />}
     </ChartContainer>
   )
 }
