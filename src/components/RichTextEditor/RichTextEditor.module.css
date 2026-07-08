@@ -192,6 +192,8 @@
   background: var(--color-input-bg);
   flex-shrink: 0;
   cursor: pointer;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
 }
 
 .editor [data-checkbox="true"]::before {

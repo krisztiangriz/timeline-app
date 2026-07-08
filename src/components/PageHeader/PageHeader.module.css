@@ -78,4 +78,6 @@
   height: 12px;
   background: var(--color-text-placeholder);
   flex-shrink: 0;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
 }
