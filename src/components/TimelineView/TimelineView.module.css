@@ -134,6 +134,7 @@
   font-size: var(--font-size-base);
   line-height: var(--line-height-base);
   color: var(--color-text-placeholder);
+  font-style: italic;
 }
 
 /* ---- Section label (for embedded timelines) ---- */
