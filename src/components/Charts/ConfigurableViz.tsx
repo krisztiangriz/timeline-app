@@ -110,7 +110,6 @@ export const ConfigurableViz = memo(function ConfigurableViz({ blockId, pageId }
     try { await deleteChartConfig(id) } catch { showToast('Failed to delete chart') }
   }
 
-  const rows = buildRows(configs)
 
   return (
     <div className={styles.vizPage}>
@@ -128,25 +127,11 @@ export const ConfigurableViz = memo(function ConfigurableViz({ blockId, pageId }
       {configs.length === 0 ? (
         <EmptyState message="Add a chart to visualize your data" />
       ) : (
-        rows.map((row) => {
-          if (row.type === 'pair') {
-            return (
-              <div key={`pair-${row.time!.id}`} className={styles.chartPair}>
-                <div className={styles.chartPairLeft}>
-                  <ChartCard config={row.time!} monthCount={range} entries={allEntries} pages={allPages} hubProperties={allHubProperties} feedbacks={allFeedbacks} propertyValues={allPropertyValues} onEdit={setEditing} onDelete={handleDelete} palette={palette} />
-                </div>
-                <div className={styles.chartPairRight}>
-                  <ChartCard config={row.pie!} monthCount={range} entries={allEntries} pages={allPages} hubProperties={allHubProperties} feedbacks={allFeedbacks} propertyValues={allPropertyValues} onEdit={setEditing} onDelete={handleDelete} isPie palette={palette} />
-                </div>
-              </div>
-            )
-          }
-          return (
-            <div key={`single-${row.config!.id}`} className={styles.chartSection}>
-              <ChartCard config={row.config!} monthCount={range} entries={allEntries} pages={allPages} hubProperties={allHubProperties} feedbacks={allFeedbacks} propertyValues={allPropertyValues} onEdit={setEditing} onDelete={handleDelete} palette={palette} />
-            </div>
-          )
-        })
+        configs.map((config) => (
+          <div key={config.id} className={styles.chartSection}>
+            <ChartCard config={config} monthCount={range} entries={allEntries} pages={allPages} hubProperties={allHubProperties} feedbacks={allFeedbacks} propertyValues={allPropertyValues} onEdit={setEditing} onDelete={handleDelete} isPie={config.chartType === 'pie'} palette={palette} />
+          </div>
+        ))
       )}
 
       <OnboardingGuide guideId="visualization-charts" anchorRef={addBtnRef} position="bottom-right" />
@@ -220,36 +205,3 @@ const ChartCard = memo(function ChartCard({
   )
 })
 
-type ChartRow =
-  | { type: 'pair'; time: ChartConfig; pie: ChartConfig }
-  | { type: 'single'; config: ChartConfig }
-
-function buildRows(configs: ChartConfig[]): ChartRow[] {
-  const rows: ChartRow[] = []
-  const used = new Set<number>()
-
-  const timeSources = new Set(['entry-count', 'feedback-over-time'])
-
-  for (const c of configs) {
-    if (used.has(c.id!)) continue
-    if (c.chartType !== 'pie' && timeSources.has(c.dataSource)) {
-      const pie = configs.find((p) =>
-        p.id !== c.id && !used.has(p.id!) && p.chartType === 'pie' && p.dataSource === c.dataSource
-      )
-      if (pie) {
-        rows.push({ type: 'pair', time: c, pie })
-        used.add(c.id!)
-        used.add(pie.id!)
-        continue
-      }
-    }
-  }
-
-  for (const c of configs) {
-    if (!used.has(c.id!)) {
-      rows.push({ type: 'single', config: c })
-    }
-  }
-
-  return rows
-}
