@@ -57,9 +57,9 @@ function isScopeSelected(scopes: ChartScope[], scope: ChartScope): boolean {
 interface AddChartModalProps {
   open: boolean
   onClose: () => void
-  onAdd: (name: string, dataSource: ChartDataSource, chartType: ChartType, scopes?: ChartScope[], propertyId?: number) => void
+  onAdd: (name: string, dataSource: ChartDataSource, chartType: ChartType, scopes?: ChartScope[], propertyId?: number, aggregateByHub?: boolean) => void
   editing?: ChartConfig
-  onUpdate?: (id: number, name: string, dataSource: ChartDataSource, chartType: ChartType, scopes?: ChartScope[], propertyId?: number) => void
+  onUpdate?: (id: number, name: string, dataSource: ChartDataSource, chartType: ChartType, scopes?: ChartScope[], propertyId?: number, aggregateByHub?: boolean) => void
   pageId: number
   allPages: Page[]
 }
@@ -70,6 +70,7 @@ export function AddChartModal({ open, onClose, onAdd, editing, onUpdate, pageId,
   const [source, setSource] = useState<ChartDataSource>(editing?.dataSource ?? 'entry-count')
   const [type, setType] = useState<ChartType>(editing?.chartType ?? 'bar')
   const [propertyId, setPropertyId] = useState<number | undefined>(editing?.propertyId)
+  const [aggregateByHub, setAggregateByHub] = useState(editing?.aggregateByHub ?? false)
   const [scopeOpen, setScopeOpen] = useState(false)
   const [sourceOpen, setSourceOpen] = useState(false)
   const prevOpen = useRef(false)
@@ -153,6 +154,7 @@ export function AddChartModal({ open, onClose, onAdd, editing, onUpdate, pageId,
         setSource(editing.dataSource)
         setType(editing.chartType)
         setPropertyId(editing.propertyId)
+        setAggregateByHub(editing.aggregateByHub ?? false)
         userEditedName.current = true
       } else {
         setName(DATA_SOURCE_LABELS['entry-count'] ?? '')
@@ -164,6 +166,7 @@ export function AddChartModal({ open, onClose, onAdd, editing, onUpdate, pageId,
         setSource('entry-count')
         setType('bar')
         setPropertyId(undefined)
+        setAggregateByHub(false)
         userEditedName.current = false
       }
     }
@@ -178,10 +181,11 @@ export function AddChartModal({ open, onClose, onAdd, editing, onUpdate, pageId,
     const chartName = name.trim() || (DATA_SOURCE_LABELS[source] ?? 'Chart')
     const scopesValue = scopes.length > 0 ? scopes : undefined
     const propId = source === 'property-distribution' ? propertyId : undefined
+    const hubAgg = effectiveType === 'pie' && aggregateByHub ? true : undefined
     if (editing && onUpdate) {
-      onUpdate(editing.id!, chartName, source, effectiveType, scopesValue, propId)
+      onUpdate(editing.id!, chartName, source, effectiveType, scopesValue, propId, hubAgg)
     } else {
-      onAdd(chartName, source, effectiveType, scopesValue, propId)
+      onAdd(chartName, source, effectiveType, scopesValue, propId, hubAgg)
     }
     onClose()
   }
@@ -322,6 +326,15 @@ export function AddChartModal({ open, onClose, onAdd, editing, onUpdate, pageId,
             ))}
           </div>
         </div>
+
+        {effectiveType === 'pie' && scopes.some((s) => s.type === 'hub') && (
+          <div className={styles.formSection}>
+            <button className={styles.scopeOption} onClick={() => setAggregateByHub(!aggregateByHub)} type="button" role="checkbox" aria-checked={aggregateByHub} tabIndex={0}>
+              <div className={styles.scopeCheckbox} data-checked={aggregateByHub} />
+              Aggregate by hub
+            </button>
+          </div>
+        )}
       </div>
     </Modal>
   )

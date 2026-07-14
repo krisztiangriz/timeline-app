@@ -118,6 +118,7 @@ export interface ChartConfig {
   chartType: ChartType
   scopes?: ChartScope[]       // multi-select scopes (empty = all data)
   propertyId?: number         // for 'property-distribution' source
+  aggregateByHub?: boolean
   order: number
 }
 

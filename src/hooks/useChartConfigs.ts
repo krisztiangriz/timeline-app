@@ -16,10 +16,11 @@ export async function addChartConfig(
   chartType: ChartType,
   scopes?: ChartScope[],
   propertyId?: number,
+  aggregateByHub?: boolean,
 ) {
   const existing = await db.chartConfigs.where('blockId').equals(blockId).toArray()
   const order = existing.length
-  return db.chartConfigs.add({ blockId, name, dataSource, chartType, scopes, propertyId, order })
+  return db.chartConfigs.add({ blockId, name, dataSource, chartType, scopes, propertyId, aggregateByHub, order })
 }
 
 export async function updateChartConfig(id: number, data: Partial<ChartConfig>) {
