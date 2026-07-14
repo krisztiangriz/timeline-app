@@ -107,6 +107,7 @@ export function useEntryCount(
   pages: Page[],
   scopes: ChartScope[],
   monthCount = 12,
+  aggregateByHub?: boolean,
 ) {
   return useMemo(() => {
     const months = buildMonthKeys(monthCount, entries)
@@ -128,14 +129,30 @@ export function useEntryCount(
       const childById = new Map(children.map((c) => [c.id!, c]))
       const monthToIdx = new Map(months.map((m, i) => [m, i]))
 
+      // Determine bucket keys: hub names when aggregating, child names otherwise
+      const hubById = new Map(hubIds.map((id) => [id, pages.find((p) => p.id === id)!]))
+      const bucketKeys = aggregateByHub
+        ? hubIds.map((id) => hubById.get(id)!.name)
+        : children.map((c) => c.name)
+
       const data = months.map((m) => {
         const row: Record<string, string | number> = { month: formatMonthLabel(m) }
-        for (const c of children) row[c.name] = 0
+        for (const k of bucketKeys) row[k] = 0
         return row
       })
 
-      // Accumulate summary totals in the same pass
-      const summaryTotals = new Map<number, number>(children.map((c) => [c.id!, 0]))
+      // Accumulate summary totals
+      const summaryTotals = new Map<string, number>(bucketKeys.map((k) => [k, 0]))
+
+      function getBucket(childId: number): string | undefined {
+        const child = childById.get(childId)
+        if (!child) return undefined
+        if (aggregateByHub) {
+          const hub = hubById.get(child.parentId!)
+          return hub?.name
+        }
+        return child.name
+      }
 
       for (const e of entries) {
         if (e.isPending) continue
@@ -144,12 +161,12 @@ export function useEntryCount(
         if (idx === undefined) continue
         const counted = new Set<number>()
         if (childIdSet.has(e.pageId)) {
-          const child = childById.get(e.pageId)
-          if (child) {
+          const bucket = getBucket(e.pageId)
+          if (bucket) {
             const blocks = countHtmlBlocks(e.text)
-            data[idx][child.name] = (Number(data[idx][child.name]) || 0) + blocks
-            summaryTotals.set(child.id!, summaryTotals.get(child.id!)! + blocks)
-            counted.add(child.id!)
+            data[idx][bucket] = (Number(data[idx][bucket]) || 0) + blocks
+            summaryTotals.set(bucket, (summaryTotals.get(bucket) ?? 0) + blocks)
+            counted.add(e.pageId)
           }
         }
         if (e.tagRefs) {
@@ -157,11 +174,11 @@ export function useEntryCount(
             const refId = Number(ref)
             if (counted.has(refId)) continue
             if (childIdSet.has(refId)) {
-              const child = childById.get(refId)
-              if (child) {
+              const bucket = getBucket(refId)
+              if (bucket) {
                 const blocks = countMentionBlocks(e.text, refId)
-                data[idx][child.name] = (Number(data[idx][child.name]) || 0) + blocks
-                summaryTotals.set(child.id!, summaryTotals.get(child.id!)! + blocks)
+                data[idx][bucket] = (Number(data[idx][bucket]) || 0) + blocks
+                summaryTotals.set(bucket, (summaryTotals.get(bucket) ?? 0) + blocks)
                 counted.add(refId)
               }
             }
@@ -169,9 +186,9 @@ export function useEntryCount(
         }
       }
 
-      const keys = children.map((c) => c.name).filter((k) => data.some((d) => Number(d[k]) > 0))
-      const summary = children
-        .map((c) => ({ name: c.name, value: summaryTotals.get(c.id!) ?? 0 }))
+      const keys = bucketKeys.filter((k) => data.some((d) => Number(d[k]) > 0))
+      const summary = bucketKeys
+        .map((k) => ({ name: k, value: summaryTotals.get(k) ?? 0 }))
         .filter((s) => s.value > 0)
 
       return { data, keys, summary }
@@ -206,7 +223,7 @@ export function useEntryCount(
     const summary = total > 0 ? [{ name: 'Entries', value: total }] : []
 
     return { data, keys, summary }
-  }, [entries, pages, scopes, monthCount])
+  }, [entries, pages, scopes, monthCount, aggregateByHub])
 }
 
 // ---- Aggregation: entry count by weekday ----

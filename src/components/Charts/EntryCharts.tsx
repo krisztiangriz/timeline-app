@@ -17,7 +17,7 @@ import type { ChartRendererProps } from './ChartRenderer'
 export function EntryCountChart({ config, monthCount = 12, entries, pages, containerClass, palette }: ChartRendererProps) {
   const scopes = config.scopes ?? EMPTY_SCOPES
   const scopedEntries = useScopedEntries(entries, pages, scopes)
-  const data = useEntryCount(scopedEntries, pages, scopes, monthCount)
+  const data = useEntryCount(scopedEntries, pages, scopes, monthCount, config.aggregateByHub)
   const cls = useContainerClass(config, containerClass)
   const { chartType } = config
   const { toggle, opacity, isActive } = useSeriesFilter(data.keys)
