@@ -21,31 +21,16 @@ interface FeedbackModalProps {
 
 export function FeedbackModal({ open, onClose, onSuccess }: FeedbackModalProps) {
   const { allPages } = useAutocomplete()
-  const allHubProperties = useLiveQuery(() => db.hubProperties.toArray(), []) ?? []
-
-  // Hub IDs that have at least one feedback-scoped property
-  const hubsWithFeedback = useMemo(() => {
-    return new Set(allHubProperties.filter((p) => p.scope === 'feedback').map((p) => p.hubId))
-  }, [allHubProperties])
-
-  const hubsKey = useMemo(() => [...hubsWithFeedback].sort().join(','), [hubsWithFeedback])
-
-  // Page IDs that have a feedback block — query by type index on pageId scoped to known hubs
+  // Page IDs that have a feedback block
   const feedbackPageIds = useLiveQuery(async () => {
-    // Get child pages of hubs with feedback config, then check their blocks
-    const hubIds = [...hubsWithFeedback]
-    if (hubIds.length === 0) return new Set<number>()
-    const childPages = await db.pages.where('parentId').anyOf(hubIds).toArray()
-    const childPageIds = childPages.map((p) => p.id!)
-    if (childPageIds.length === 0) return new Set<number>()
-    const blocks = await db.blocks.where('pageId').anyOf(childPageIds).filter((b) => b.type === 'feedback').toArray()
+    const blocks = await db.blocks.filter((b) => b.type === 'feedback').toArray()
     return new Set(blocks.map((b) => b.pageId))
-  }, [hubsKey]) ?? new Set<number>()
+  }, []) ?? new Set<number>()
 
-  // Pages searchable for feedback (under hubs with feedback config AND have a feedback block)
+  // Any page with a feedback block is a valid subject
   const searchablePages = useMemo(() => {
-    return allPages.filter((p) => p.parentId && hubsWithFeedback.has(p.parentId) && feedbackPageIds.has(p.id!))
-  }, [allPages, hubsWithFeedback, feedbackPageIds])
+    return allPages.filter((p) => feedbackPageIds.has(p.id!))
+  }, [allPages, feedbackPageIds])
 
   const [subjectQuery, setSubjectQuery] = useState('')
   const [selectedSubjects, setSelectedSubjects] = useState<Page[]>([])
