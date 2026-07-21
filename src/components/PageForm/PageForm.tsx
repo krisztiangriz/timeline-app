@@ -195,7 +195,7 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
 
   function confirmTab() {
     // Guard against duplicate non-text types
-    if (newTabType !== 'text' && newTabType !== 'timeline' && usedTypes.has(newTabType)) return
+    if (newTabType !== 'text' && usedTypes.has(newTabType)) return
     const name = newTabName.trim() || (BLOCK_TYPE_LABELS[newTabType] ?? newTabType)
     setTabs((t) => [...t, { name, type: newTabType, key: tabKeyCounter.current++ }])
     setNewTabName('')
@@ -449,7 +449,7 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
             <DropdownPortal anchorRef={blockTypeAnchorRef} open={blockTypeSelectOpen} onClose={() => setBlockTypeSelectOpen(false)} autoFocus>
                 <div className={styles.hubSelectMenu} role="listbox">
                   {(['timeline', 'visualization', 'text'] as BlockType[]).map((type) => {
-                    const disabled = type !== 'text' && type !== 'timeline' && usedTypes.has(type)
+                    const disabled = type !== 'text' && usedTypes.has(type)
                     return (
                       <button
                         key={type}
