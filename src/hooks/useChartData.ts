@@ -197,10 +197,8 @@ function aggregateRegexByMonth(
             if (childIdSet.has(refId)) {
               const bucket = childToName.get(refId)
               if (bucket) {
-                let count = 0
-                for (const { pattern } of regexes) count += countRegexMentionMatches(e.text, refId, new RegExp(pattern, 'g'))
-                data[idx][bucket] = (Number(data[idx][bucket]) || 0) + count
-                summaryTotals.set(bucket, (summaryTotals.get(bucket) ?? 0) + count)
+                data[idx][bucket] = (Number(data[idx][bucket]) || 0) + 1
+                summaryTotals.set(bucket, (summaryTotals.get(bucket) ?? 0) + 1)
                 counted.add(refId)
               }
             }
@@ -395,9 +393,7 @@ function aggregateRegexByWeekday(
             if (childIdSet.has(refId)) {
               const bucket = childToName.get(refId)
               if (bucket) {
-                let count = 0
-                for (const { pattern } of regexes) count += countRegexMentionMatches(e.text, refId, new RegExp(pattern, 'g'))
-                data[idx][bucket] = (Number(data[idx][bucket]) || 0) + count
+                data[idx][bucket] = (Number(data[idx][bucket]) || 0) + 1
                 counted.add(refId)
               }
             }
