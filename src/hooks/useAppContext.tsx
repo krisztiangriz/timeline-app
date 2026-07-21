@@ -23,8 +23,6 @@ export interface PendingMentionInsert {
 // ---- Modal context (open/close states for all modals) ----
 
 interface ModalContextValue {
-  feedbackOpen: boolean
-  setFeedbackOpen: (v: boolean) => void
   searchOpen: boolean
   setSearchOpen: (v: boolean) => void
   addPageOpen: boolean
@@ -85,7 +83,6 @@ function isInsideRichEditor(): boolean {
 }
 
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [feedbackOpen, setFeedbackOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const [addPageOpen, setAddPageOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
@@ -101,12 +98,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    // Ctrl+Shift+F → open feedback modal
-    if (e.ctrlKey && e.shiftKey && (e.key === 'f' || e.key === 'F')) {
-      e.preventDefault()
-      setFeedbackOpen(true)
-    }
-
     // Ctrl+Shift+K → open search (when not inside a rich editor)
     if (e.ctrlKey && e.shiftKey && (e.key === 'k' || e.key === 'K')) {
       if (!isInsideRichEditor()) {
@@ -130,14 +121,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [handleKeyDown])
 
   const modalValue = useMemo<ModalContextValue>(() => ({
-    feedbackOpen, setFeedbackOpen,
     searchOpen, setSearchOpen,
     addPageOpen, setAddPageOpen,
     settingsOpen, setSettingsOpen,
     helpOpen, setHelpOpen,
     onboardingOpen, setOnboardingOpen,
     addPageInitial, setAddPageInitial,
-  }), [feedbackOpen, searchOpen, addPageOpen, settingsOpen, helpOpen, onboardingOpen, addPageInitial])
+  }), [searchOpen, addPageOpen, settingsOpen, helpOpen, onboardingOpen, addPageInitial])
 
   const mentionInsertValue = useMemo<MentionInsertContextValue>(() => ({
     pendingMentionInsert, setPendingMentionInsert,

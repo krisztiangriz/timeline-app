@@ -2,7 +2,6 @@ import { useState, useEffect, lazy, Suspense, useCallback, useRef, memo, useMemo
 import { useNavigate } from 'react-router-dom'
 import { RichTextEditor } from '../RichTextEditor/RichTextEditor'
 import { TimelineView } from '../TimelineView/TimelineView'
-import { FeedbackList } from '../PageDetail/FeedbackList'
 import { EmptyState } from '../EmptyState/EmptyState'
 import { useBlocks, updateBlock } from '../../hooks/useBlocks'
 import { useChildPages, getPagePath } from '../../hooks/usePages'
@@ -142,7 +141,6 @@ const TextBlock = memo(function TextBlock({ block, onUpdate, onMentionClick, pla
 const ComponentBlockContent = memo(function ComponentBlockContent({ block, page }: { block: Block; page: Page }) {
   switch (block.type) {
     case 'timeline': return <TimelineView pageId={page.id!} page={page} />
-    case 'feedback': return <FeedbackList subjectId={page.id!} />
     case 'visualization': return <Suspense fallback={null}><ConfigurableViz blockId={block.id!} pageId={page.id!} /></Suspense>
     case 'table': return <TableBlock page={page} />
     default: return null

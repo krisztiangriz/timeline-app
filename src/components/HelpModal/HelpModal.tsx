@@ -11,7 +11,6 @@ const SHORTCUTS = [
     title: 'Global',
     items: [
       { label: 'Search', keys: '⌃ ⇧ K' },
-      { label: 'Add feedback', keys: '⌃ ⇧ F' },
       { label: 'Close / deselect', keys: 'Esc' },
       { label: 'Confirm modal', keys: 'Enter' },
     ],

@@ -103,7 +103,7 @@ export async function deletePage(id: number) {
   const target = await db.pages.get(id)
   if (target?.role) return
 
-  await db.transaction('rw', [db.pages, db.layouts, db.blocks, db.timelineEntries, db.feedbacks, db.chartConfigs, db.pagePropertyValues, db.hubProperties], async () => {
+  await db.transaction('rw', [db.pages, db.layouts, db.blocks, db.timelineEntries, db.chartConfigs, db.pagePropertyValues, db.hubProperties], async () => {
     const deletedIds: number[] = []
 
     async function deleteRecursive(pageId: number) {
@@ -120,7 +120,6 @@ export async function deletePage(id: number) {
       await db.blocks.where('pageId').equals(pageId).delete()
       await db.layouts.where('pageId').equals(pageId).delete()
       await db.timelineEntries.where('pageId').equals(pageId).delete()
-      await db.feedbacks.where('subjectId').equals(pageId).delete()
       await db.pagePropertyValues.where('pageId').equals(pageId).delete()
       // Clean hub properties if this is a hub page
       await db.hubProperties.where('hubId').equals(pageId).delete()

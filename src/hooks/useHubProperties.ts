@@ -25,18 +25,6 @@ export function useHubPageProperties(hubId?: number): HubProperty[] {
   ) ?? []
 }
 
-/** Get only feedback-scoped properties for a hub */
-export function useHubFeedbackProperties(hubId?: number): HubProperty[] {
-  return useLiveQuery(
-    () => hubId
-      ? db.hubProperties.where('[hubId+order]').between([hubId, -Infinity], [hubId, Infinity])
-          .filter((p) => p.scope === 'feedback')
-          .toArray()
-      : [],
-    [hubId]
-  ) ?? []
-}
-
 /** Get all property values for a page */
 export function usePagePropertyValues(pageId?: number): PagePropertyValue[] {
   return useLiveQuery(
@@ -78,7 +66,7 @@ export async function seedDefaultPropertyValues(pageId: number, hubId: number) {
 
 // ---- Property CRUD (for PropertyEditor modal) ----
 
-export async function addHubProperty(hubId: number, name: string, scope?: 'page' | 'feedback'): Promise<number> {
+export async function addHubProperty(hubId: number, name: string, scope?: 'page'): Promise<number> {
   const existing = await db.hubProperties.where('hubId').equals(hubId).toArray()
   const maxOrder = existing.length > 0 ? Math.max(...existing.map((p) => p.order)) : -1
   const id = await db.hubProperties.add({

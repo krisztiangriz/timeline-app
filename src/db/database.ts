@@ -4,11 +4,12 @@ import type {
   Tab,
   Block,
   TimelineEntry,
-  Feedback,
   PageSetting,
   ChartConfig,
   HubProperty,
   PagePropertyValue,
+  RegexPattern,
+  HubRegexAssignment,
 } from '../types'
 
 class TimelineDB extends Dexie {
@@ -17,11 +18,13 @@ class TimelineDB extends Dexie {
   layouts!: Table<Tab>
   blocks!: Table<Block>
   timelineEntries!: Table<TimelineEntry>
-  feedbacks!: Table<Feedback>
+
   pageSettings!: Table<PageSetting>
   chartConfigs!: Table<ChartConfig>
   hubProperties!: Table<HubProperty>
   pagePropertyValues!: Table<PagePropertyValue>
+  regexPatterns!: Table<RegexPattern>
+  hubRegexAssignments!: Table<HubRegexAssignment>
 
   constructor() {
     super('TimelineApp')
@@ -438,6 +441,80 @@ class TimelineDB extends Dexie {
     // making IndexedDB indexes unusable. Filter with .filter(p => !p.isDraft) in JS instead.
     this.version(20).stores({
       pages: '++id, parentId, role',
+    })
+    // v21: global regex patterns library + hub assignments, migrate entry-count → regex-count
+    this.version(21).stores({
+      regexPatterns: '++id, order',
+      hubRegexAssignments: '++id, hubId, regexPatternId, [hubId+regexPatternId]',
+    }).upgrade(async (tx) => {
+      const regexPatterns = tx.table('regexPatterns')
+      const hubRegexAssignments = tx.table('hubRegexAssignments')
+      const chartConfigs = tx.table('chartConfigs')
+      const pages = tx.table('pages')
+
+      // 1. Seed default "Entry count" pattern
+      const patternId = await regexPatterns.add({ name: 'Entry count', pattern: '.+', order: 0 })
+
+      // 2. Migrate existing entry-count charts to regex-count
+      const entryCountCharts = await chartConfigs.filter((c: { dataSource: string }) => c.dataSource === 'entry-count').toArray()
+      for (const chart of entryCountCharts) {
+        await chartConfigs.update(chart.id, { dataSource: 'regex-count', regexPatternId: patternId })
+      }
+
+      // 3. Auto-assign "Entry count" pattern to all hubs that have child pages
+      const allPages = await pages.toArray() as Page[]
+      const hubIds = new Set(allPages.filter((p) => p.type === 'hub').map((p) => p.id!))
+      const hubsWithChildren = new Set(allPages.filter((p) => p.parentId && hubIds.has(p.parentId)).map((p) => p.parentId!))
+      for (const hubId of hubsWithChildren) {
+        await hubRegexAssignments.add({ hubId, regexPatternId: patternId as number })
+      }
+    })
+    // v22: remove feedback system entirely
+    this.version(22).stores({
+      feedbacks: null,
+    }).upgrade(async (tx) => {
+      const blocks = tx.table('blocks')
+      const layouts = tx.table('layouts')
+      const chartConfigs = tx.table('chartConfigs')
+      const hubProperties = tx.table('hubProperties')
+
+      // Delete feedback blocks and their tabs
+      const feedbackBlocks = await blocks.filter((b: { type: string }) => b.type === 'feedback').toArray()
+      await Promise.all(feedbackBlocks.map((b: { id: number }) => blocks.delete(b.id)))
+
+      // Delete tabs that had feedback blocks
+      const feedbackTabIds = new Set(feedbackBlocks.map((b: { tabId?: number }) => b.tabId).filter(Boolean))
+      const tabs = await layouts.toArray()
+      const tabsToDelete = tabs.filter((t: { id: number }) => feedbackTabIds.has(t.id))
+      await Promise.all(tabsToDelete.map((t: { id: number }) => layouts.delete(t.id)))
+
+      // Delete feedback chart configs
+      const fbCharts = await chartConfigs.filter((c: { dataSource: string }) => c.dataSource.startsWith('feedback-')).toArray()
+      await Promise.all(fbCharts.map((c: { id: number }) => chartConfigs.delete(c.id)))
+
+      // Delete feedback-scoped hub properties
+      const fbProps = await hubProperties.filter((p: { scope?: string }) => p.scope === 'feedback').toArray()
+      await Promise.all(fbProps.map((p: { id: number }) => hubProperties.delete(p.id)))
+    })
+    // v23: unified chart system — replace dataSource with source + grouping
+    this.version(23).stores({}).upgrade(async (tx) => {
+      await tx.table('chartConfigs').toCollection().modify((config: Record<string, unknown>) => {
+        const ds = config.dataSource as string
+        if (ds === 'regex-count') { config.source = 'regex'; config.grouping = 'month' }
+        else if (ds === 'entry-by-weekday') { config.source = 'entries'; config.grouping = 'weekday' }
+        else if (ds === 'page-count') { config.source = 'pages'; config.grouping = 'month' }
+        else if (ds === 'property-distribution') { config.source = 'property'; config.grouping = 'property-value' }
+        delete config.dataSource
+      })
+    })
+    // v24: multi-pattern charts — regexPatternId → regexPatternIds array
+    this.version(24).stores({}).upgrade(async (tx) => {
+      await tx.table('chartConfigs').toCollection().modify((config: Record<string, unknown>) => {
+        if (config.regexPatternId) {
+          config.regexPatternIds = [config.regexPatternId as number]
+          delete config.regexPatternId
+        }
+      })
     })
   }
 }

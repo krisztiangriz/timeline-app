@@ -36,7 +36,7 @@ export const onboardingGuides: GuideDefinition[] = [
     id: 'visualization-charts',
     steps: [
       {
-        description: 'Add charts to visualize your activity, and feedback trends.',
+        description: 'Add charts to visualize your activity and regex metrics.',
         video: '/timeline-app/visualization-charts.mp4',
       },
     ],

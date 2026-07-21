@@ -15,18 +15,7 @@ export function BreadcrumbNav({
   items,
   moreMenuItems,
 }: BreadcrumbNavProps) {
-  const { searchOpen, setSearchOpen, setAddPageOpen, setFeedbackOpen } = useModalContext()
-
-  const addTrigger = (
-    <button className={styles.actionButton} aria-label="Add" tabIndex={0}>
-      <PlusIcon />
-    </button>
-  )
-
-  const addMenuItems: MenuEntry[] = [
-    { type: 'item', label: 'Add page', onClick: () => setAddPageOpen(true) },
-    { type: 'item', label: 'Add feedback', onClick: () => setFeedbackOpen(true) },
-  ]
+  const { searchOpen, setSearchOpen, setAddPageOpen } = useModalContext()
 
   const moreTrigger = (
     <button className={styles.actionButton} aria-label="More" tabIndex={0}>
@@ -80,7 +69,14 @@ export function BreadcrumbNav({
       )}
 
       <div className={styles.actions}>
-        <ContextMenu items={addMenuItems} trigger={addTrigger} />
+        <button
+          className={styles.actionButton}
+          onClick={() => setAddPageOpen(true)}
+          aria-label="Add page"
+          tabIndex={0}
+        >
+          <PlusIcon />
+        </button>
 
         {moreMenuItems && moreMenuItems.length > 0 && (
           <ContextMenu items={moreMenuItems} trigger={moreTrigger} />

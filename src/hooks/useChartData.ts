@@ -1,8 +1,10 @@
 import { useMemo } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db/database'
-import type { TimelineEntry, Page, ChartScope, HubProperty, PagePropertyValue } from '../types'
-import { countHtmlBlocks, countMentionBlocks } from '../utils/countHtmlBlocks'
+import type { TimelineEntry, Page, ChartScope, ChartConfig, HubProperty, PagePropertyValue, RegexPattern } from '../types'
+import { stripHtml } from '../utils/stripHtml'
+import { filterHtmlToMentionLines } from '../utils/mentionParser'
+import { CHART_COLORS } from '../constants/colors'
 
 // Native date helpers
 function formatMonthKey(d: Date): string {
@@ -18,7 +20,6 @@ function buildMonthKeys(monthCount: number, entries?: { date: Date | string }[])
   const year = now.getFullYear()
   const month = now.getMonth()
 
-  // monthCount === 0 means "all time" — derive range from data or default to 24 months
   let count = monthCount
   if (count === 0) {
     if (entries && entries.length > 0) {
@@ -42,12 +43,10 @@ function buildMonthKeys(monthCount: number, entries?: { date: Date | string }[])
 }
 
 export function getCutoff(monthCount: number): Date {
-  if (monthCount === 0) return new Date(0) // no cutoff — include everything
+  if (monthCount === 0) return new Date(0)
   const now = new Date()
   return new Date(now.getFullYear(), now.getMonth() - (monthCount - 1), 1)
 }
-
-import { CHART_COLORS } from '../constants/colors'
 
 // ---- Scope filtering ----
 
@@ -69,8 +68,6 @@ function filterEntriesByScope(entries: TimelineEntry[], scope: ChartScope, allPa
   }
   return entries
 }
-
-// ---- Multi-scope filtering (union + dedup) ----
 
 export function filterEntriesByScopes(entries: TimelineEntry[], scopes: ChartScope[], allPages: Page[]): TimelineEntry[] {
   if (scopes.length === 0) return entries
@@ -98,296 +95,558 @@ export function useAllEntries(monthCount?: number) {
   }, [cutoff?.getTime()]) ?? []
 }
 
-// ---- Aggregation: entry count (scope-aware) ----
-// Hub scopes → break down by children of all selected hubs
-// Other scopes / empty → total over time
+// ---- Unified chart data interface ----
 
-export function useEntryCount(
-  entries: TimelineEntry[],
-  pages: Page[],
-  scopes: ChartScope[],
-  monthCount = 12,
-  aggregateByHub?: boolean,
-) {
-  return useMemo(() => {
-    const months = buildMonthKeys(monthCount, entries)
+export interface UnifiedChartData {
+  data: Record<string, string | number>[]
+  keys: string[]
+  xKey: string
+  summary?: { name: string; value: number; color?: string }[]
+}
 
-    // Collect hub scopes — if any scope is hub-type, do per-child breakdown
-    const hubIds: number[] = []
-    for (const s of scopes) {
-      if (s.type === 'hub') hubIds.push(s.hubId)
-      else if (s.type === 'page') {
-        const page = pages.find((p) => p.id === s.pageId)
-        if (page?.type === 'hub') hubIds.push(page.id!)
-      }
+// ---- Regex helpers ----
+
+function countRegexMatches(text: string, regex: RegExp): number {
+  const plain = stripHtml(text)
+  const matches = plain.match(regex)
+  return matches ? matches.length : 0
+}
+
+function countRegexMentionMatches(html: string, pageId: number, regex: RegExp): number {
+  const mentionLines = filterHtmlToMentionLines(html, pageId)
+  let count = 0
+  for (const line of mentionLines) {
+    const plain = stripHtml(line)
+    const matches = plain.match(regex)
+    if (matches) count += matches.length
+  }
+  return count
+}
+
+// ---- Hub breakdown helpers ----
+
+function getHubIds(scopes: ChartScope[], pages: Page[]): number[] {
+  const hubIds: number[] = []
+  for (const s of scopes) {
+    if (s.type === 'hub') hubIds.push(s.hubId)
+    else if (s.type === 'page') {
+      const page = pages.find((p) => p.id === s.pageId)
+      if (page?.type === 'hub') hubIds.push(page.id!)
     }
+  }
+  return hubIds
+}
 
-    if (hubIds.length > 0) {
-      const hubIdSet = new Set(hubIds)
-      const children = pages.filter((p) => p.parentId && hubIdSet.has(p.parentId))
-      const childIdSet = new Set(children.map((p) => p.id!))
-      const childById = new Map(children.map((c) => [c.id!, c]))
-      const monthToIdx = new Map(months.map((m, i) => [m, i]))
+// ---- Aggregation: regex by month ----
 
-      // Determine bucket keys: hub names when aggregating, child names otherwise
-      const hubById = new Map(hubIds.map((id) => [id, pages.find((p) => p.id === id)!]))
-      const bucketKeys = aggregateByHub
-        ? hubIds.map((id) => hubById.get(id)!.name)
-        : children.map((c) => c.name)
+interface PatternInfo { id: number; name: string; pattern: string }
 
-      const data = months.map((m) => {
-        const row: Record<string, string | number> = { month: formatMonthLabel(m) }
-        for (const k of bucketKeys) row[k] = 0
-        return row
-      })
+function aggregateRegexByMonth(
+  entries: TimelineEntry[], pages: Page[], scopes: ChartScope[],
+  patterns: PatternInfo[], monthCount: number, aggregateByHub?: boolean,
+): UnifiedChartData {
+  if (patterns.length === 0) return { data: [], keys: [], xKey: 'month' }
 
-      // Accumulate summary totals
-      const summaryTotals = new Map<string, number>(bucketKeys.map((k) => [k, 0]))
+  const months = buildMonthKeys(monthCount, entries)
+  const hubIds = getHubIds(scopes, pages)
 
-      function getBucket(childId: number): string | undefined {
-        const child = childById.get(childId)
-        if (!child) return undefined
-        if (aggregateByHub) {
-          const hub = hubById.get(child.parentId!)
-          return hub?.name
-        }
-        return child.name
-      }
-
-      for (const e of entries) {
-        if (e.isPending) continue
-        const m = formatMonthKey(new Date(e.date))
-        const idx = monthToIdx.get(m)
-        if (idx === undefined) continue
-        const counted = new Set<number>()
-        if (childIdSet.has(e.pageId)) {
-          const bucket = getBucket(e.pageId)
-          if (bucket) {
-            const blocks = countHtmlBlocks(e.text)
-            data[idx][bucket] = (Number(data[idx][bucket]) || 0) + blocks
-            summaryTotals.set(bucket, (summaryTotals.get(bucket) ?? 0) + blocks)
-            counted.add(e.pageId)
-          }
-        }
-        if (e.tagRefs) {
-          for (const ref of e.tagRefs) {
-            const refId = Number(ref)
-            if (counted.has(refId)) continue
-            if (childIdSet.has(refId)) {
-              const bucket = getBucket(refId)
-              if (bucket) {
-                const blocks = countMentionBlocks(e.text, refId)
-                data[idx][bucket] = (Number(data[idx][bucket]) || 0) + blocks
-                summaryTotals.set(bucket, (summaryTotals.get(bucket) ?? 0) + blocks)
-                counted.add(refId)
-              }
-            }
-          }
-        }
-      }
-
-      const keys = bucketKeys.filter((k) => data.some((d) => Number(d[k]) > 0))
-      const summary = bucketKeys
-        .map((k) => ({ name: k, value: summaryTotals.get(k) ?? 0 }))
-        .filter((s) => s.value > 0)
-
-      return { data, keys, summary }
+  // Multi-pattern: each pattern is a series
+  if (patterns.length > 1) {
+    const regexes: { name: string; pattern: string }[] = []
+    for (const p of patterns) {
+      try { new RegExp(p.pattern, 'g'); regexes.push({ name: p.name, pattern: p.pattern }) } catch { /* skip invalid */ }
     }
+    if (regexes.length === 0) return { data: [], keys: [], xKey: 'month' }
 
-    // No hub scopes (or empty scopes): single series "Entries"
-    // Determine single-page scope for mention-aware counting
-    const scopePageId = scopes.length === 1 && scopes[0].type === 'page'
-      ? scopes[0].pageId : undefined
-
+    const monthToIdx = new Map(months.map((m, i) => [m, i]))
+    const keys = regexes.map((r) => r.name)
     const data = months.map((m) => {
-      const row: Record<string, string | number> = { month: formatMonthLabel(m), Entries: 0 }
+      const row: Record<string, string | number> = { month: formatMonthLabel(m) }
+      for (const k of keys) row[k] = 0
       return row
     })
-
-    const monthToIdx2 = new Map(months.map((m, i) => [m, i]))
-    let total = 0
+    const totals = new Map<string, number>(keys.map((k) => [k, 0]))
 
     for (const e of entries) {
       if (e.isPending) continue
       const m = formatMonthKey(new Date(e.date))
-      const idx = monthToIdx2.get(m)
+      const idx = monthToIdx.get(m)
       if (idx === undefined) continue
-      const blocks = scopePageId && e.pageId !== scopePageId
-        ? countMentionBlocks(e.text, scopePageId)
-        : countHtmlBlocks(e.text)
-      data[idx].Entries = (Number(data[idx].Entries) || 0) + blocks
-      total += blocks
-    }
-
-    const keys = ['Entries']
-    const summary = total > 0 ? [{ name: 'Entries', value: total }] : []
-
-    return { data, keys, summary }
-  }, [entries, pages, scopes, monthCount, aggregateByHub])
-}
-
-// ---- Aggregation: entry count by weekday ----
-
-const WEEKDAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-
-export function useEntryByWeekday(
-  entries: TimelineEntry[],
-  pages: Page[],
-  scopes: ChartScope[],
-  monthCount = 12,
-) {
-  return useMemo(() => {
-    const cutoff = getCutoff(monthCount)
-
-    // Check for hub scopes
-    const hubIds: number[] = []
-    for (const s of scopes) {
-      if (s.type === 'hub') hubIds.push(s.hubId)
-      else if (s.type === 'page') {
-        const page = pages.find((p) => p.id === s.pageId)
-        if (page?.type === 'hub') hubIds.push(page.id!)
+      for (const { name, pattern } of regexes) {
+        const count = countRegexMatches(e.text, new RegExp(pattern, 'g'))
+        data[idx][name] = (Number(data[idx][name]) || 0) + count
+        totals.set(name, (totals.get(name) ?? 0) + count)
       }
     }
 
-    if (hubIds.length > 0) {
-      const hubs = pages.filter((p) => p.id && hubIds.includes(p.id))
-      // Map each child page to its parent hub
-      const childToHub = new Map<number, string>()
-      for (const hub of hubs) {
-        for (const p of pages) {
-          if (p.parentId === hub.id) childToHub.set(p.id!, hub.name)
+    const activeKeys = keys.filter((k) => data.some((d) => Number(d[k]) > 0))
+    const summary = keys.map((k) => ({ name: k, value: totals.get(k) ?? 0 })).filter((s) => s.value > 0)
+    return { data, keys: activeKeys, xKey: 'month', summary }
+  }
+
+  // Single pattern
+  const pat = patterns[0]
+  let regex: RegExp
+  try { regex = new RegExp(pat.pattern, 'g') } catch { return { data: [], keys: [], xKey: 'month' } }
+
+  if (hubIds.length > 0) {
+    const hubIdSet = new Set(hubIds)
+    const children = pages.filter((p) => p.parentId && hubIdSet.has(p.parentId))
+    const childIdSet = new Set(children.map((p) => p.id!))
+    const childById = new Map(children.map((c) => [c.id!, c]))
+    const monthToIdx = new Map(months.map((m, i) => [m, i]))
+    const hubById = new Map(hubIds.map((id) => [id, pages.find((p) => p.id === id)!]))
+
+    const bucketKeys = aggregateByHub
+      ? hubIds.map((id) => hubById.get(id)!.name)
+      : children.map((c) => c.name)
+
+    const data = months.map((m) => {
+      const row: Record<string, string | number> = { month: formatMonthLabel(m) }
+      for (const k of bucketKeys) row[k] = 0
+      return row
+    })
+
+    const summaryTotals = new Map<string, number>(bucketKeys.map((k) => [k, 0]))
+
+    function getBucket(childId: number): string | undefined {
+      const child = childById.get(childId)
+      if (!child) return undefined
+      if (aggregateByHub) {
+        const hub = hubById.get(child.parentId!)
+        return hub?.name
+      }
+      return child.name
+    }
+
+    for (const e of entries) {
+      if (e.isPending) continue
+      const m = formatMonthKey(new Date(e.date))
+      const idx = monthToIdx.get(m)
+      if (idx === undefined) continue
+      regex.lastIndex = 0
+      const counted = new Set<number>()
+      if (childIdSet.has(e.pageId)) {
+        const bucket = getBucket(e.pageId)
+        if (bucket) {
+          const count = countRegexMatches(e.text, new RegExp(pat.pattern, 'g'))
+          data[idx][bucket] = (Number(data[idx][bucket]) || 0) + count
+          summaryTotals.set(bucket, (summaryTotals.get(bucket) ?? 0) + count)
+          counted.add(e.pageId)
         }
       }
-
-      const data = WEEKDAY_LABELS.map((label) => {
-        const row: Record<string, string | number> = { name: label }
-        for (const hub of hubs) row[hub.name] = 0
-        return row
-      })
-
-      for (const e of entries) {
-        if (e.isPending) continue
-        if (new Date(e.date) < cutoff) continue
-        const jsDay = new Date(e.date).getDay()
-        const idx = jsDay === 0 ? 6 : jsDay - 1
-        const counted = new Set<string>()
-        // Count by pageId
-        const hubName = childToHub.get(e.pageId)
-        if (hubName && !counted.has(hubName)) {
-          data[idx][hubName] = (Number(data[idx][hubName]) || 0) + 1
-          counted.add(hubName)
-        }
-        // Count by tagRefs
-        if (e.tagRefs) {
-          for (const ref of e.tagRefs) {
-            const refHubName = childToHub.get(Number(ref))
-            if (refHubName && !counted.has(refHubName)) {
-              data[idx][refHubName] = (Number(data[idx][refHubName]) || 0) + 1
-              counted.add(refHubName)
+      if (e.tagRefs) {
+        for (const ref of e.tagRefs) {
+          const refId = Number(ref)
+          if (counted.has(refId)) continue
+          if (childIdSet.has(refId)) {
+            const bucket = getBucket(refId)
+            if (bucket) {
+              const count = countRegexMentionMatches(e.text, refId, new RegExp(pat.pattern, 'g'))
+              data[idx][bucket] = (Number(data[idx][bucket]) || 0) + count
+              summaryTotals.set(bucket, (summaryTotals.get(bucket) ?? 0) + count)
+              counted.add(refId)
             }
           }
         }
       }
-
-      const keys = hubs.map((h) => h.name).filter((k) => data.some((d) => Number(d[k]) > 0))
-      return { data, keys }
     }
 
-    // No hub scope: single series
-    const counts = [0, 0, 0, 0, 0, 0, 0]
+    const keys = bucketKeys.filter((k) => data.some((d) => Number(d[k]) > 0))
+    const summary = bucketKeys
+      .map((k) => ({ name: k, value: summaryTotals.get(k) ?? 0 }))
+      .filter((s) => s.value > 0)
+
+    return { data, keys, xKey: 'month', summary }
+  }
+
+  // No hub scopes: single series
+  const scopePageId = scopes.length === 1 && scopes[0].type === 'page' ? scopes[0].pageId : undefined
+  const data = months.map((m) => ({ month: formatMonthLabel(m), Matches: 0 } as Record<string, string | number>))
+  const monthToIdx2 = new Map(months.map((m, i) => [m, i]))
+  let total = 0
+
+  for (const e of entries) {
+    if (e.isPending) continue
+    const m = formatMonthKey(new Date(e.date))
+    const idx = monthToIdx2.get(m)
+    if (idx === undefined) continue
+    const count = scopePageId && e.pageId !== scopePageId
+      ? countRegexMentionMatches(e.text, scopePageId, new RegExp(pat.pattern, 'g'))
+      : countRegexMatches(e.text, new RegExp(pat.pattern, 'g'))
+    data[idx].Matches = (Number(data[idx].Matches) || 0) + count
+    total += count
+  }
+
+  const summary = total > 0 ? [{ name: 'Matches', value: total }] : []
+  return { data, keys: ['Matches'], xKey: 'month', summary }
+}
+
+// ---- Aggregation: regex by weekday (NEW) ----
+
+const WEEKDAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+
+function aggregateRegexByWeekday(
+  entries: TimelineEntry[], pages: Page[], scopes: ChartScope[],
+  patterns: PatternInfo[], monthCount: number,
+): UnifiedChartData {
+  if (patterns.length === 0) return { data: [], keys: [], xKey: 'name' }
+
+  const cutoff = getCutoff(monthCount)
+  const hubIds = getHubIds(scopes, pages)
+
+  // Multi-pattern: each pattern is a series
+  if (patterns.length > 1) {
+    const regexes: { name: string; pattern: string }[] = []
+    for (const p of patterns) {
+      try { new RegExp(p.pattern, 'g'); regexes.push({ name: p.name, pattern: p.pattern }) } catch { /* skip invalid */ }
+    }
+    if (regexes.length === 0) return { data: [], keys: [], xKey: 'name' }
+
+    const keys = regexes.map((r) => r.name)
+    const data = WEEKDAY_LABELS.map((label) => {
+      const row: Record<string, string | number> = { name: label }
+      for (const k of keys) row[k] = 0
+      return row
+    })
 
     for (const e of entries) {
       if (e.isPending) continue
       if (new Date(e.date) < cutoff) continue
-      const jsDay = new Date(e.date).getDay() // 0=Sun, 1=Mon...6=Sat
-      const idx = jsDay === 0 ? 6 : jsDay - 1 // Mon=0...Sun=6
-      counts[idx]++
-    }
-
-    const data = WEEKDAY_LABELS.map((label, i) => ({ name: label, Entries: counts[i] }))
-    return { data, keys: ['Entries'] }
-  }, [entries, pages, scopes, monthCount])
-}
-
-// ---- Aggregation: pages by hub property ----
-
-export function usePagesByProperty(
-  pages: Page[],
-  property: HubProperty | undefined,
-  propertyValues: PagePropertyValue[],
-) {
-  return useMemo(() => {
-    if (!property) return []
-
-    // Count pages per option value
-    const counts = new Map<string, number>()
-    const childPages = pages.filter((p) => p.parentId === property.hubId)
-    const valuesByPage = new Map<number, string>()
-    for (const pv of propertyValues) {
-      if (pv.propertyId === property.id) {
-        valuesByPage.set(pv.pageId, pv.value)
+      const jsDay = new Date(e.date).getDay()
+      const idx = jsDay === 0 ? 6 : jsDay - 1
+      for (const { name, pattern } of regexes) {
+        const count = countRegexMatches(e.text, new RegExp(pattern, 'g'))
+        data[idx][name] = (Number(data[idx][name]) || 0) + count
       }
     }
 
-    for (const page of childPages) {
-      const val = valuesByPage.get(page.id!) ?? property.options[0]?.value
-      if (val) counts.set(val, (counts.get(val) || 0) + 1)
+    const activeKeys = keys.filter((k) => data.some((d) => Number(d[k]) > 0))
+    return { data, keys: activeKeys, xKey: 'name' }
+  }
+
+  // Single pattern (or multi-pattern with hub breakdown — use first pattern)
+  const pat = patterns[0]
+  let regex: RegExp
+  try { regex = new RegExp(pat.pattern, 'g') } catch { return { data: [], keys: [], xKey: 'name' } }
+  void regex
+
+  if (hubIds.length > 0) {
+    const hubs = pages.filter((p) => p.id && hubIds.includes(p.id))
+    const childToHub = new Map<number, string>()
+    for (const hub of hubs) {
+      for (const p of pages) {
+        if (p.parentId === hub.id) childToHub.set(p.id!, hub.name)
+      }
     }
 
-    return property.options
-      .map((opt, i) => ({
-        name: opt.label,
-        value: counts.get(opt.value) || 0,
-        color: opt.color ?? CHART_COLORS[i % CHART_COLORS.length],
-      }))
-      .filter((s) => s.value > 0)
-  }, [pages, property, propertyValues])
-}
+    const data = WEEKDAY_LABELS.map((label) => {
+      const row: Record<string, string | number> = { name: label }
+      for (const hub of hubs) row[hub.name] = 0
+      return row
+    })
 
-// ---- Page count (child page creation over time) ----
-
-export function usePageCount(
-  pages: Page[],
-  scopes: ChartScope[],
-  monthCount = 12,
-) {
-  return useMemo(() => {
-    const months = buildMonthKeys(monthCount, pages.map((p) => ({ date: p.createdAt })))
-    const cutoff = getCutoff(monthCount)
-
-    // Determine which child pages to count
-    let scopedPages: Page[]
-    if (scopes.length > 0) {
-      const hubIds = new Set<number>()
-      const pageIds = new Set<number>()
-      for (const s of scopes) {
-        if (s.type === 'hub') hubIds.add(s.hubId)
-        else if (s.type === 'page') {
-          const page = pages.find((p) => p.id === s.pageId)
-          if (page?.type === 'hub') hubIds.add(page.id!)
-          else if (page?.parentId) pageIds.add(page.id!)
+    for (const e of entries) {
+      if (e.isPending) continue
+      if (new Date(e.date) < cutoff) continue
+      const jsDay = new Date(e.date).getDay()
+      const idx = jsDay === 0 ? 6 : jsDay - 1
+      const counted = new Set<string>()
+      const hubName = childToHub.get(e.pageId)
+      if (hubName && !counted.has(hubName)) {
+        const count = countRegexMatches(e.text, new RegExp(pat.pattern, 'g'))
+        data[idx][hubName] = (Number(data[idx][hubName]) || 0) + count
+        counted.add(hubName)
+      }
+      if (e.tagRefs) {
+        for (const ref of e.tagRefs) {
+          const refHubName = childToHub.get(Number(ref))
+          if (refHubName && !counted.has(refHubName)) {
+            const count = countRegexMentionMatches(e.text, Number(ref), new RegExp(pat.pattern, 'g'))
+            data[idx][refHubName] = (Number(data[idx][refHubName]) || 0) + count
+            counted.add(refHubName)
+          }
         }
       }
-      scopedPages = pages.filter((p) =>
-        (p.parentId && hubIds.has(p.parentId)) || pageIds.has(p.id!)
-      )
-    } else {
-      scopedPages = pages.filter((p) => p.parentId && p.type !== 'hub')
     }
 
-    // Build month data
+    const keys = hubs.map((h) => h.name).filter((k) => data.some((d) => Number(d[k]) > 0))
+    return { data, keys, xKey: 'name' }
+  }
+
+  // Single series
+  const scopePageId = scopes.length === 1 && scopes[0].type === 'page' ? scopes[0].pageId : undefined
+  const data = WEEKDAY_LABELS.map((label) => ({ name: label, Matches: 0 } as Record<string, string | number>))
+
+  for (const e of entries) {
+    if (e.isPending) continue
+    if (new Date(e.date) < cutoff) continue
+    const jsDay = new Date(e.date).getDay()
+    const idx = jsDay === 0 ? 6 : jsDay - 1
+    const count = scopePageId && e.pageId !== scopePageId
+      ? countRegexMentionMatches(e.text, scopePageId, new RegExp(pat.pattern, 'g'))
+      : countRegexMatches(e.text, new RegExp(pat.pattern, 'g'))
+    data[idx].Matches = (Number(data[idx].Matches) || 0) + count
+  }
+
+  return { data, keys: ['Matches'], xKey: 'name' }
+}
+
+// ---- Aggregation: entries by month (NEW) ----
+
+function aggregateEntriesByMonth(
+  entries: TimelineEntry[], pages: Page[], scopes: ChartScope[], monthCount: number,
+): UnifiedChartData {
+  const months = buildMonthKeys(monthCount, entries)
+  const hubIds = getHubIds(scopes, pages)
+
+  if (hubIds.length > 0) {
+    const hubs = pages.filter((p) => p.id && hubIds.includes(p.id))
+    const childToHub = new Map<number, string>()
+    for (const hub of hubs) {
+      for (const p of pages) {
+        if (p.parentId === hub.id) childToHub.set(p.id!, hub.name)
+      }
+    }
+
     const monthToIdx = new Map(months.map((m, i) => [m, i]))
-    const data = months.map((m) => ({ month: formatMonthLabel(m), count: 0 }))
+    const data = months.map((m) => {
+      const row: Record<string, string | number> = { month: formatMonthLabel(m) }
+      for (const hub of hubs) row[hub.name] = 0
+      return row
+    })
 
-    for (const p of scopedPages) {
-      if (!p.createdAt) continue
-      const d = new Date(p.createdAt)
-      if (d < cutoff) continue
-      const key = formatMonthKey(d)
-      const idx = monthToIdx.get(key)
-      if (idx !== undefined) data[idx].count++
+    for (const e of entries) {
+      if (e.isPending) continue
+      const m = formatMonthKey(new Date(e.date))
+      const idx = monthToIdx.get(m)
+      if (idx === undefined) continue
+      const counted = new Set<string>()
+      const hubName = childToHub.get(e.pageId)
+      if (hubName && !counted.has(hubName)) {
+        data[idx][hubName] = (Number(data[idx][hubName]) || 0) + 1
+        counted.add(hubName)
+      }
+      if (e.tagRefs) {
+        for (const ref of e.tagRefs) {
+          const refHubName = childToHub.get(Number(ref))
+          if (refHubName && !counted.has(refHubName)) {
+            data[idx][refHubName] = (Number(data[idx][refHubName]) || 0) + 1
+            counted.add(refHubName)
+          }
+        }
+      }
     }
 
-    return { data, keys: ['count'] }
-  }, [pages, scopes, monthCount])
+    const keys = hubs.map((h) => h.name).filter((k) => data.some((d) => Number(d[k]) > 0))
+    return { data, keys, xKey: 'month' }
+  }
+
+  // Single series
+  const monthToIdx = new Map(months.map((m, i) => [m, i]))
+  const data = months.map((m) => ({ month: formatMonthLabel(m), Entries: 0 } as Record<string, string | number>))
+
+  for (const e of entries) {
+    if (e.isPending) continue
+    const m = formatMonthKey(new Date(e.date))
+    const idx = monthToIdx.get(m)
+    if (idx === undefined) continue
+    data[idx].Entries = (Number(data[idx].Entries) || 0) + 1
+  }
+
+  return { data, keys: ['Entries'], xKey: 'month' }
+}
+
+// ---- Aggregation: entries by weekday ----
+
+function aggregateEntriesByWeekday(
+  entries: TimelineEntry[], pages: Page[], scopes: ChartScope[], monthCount: number,
+): UnifiedChartData {
+  const cutoff = getCutoff(monthCount)
+  const hubIds = getHubIds(scopes, pages)
+
+  if (hubIds.length > 0) {
+    const hubs = pages.filter((p) => p.id && hubIds.includes(p.id))
+    const childToHub = new Map<number, string>()
+    for (const hub of hubs) {
+      for (const p of pages) {
+        if (p.parentId === hub.id) childToHub.set(p.id!, hub.name)
+      }
+    }
+
+    const data = WEEKDAY_LABELS.map((label) => {
+      const row: Record<string, string | number> = { name: label }
+      for (const hub of hubs) row[hub.name] = 0
+      return row
+    })
+
+    for (const e of entries) {
+      if (e.isPending) continue
+      if (new Date(e.date) < cutoff) continue
+      const jsDay = new Date(e.date).getDay()
+      const idx = jsDay === 0 ? 6 : jsDay - 1
+      const counted = new Set<string>()
+      const hubName = childToHub.get(e.pageId)
+      if (hubName && !counted.has(hubName)) {
+        data[idx][hubName] = (Number(data[idx][hubName]) || 0) + 1
+        counted.add(hubName)
+      }
+      if (e.tagRefs) {
+        for (const ref of e.tagRefs) {
+          const refHubName = childToHub.get(Number(ref))
+          if (refHubName && !counted.has(refHubName)) {
+            data[idx][refHubName] = (Number(data[idx][refHubName]) || 0) + 1
+            counted.add(refHubName)
+          }
+        }
+      }
+    }
+
+    const keys = hubs.map((h) => h.name).filter((k) => data.some((d) => Number(d[k]) > 0))
+    return { data, keys, xKey: 'name' }
+  }
+
+  // Single series
+  const counts = [0, 0, 0, 0, 0, 0, 0]
+  for (const e of entries) {
+    if (e.isPending) continue
+    if (new Date(e.date) < cutoff) continue
+    const jsDay = new Date(e.date).getDay()
+    const idx = jsDay === 0 ? 6 : jsDay - 1
+    counts[idx]++
+  }
+
+  const data = WEEKDAY_LABELS.map((label, i) => ({ name: label, Entries: counts[i] } as Record<string, string | number>))
+  return { data, keys: ['Entries'], xKey: 'name' }
+}
+
+// ---- Aggregation: pages by month ----
+
+function aggregatePagesByMonth(
+  pages: Page[], scopes: ChartScope[], monthCount: number,
+): UnifiedChartData {
+  const months = buildMonthKeys(monthCount, pages.map((p) => ({ date: p.createdAt })))
+  const cutoff = getCutoff(monthCount)
+
+  let scopedPages: Page[]
+  if (scopes.length > 0) {
+    const hubIds = new Set<number>()
+    const pageIds = new Set<number>()
+    for (const s of scopes) {
+      if (s.type === 'hub') hubIds.add(s.hubId)
+      else if (s.type === 'page') {
+        const page = pages.find((p) => p.id === s.pageId)
+        if (page?.type === 'hub') hubIds.add(page.id!)
+        else if (page?.parentId) pageIds.add(page.id!)
+      }
+    }
+    scopedPages = pages.filter((p) =>
+      (p.parentId && hubIds.has(p.parentId)) || pageIds.has(p.id!)
+    )
+  } else {
+    scopedPages = pages.filter((p) => p.parentId && p.type !== 'hub')
+  }
+
+  const monthToIdx = new Map(months.map((m, i) => [m, i]))
+  const data = months.map((m) => ({ month: formatMonthLabel(m), count: 0 } as Record<string, string | number>))
+
+  for (const p of scopedPages) {
+    if (!p.createdAt) continue
+    const d = new Date(p.createdAt)
+    if (d < cutoff) continue
+    const key = formatMonthKey(d)
+    const idx = monthToIdx.get(key)
+    if (idx !== undefined) data[idx].count = (Number(data[idx].count) || 0) + 1
+  }
+
+  return { data, keys: ['count'], xKey: 'month' }
+}
+
+// ---- Aggregation: property distribution ----
+
+function aggregatePropertyDistribution(
+  pages: Page[], property: HubProperty | undefined, propertyValues: PagePropertyValue[],
+): UnifiedChartData {
+  if (!property) return { data: [], keys: [], xKey: 'name' }
+
+  const counts = new Map<string, number>()
+  const childPages = pages.filter((p) => p.parentId === property.hubId)
+  const valuesByPage = new Map<number, string>()
+  for (const pv of propertyValues) {
+    if (pv.propertyId === property.id) {
+      valuesByPage.set(pv.pageId, pv.value)
+    }
+  }
+
+  for (const page of childPages) {
+    const val = valuesByPage.get(page.id!) ?? property.options[0]?.value
+    if (val) counts.set(val, (counts.get(val) || 0) + 1)
+  }
+
+  const summary = property.options
+    .map((opt, i) => ({
+      name: opt.label,
+      value: counts.get(opt.value) || 0,
+      color: opt.color ?? CHART_COLORS[i % CHART_COLORS.length],
+    }))
+    .filter((s) => s.value > 0)
+
+  // For bar charts, provide data array
+  const data = summary.map((s) => ({ name: s.name, value: s.value } as Record<string, string | number>))
+  return { data, keys: ['value'], xKey: 'name', summary }
+}
+
+// ---- Unified dispatcher hook ----
+
+export function useUnifiedChartData(
+  config: ChartConfig,
+  entries: TimelineEntry[],
+  pages: Page[],
+  hubProperties: HubProperty[],
+  propertyValues: PagePropertyValue[],
+  regexPatterns: RegexPattern[],
+  monthCount: number,
+): UnifiedChartData {
+  const scopes = config.scopes ?? []
+  const scopedEntries = useMemo(
+    () => filterEntriesByScopes(entries, scopes, pages),
+    [entries, scopes, pages],
+  )
+
+  const patterns: PatternInfo[] = useMemo(() => {
+    if (config.source !== 'regex' || !config.regexPatternIds) return []
+    return config.regexPatternIds
+      .map((id) => regexPatterns.find((p) => p.id === id))
+      .filter((p): p is RegexPattern => !!p)
+      .map((p) => ({ id: p.id!, name: p.name, pattern: p.pattern }))
+  }, [config.source, config.regexPatternIds, regexPatterns])
+
+  const property = config.source === 'property'
+    ? hubProperties.find((p) => p.id === config.propertyId)
+    : undefined
+
+  return useMemo(() => {
+    const { source, grouping } = config
+
+    if (source === 'regex' && grouping === 'month') {
+      return aggregateRegexByMonth(scopedEntries, pages, scopes, patterns, monthCount, config.aggregateByHub)
+    }
+    if (source === 'regex' && grouping === 'weekday') {
+      return aggregateRegexByWeekday(scopedEntries, pages, scopes, patterns, monthCount)
+    }
+    if (source === 'entries' && grouping === 'month') {
+      return aggregateEntriesByMonth(scopedEntries, pages, scopes, monthCount)
+    }
+    if (source === 'entries' && grouping === 'weekday') {
+      return aggregateEntriesByWeekday(scopedEntries, pages, scopes, monthCount)
+    }
+    if (source === 'pages' && grouping === 'month') {
+      return aggregatePagesByMonth(pages, scopes, monthCount)
+    }
+    if (source === 'property' && grouping === 'property-value') {
+      return aggregatePropertyDistribution(pages, property, propertyValues)
+    }
+
+    return { data: [], keys: [], xKey: 'month' }
+  }, [config, scopedEntries, pages, scopes, patterns, property, propertyValues, monthCount])
 }

@@ -267,6 +267,75 @@
   flex: 1;
 }
 
+/* ---- Regex patterns ---- */
+
+.patternList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding: var(--space-xs) 0;
+}
+
+.patternRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.patternName {
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+  cursor: pointer;
+  min-width: 80px;
+  flex-shrink: 0;
+}
+
+.patternName:hover {
+  text-decoration: underline;
+}
+
+.patternInput {
+  flex: 1;
+  font-family: ui-monospace, 'SF Mono', Monaco, 'Cascadia Mono', monospace;
+  font-size: 12px;
+  line-height: var(--line-height-sm);
+  padding: var(--space-xs) var(--space-sm);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-sm);
+  background: var(--color-input-bg);
+  color: var(--color-text-primary);
+  min-width: 0;
+}
+
+.patternInput:focus {
+  border-color: var(--color-input-border);
+  outline: none;
+}
+
+.patternInputInvalid {
+  composes: patternInput;
+  border-color: var(--color-negative);
+}
+
+.patternInlineInput {
+  flex: 1;
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-sm);
+  padding: var(--space-xs) var(--space-sm);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-sm);
+  background: var(--color-input-bg);
+  color: var(--color-text-primary);
+  min-width: 0;
+}
+
+.patternInlineInput:focus {
+  border-color: var(--color-input-border);
+  outline: none;
+}
+
 .version {
   display: block;
   font-size: var(--font-size-xs);

@@ -11,6 +11,7 @@ import {
   renamePropertyOption,
   updatePropertyOptionColor,
 } from '../../hooks/useHubProperties'
+import { useRegexPatterns, useHubAssignedPatternIds, assignPatternToHub, unassignPatternFromHub } from '../../hooks/useRegexPatterns'
 import { useToast } from '../../hooks/useToast'
 import { CHART_COLORS } from '../../constants/colors'
 import { PALETTE_OPTIONS } from '../../hooks/useChartPalette'
@@ -157,13 +158,14 @@ function PropertyBlock({ prop, renamingPropertyId, renamingPropertyName, setRena
 export function PropertyEditorContent({ hubId }: { hubId: number }) {
   const allProperties = useHubProperties(hubId)
   const pageProperties = allProperties.filter((p) => !p.scope || p.scope === 'page')
-  const feedbackProperties = allProperties.filter((p) => p.scope === 'feedback')
+  const regexPatterns = useRegexPatterns()
+  const assignedPatternIds = useHubAssignedPatternIds(hubId)
   const { show: showToast } = useToast()
 
   // Editing state
   const [renamingPropertyId, setRenamingPropertyId] = useState<number | null>(null)
   const [renamingPropertyName, setRenamingPropertyName] = useState('')
-  const [addingPropertyScope, setAddingPropertyScope] = useState<'page' | 'feedback' | null>(null)
+  const [addingPropertyScope, setAddingPropertyScope] = useState<'page' | null>(null)
   const [addingPropertyName, setAddingPropertyName] = useState('')
   const [addingOptionForId, setAddingOptionForId] = useState<number | null>(null)
   const [newOptionLabel, setNewOptionLabel] = useState('')
@@ -263,58 +265,43 @@ export function PropertyEditorContent({ hubId }: { hubId: number }) {
         )}
       </div>
 
-      {/* Feedback Properties section */}
-      <div className={styles.sectionHeader}>
-        <span className={styles.sectionLabel}>Feedback</span>
-        <button className={styles.addButton} onClick={() => setAddingPropertyScope('feedback')} aria-label="Add feedback property">
-          <PlusIcon />
-        </button>
-      </div>
-
-      <div className={styles.propertyList}>
-        {feedbackProperties.map((prop) => (
-          <PropertyBlock
-            key={prop.id}
-            prop={prop}
-            renamingPropertyId={renamingPropertyId}
-            renamingPropertyName={renamingPropertyName}
-            setRenamingPropertyId={setRenamingPropertyId}
-            setRenamingPropertyName={setRenamingPropertyName}
-            handleRenameProperty={handleRenameProperty}
-            addingOptionForId={addingOptionForId}
-            setAddingOptionForId={setAddingOptionForId}
-            newOptionLabel={newOptionLabel}
-            setNewOptionLabel={setNewOptionLabel}
-            handleAddOption={handleAddOption}
-            renamingOption={renamingOption}
-            setRenamingOption={setRenamingOption}
-            renamingOptionLabel={renamingOptionLabel}
-            setRenamingOptionLabel={setRenamingOptionLabel}
-            handleRenameOption={handleRenameOption}
-            colorPickerFor={colorPickerFor}
-            setColorPickerFor={setColorPickerFor}
-            colorAnchorRef={colorAnchorRef}
-            onError={showToast}
-          />
-        ))}
-
-        {addingPropertyScope === 'feedback' && (
-          <div className={styles.propertyRow}>
-            <input
-              className={styles.inlineInput}
-              type="text"
-              value={addingPropertyName}
-              onChange={(e) => setAddingPropertyName(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') handleAddProperty(); if (e.key === 'Escape') { setAddingPropertyScope(null); setAddingPropertyName('') } }}
-              placeholder="Feedback property name"
-              autoFocus
-            />
-            <button className={styles.confirmBtn} onClick={handleAddProperty}
-              style={{ opacity: addingPropertyName.trim() ? 1 : 0.4, pointerEvents: addingPropertyName.trim() ? 'auto' : 'none' }}><CheckIcon /></button>
-            <button className={styles.deleteBtn} onClick={() => { setAddingPropertyScope(null); setAddingPropertyName('') }} aria-label="Cancel"><TrashIcon /></button>
+      {/* Metrics (regex pattern assignments) */}
+      {regexPatterns.length > 0 && (
+        <>
+          <div className={styles.sectionHeader}>
+            <span className={styles.sectionLabel}>Metrics</span>
           </div>
-        )}
-      </div>
+
+          <div className={styles.propertyList}>
+            {regexPatterns.map((rp) => {
+              const isAssigned = assignedPatternIds.has(rp.id!)
+              return (
+                <div
+                  key={rp.id}
+                  className={styles.metricRow}
+                  onClick={() => {
+                    if (isAssigned) unassignPatternFromHub(hubId, rp.id!).catch(() => showToast('Failed to update'))
+                    else assignPatternToHub(hubId, rp.id!).catch(() => showToast('Failed to update'))
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      if (isAssigned) unassignPatternFromHub(hubId, rp.id!).catch(() => showToast('Failed to update'))
+                      else assignPatternToHub(hubId, rp.id!).catch(() => showToast('Failed to update'))
+                    }
+                  }}
+                  role="checkbox"
+                  aria-checked={isAssigned}
+                  tabIndex={0}
+                >
+                  <div className={styles.metricCheckbox} data-checked={isAssigned} />
+                  <span className={styles.metricLabel}>{rp.name}</span>
+                </div>
+              )
+            })}
+          </div>
+        </>
+      )}
     </div>
   )
 }

@@ -4,16 +4,17 @@ import type {
   Tab,
   Block,
   TimelineEntry,
-  Feedback,
   PageSetting,
   ChartConfig,
   HubProperty,
   PagePropertyValue,
+  RegexPattern,
+  HubRegexAssignment,
 } from '../types'
 
 // ---- Export Format ----
 
-const CURRENT_VERSION = 13
+const CURRENT_VERSION = 17
 
 interface ExportData {
   version: typeof CURRENT_VERSION
@@ -22,23 +23,33 @@ interface ExportData {
   tabs: Tab[]
   blocks: Block[]
   timelineEntries: TimelineEntry[]
-  feedbacks: Feedback[]
   pageSettings: PageSetting[]
   chartConfigs: ChartConfig[]
   hubProperties: HubProperty[]
   pagePropertyValues: PagePropertyValue[]
+  regexPatterns: RegexPattern[]
+  hubRegexAssignments: HubRegexAssignment[]
 }
 
 // ---- Enum allowlists (runtime guards — TypeScript casts are erased at runtime) ----
 
 const VALID_PAGE_TYPES = new Set(['general', 'candidate', 'colleague', 'project', 'hub'])
 const VALID_PAGE_ROLES = new Set(['colleague-hub', 'candidate-hub', 'project-hub', 'main-timeline'])
-const VALID_BLOCK_TYPES = new Set(['text', 'timeline', 'feedback', 'table', 'visualization'])
-const VALID_CHART_DATA_SOURCES = new Set([
-  'entry-count', 'entry-by-weekday', 'property-distribution', 'page-count',
-  'feedback-by-type', 'feedback-by-dimension', 'feedback-over-time', 'feedback-per-page',
-])
+const VALID_BLOCK_TYPES = new Set(['text', 'timeline', 'table', 'visualization'])
+const VALID_CHART_SOURCES = new Set(['regex', 'entries', 'pages', 'property'])
+const VALID_CHART_GROUPINGS = new Set(['month', 'weekday', 'property-value'])
 const VALID_CHART_TYPES = new Set(['bar', 'line', 'area', 'pie'])
+
+function convertLegacyDataSource(dataSource: string): { source: string; grouping: string } | null {
+  switch (dataSource) {
+    case 'entry-count':
+    case 'regex-count': return { source: 'regex', grouping: 'month' }
+    case 'entry-by-weekday': return { source: 'entries', grouping: 'weekday' }
+    case 'page-count': return { source: 'pages', grouping: 'month' }
+    case 'property-distribution': return { source: 'property', grouping: 'property-value' }
+    default: return null
+  }
+}
 
 // ---- Validation ----
 
@@ -124,19 +135,6 @@ function validateTimelineEntry(raw: unknown): TimelineEntry | null {
   }
 }
 
-function validateFeedback(raw: unknown): Feedback | null {
-  if (!isObject(raw)) return null
-  if (!isNumber(raw.subjectId) || !isString(raw.type)) return null
-  return {
-    ...(isNumber(raw.id) ? { id: raw.id } : {}),
-    subjectId: raw.subjectId,
-    type: raw.type,
-    description: isString(raw.description) ? raw.description : '',
-    dimensionId: isString(raw.dimensionId) ? raw.dimensionId : undefined,
-    createdAt: toDate(raw.createdAt),
-  }
-}
-
 function validatePageSetting(raw: unknown): PageSetting | null {
   if (!isObject(raw)) return null
   if (!isString(raw.pageKey) || !isString(raw.sortKey) || !isString(raw.sortDir)) return null
@@ -150,8 +148,21 @@ function validatePageSetting(raw: unknown): PageSetting | null {
 
 function validateChartConfig(raw: unknown): ChartConfig | null {
   if (!isObject(raw)) return null
-  if (!isNumber(raw.blockId) || !isString(raw.dataSource) || !isString(raw.chartType)) return null
-  if (!VALID_CHART_DATA_SOURCES.has(raw.dataSource) || !VALID_CHART_TYPES.has(raw.chartType)) return null
+  if (!isNumber(raw.blockId) || !isString(raw.chartType)) return null
+  if (!VALID_CHART_TYPES.has(raw.chartType)) return null
+
+  // Support legacy format: convert dataSource to source+grouping
+  let source = raw.source as string | undefined
+  let grouping = raw.grouping as string | undefined
+  if (!source && isString(raw.dataSource)) {
+    const converted = convertLegacyDataSource(raw.dataSource)
+    if (!converted) return null
+    source = converted.source
+    grouping = converted.grouping
+  }
+  if (!isString(source) || !VALID_CHART_SOURCES.has(source)) return null
+  if (!isString(grouping) || !VALID_CHART_GROUPINGS.has(grouping)) return null
+
   // Validate scopes structure
   let scopes: ChartConfig['scopes'] | undefined
   if (isArray(raw.scopes)) {
@@ -162,14 +173,26 @@ function validateChartConfig(raw: unknown): ChartConfig | null {
     })
     scopes = validScopes.length > 0 ? validScopes as ChartConfig['scopes'] : undefined
   }
+  // Handle regexPatternIds (new array) or legacy regexPatternId (singular)
+  let regexPatternIds: number[] | undefined
+  if (isArray(raw.regexPatternIds)) {
+    const ids = (raw.regexPatternIds as unknown[]).filter(isNumber)
+    if (ids.length > 0) regexPatternIds = ids
+  } else if (isNumber(raw.regexPatternId)) {
+    regexPatternIds = [raw.regexPatternId]
+  }
+
   return {
     ...(isNumber(raw.id) ? { id: raw.id } : {}),
     blockId: raw.blockId,
     name: isString(raw.name) ? raw.name : undefined,
-    dataSource: raw.dataSource as ChartConfig['dataSource'],
+    source: source as ChartConfig['source'],
+    grouping: grouping as ChartConfig['grouping'],
     chartType: raw.chartType as ChartConfig['chartType'],
     scopes,
     propertyId: isNumber(raw.propertyId) ? raw.propertyId : undefined,
+    regexPatternIds,
+    aggregateByHub: raw.aggregateByHub === true ? true : undefined,
     order: isNumber(raw.order) ? raw.order : 0,
   }
 }
@@ -177,6 +200,7 @@ function validateChartConfig(raw: unknown): ChartConfig | null {
 function validateHubProperty(raw: unknown): HubProperty | null {
   if (!isObject(raw)) return null
   if (!isNumber(raw.hubId) || !isString(raw.name)) return null
+  if (raw.scope === 'feedback') return null
   return {
     ...(isNumber(raw.id) ? { id: raw.id } : {}),
     hubId: raw.hubId,
@@ -184,7 +208,7 @@ function validateHubProperty(raw: unknown): HubProperty | null {
     type: 'select',
     options: isArray(raw.options) ? raw.options as HubProperty['options'] : [],
     order: isNumber(raw.order) ? raw.order : 0,
-    scope: raw.scope === 'feedback' ? 'feedback' : raw.scope === 'page' ? 'page' : undefined,
+    scope: raw.scope === 'page' ? 'page' : undefined,
   }
 }
 
@@ -196,6 +220,27 @@ function validatePagePropertyValue(raw: unknown): PagePropertyValue | null {
     pageId: raw.pageId,
     propertyId: raw.propertyId,
     value: raw.value,
+  }
+}
+
+function validateRegexPattern(raw: unknown): RegexPattern | null {
+  if (!isObject(raw)) return null
+  if (!isString(raw.name) || !isString(raw.pattern)) return null
+  return {
+    ...(isNumber(raw.id) ? { id: raw.id } : {}),
+    name: raw.name,
+    pattern: raw.pattern,
+    order: isNumber(raw.order) ? raw.order : 0,
+  }
+}
+
+function validateHubRegexAssignment(raw: unknown): HubRegexAssignment | null {
+  if (!isObject(raw)) return null
+  if (!isNumber(raw.hubId) || !isNumber(raw.regexPatternId)) return null
+  return {
+    ...(isNumber(raw.id) ? { id: raw.id } : {}),
+    hubId: raw.hubId,
+    regexPatternId: raw.regexPatternId,
   }
 }
 
@@ -234,17 +279,18 @@ function sanitizeHtml(records: { text?: string; content?: string; description?: 
 // ---- Export ----
 
 async function exportAllData(): Promise<string> {
-  const [pages, tabs, blocks, timelineEntries, feedbacks, pageSettings, chartConfigs, hubProperties, pagePropertyValues] =
+  const [pages, tabs, blocks, timelineEntries, pageSettings, chartConfigs, hubProperties, pagePropertyValues, regexPatterns, hubRegexAssignments] =
     await Promise.all([
       db.pages.toArray(),
       db.layouts.toArray(),
       db.blocks.toArray(),
       db.timelineEntries.toArray(),
-      db.feedbacks.toArray(),
       db.pageSettings.toArray(),
       db.chartConfigs.toArray(),
       db.hubProperties.toArray(),
       db.pagePropertyValues.toArray(),
+      db.regexPatterns.toArray(),
+      db.hubRegexAssignments.toArray(),
     ])
 
   const data: ExportData = {
@@ -254,11 +300,12 @@ async function exportAllData(): Promise<string> {
     tabs,
     blocks,
     timelineEntries,
-    feedbacks,
     pageSettings,
     chartConfigs,
     hubProperties,
     pagePropertyValues,
+    regexPatterns,
+    hubRegexAssignments,
   }
 
   return JSON.stringify(data, null, 2)
@@ -289,7 +336,7 @@ async function importData(jsonString: string): Promise<void> {
   const raw: unknown = JSON.parse(jsonString)
   if (!isObject(raw)) throw new Error('Invalid export file: expected JSON object')
 
-  // Accept version 12 (old format with 'layouts' key) or 13 (new format with 'tabs' key)
+  // Accept version 12+ (old format with 'layouts' key) or 13+ (new format with 'tabs' key)
   const version = raw.version
   if (!isNumber(version) || version < 12) {
     throw new Error(`Unsupported export version: ${version}. Re-export from the app.`)
@@ -301,14 +348,87 @@ async function importData(jsonString: string): Promise<void> {
   const tabs = validateArray(tabsRaw, validateTab)
   const blocks = validateArray(raw.blocks, validateBlock)
   const timelineEntries = validateArray(raw.timelineEntries, validateTimelineEntry)
-  const feedbacks = validateArray(raw.feedbacks, validateFeedback)
   const pageSettings = validateArray(raw.pageSettings, validatePageSetting)
   const chartConfigs = validateArray(raw.chartConfigs, validateChartConfig)
   const hubProperties = validateArray(raw.hubProperties, validateHubProperty)
   const pagePropertyValues = validateArray(raw.pagePropertyValues, validatePagePropertyValue)
+  const regexPatterns = validateArray(raw.regexPatterns, validateRegexPattern)
+  const hubRegexAssignments = validateArray(raw.hubRegexAssignments, validateHubRegexAssignment)
 
   if (pages.length === 0) {
     throw new Error('Invalid export file: no valid pages found')
+  }
+
+  // Compute hub set for pattern seeding
+  const hubIds = new Set(pages.filter((p) => p.type === 'hub').map((p) => p.id!))
+  const hubsWithChildren = new Set(pages.filter((p) => p.parentId && hubIds.has(p.parentId)).map((p) => p.parentId!))
+
+  // Seed regex pattern for legacy entry-count charts (pre-v21 backups have no regexPatterns)
+  const chartsNeedingPattern = chartConfigs.filter((c) => c.source === 'regex' && (!c.regexPatternIds || c.regexPatternIds.length === 0))
+  if (chartsNeedingPattern.length > 0) {
+    const existing = regexPatterns.find((p) => p.pattern === '.+')
+    let patternId: number
+    if (existing?.id) {
+      patternId = existing.id
+    } else {
+      const maxId = Math.max(0, ...regexPatterns.map((p) => p.id ?? 0))
+      const newPattern: RegexPattern = { id: maxId + 1, name: 'Entry count', pattern: '.+', order: 0 }
+      regexPatterns.push(newPattern)
+      patternId = newPattern.id!
+    }
+    for (const chart of chartsNeedingPattern) {
+      chart.regexPatternIds = [patternId]
+    }
+    for (const hubId of hubsWithChildren) {
+      if (!hubRegexAssignments.some((a) => a.hubId === hubId && a.regexPatternId === patternId)) {
+        hubRegexAssignments.push({ hubId, regexPatternId: patternId })
+      }
+    }
+  }
+
+  // Convert legacy feedbacks to timeline entries
+  const rawFeedbacks = isArray(raw.feedbacks) ? raw.feedbacks as Record<string, unknown>[] : []
+  const rawDimensions = isArray(raw.dimensions) ? raw.dimensions as Record<string, unknown>[] : []
+
+  if (rawFeedbacks.length > 0) {
+    const dimensionMap = new Map<number, string>()
+    for (const d of rawDimensions) {
+      if (isNumber(d.id) && isString(d.name)) dimensionMap.set(d.id, d.name)
+    }
+
+    for (const fb of rawFeedbacks) {
+      if (!isNumber(fb.subjectId) || !isString(fb.description)) continue
+      const type = isString(fb.type) ? fb.type : 'neutral'
+      const dimension = isNumber(fb.dimensionId) ? dimensionMap.get(fb.dimensionId) : undefined
+      const prefix = dimension ? `[Feedback] [${type}] [${dimension}]` : `[Feedback] [${type}]`
+      const date = toDate(fb.createdAt)
+      timelineEntries.push({
+        pageId: fb.subjectId,
+        date,
+        text: `${prefix} ${fb.description}`,
+        tagRefs: [],
+        isPending: false,
+        createdAt: date,
+        updatedAt: date,
+      })
+    }
+
+    // Seed feedback regex patterns
+    const feedbackPatterns = [
+      { name: '[Feedback]', pattern: '\\[Feedback\\]' },
+      { name: '[Positive]', pattern: '\\[positive\\]' },
+      { name: '[Negative]', pattern: '\\[negative\\]' },
+    ]
+    let maxId = Math.max(0, ...regexPatterns.map((p) => p.id ?? 0))
+    for (const fp of feedbackPatterns) {
+      if (!regexPatterns.some((p) => p.pattern === fp.pattern)) {
+        maxId++
+        regexPatterns.push({ id: maxId, name: fp.name, pattern: fp.pattern, order: regexPatterns.length })
+        for (const hubId of hubsWithChildren) {
+          hubRegexAssignments.push({ hubId, regexPatternId: maxId })
+        }
+      }
+    }
   }
 
   // Sanitize HTML content
@@ -316,34 +436,35 @@ async function importData(jsonString: string): Promise<void> {
   if (DOMPurify) {
     sanitizeHtml(timelineEntries)
     sanitizeHtml(blocks)
-    sanitizeHtml(feedbacks)
   }
 
   // Run everything in a transaction so failure rolls back
   await db.transaction('rw',
-    [db.pages, db.layouts, db.blocks, db.timelineEntries, db.feedbacks, db.pageSettings, db.chartConfigs, db.hubProperties, db.pagePropertyValues],
+    [db.pages, db.layouts, db.blocks, db.timelineEntries, db.pageSettings, db.chartConfigs, db.hubProperties, db.pagePropertyValues, db.regexPatterns, db.hubRegexAssignments],
     async () => {
       await Promise.all([
         db.pages.clear(),
         db.layouts.clear(),
         db.blocks.clear(),
         db.timelineEntries.clear(),
-        db.feedbacks.clear(),
         db.pageSettings.clear(),
         db.chartConfigs.clear(),
         db.hubProperties.clear(),
         db.pagePropertyValues.clear(),
+        db.regexPatterns.clear(),
+        db.hubRegexAssignments.clear(),
       ])
       await Promise.all([
         db.pages.bulkAdd(pages),
         db.layouts.bulkAdd(tabs),
         db.blocks.bulkAdd(blocks),
         db.timelineEntries.bulkAdd(timelineEntries),
-        db.feedbacks.bulkAdd(feedbacks),
         pageSettings.length > 0 ? db.pageSettings.bulkAdd(pageSettings) : Promise.resolve(),
         chartConfigs.length > 0 ? db.chartConfigs.bulkAdd(chartConfigs) : Promise.resolve(),
         hubProperties.length > 0 ? db.hubProperties.bulkAdd(hubProperties) : Promise.resolve(),
         pagePropertyValues.length > 0 ? db.pagePropertyValues.bulkAdd(pagePropertyValues) : Promise.resolve(),
+        regexPatterns.length > 0 ? db.regexPatterns.bulkAdd(regexPatterns) : Promise.resolve(),
+        hubRegexAssignments.length > 0 ? db.hubRegexAssignments.bulkAdd(hubRegexAssignments) : Promise.resolve(),
       ])
     }
   )
@@ -356,10 +477,9 @@ async function mergeImportData(jsonString: string, targetPageId: number): Promis
   if (!isObject(raw)) throw new Error('Invalid file: expected JSON object')
 
   const timelineEntries = validateArray(raw.timelineEntries, validateTimelineEntry)
-  const feedbacks = validateArray(raw.feedbacks, validateFeedback)
 
-  if (timelineEntries.length === 0 && feedbacks.length === 0) {
-    throw new Error('File contains no timeline entries or feedbacks to merge')
+  if (timelineEntries.length === 0) {
+    throw new Error('File contains no timeline entries to merge')
   }
 
   const targetPage = await db.pages.get(targetPageId)
@@ -371,7 +491,6 @@ async function mergeImportData(jsonString: string, targetPageId: number): Promis
   const DOMPurify = await loadPurify()
   if (DOMPurify) {
     sanitizeHtml(timelineEntries)
-    sanitizeHtml(feedbacks)
   }
 
   const now = new Date()
@@ -387,31 +506,13 @@ async function mergeImportData(jsonString: string, targetPageId: number): Promis
     updatedAt: e.updatedAt ?? now,
   }))
 
-  const preparedFeedbacks = feedbacks.map((f) => ({
-    subjectId: targetPageId,
-    type: f.type,
-    description: f.description,
-    dimensionId: f.dimensionId,
-    createdAt: f.createdAt ?? now,
-  }))
-
-  await db.transaction('rw', [db.timelineEntries, db.feedbacks], async () => {
+  await db.transaction('rw', [db.timelineEntries], async () => {
     if (preparedEntries.length > 0) {
       await db.timelineEntries.bulkAdd(preparedEntries)
     }
-    if (preparedFeedbacks.length > 0) {
-      await db.feedbacks.bulkAdd(preparedFeedbacks)
-    }
   })
 
-  const parts: string[] = []
-  if (preparedEntries.length > 0) {
-    parts.push(`${preparedEntries.length} timeline ${preparedEntries.length === 1 ? 'entry' : 'entries'}`)
-  }
-  if (preparedFeedbacks.length > 0) {
-    parts.push(`${preparedFeedbacks.length} ${preparedFeedbacks.length === 1 ? 'feedback' : 'feedbacks'}`)
-  }
-  return `Merged ${parts.join(' and ')}`
+  return `Merged ${preparedEntries.length} timeline ${preparedEntries.length === 1 ? 'entry' : 'entries'}`
 }
 
 // ---- File Picker UI ----

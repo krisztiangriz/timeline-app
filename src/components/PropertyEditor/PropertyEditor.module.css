@@ -191,3 +191,48 @@
 .confirmBtn:hover {
   color: var(--color-text-primary);
 }
+
+/* ---- Metrics (regex pattern assignment) ---- */
+
+.metricRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  height: 32px;
+  cursor: pointer;
+}
+
+.metricRow:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.metricCheckbox {
+  width: 16px;
+  height: 16px;
+  border-radius: 6px;
+  border: 1px solid var(--color-input-border);
+  background: var(--color-input-bg);
+  flex-shrink: 0;
+  transition: border 0.1s;
+}
+
+.metricCheckbox[data-checked="true"] {
+  background: var(--color-text-body);
+  border-color: var(--color-text-body);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 18 18'%3E%3Cpath d='M15 5L7.23529 13L4 9.66667' stroke='white' stroke-width='2' stroke-miterlimit='10' fill='none'/%3E%3C/svg%3E");
+  background-size: 12px 12px;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+[data-theme="dark"] .metricCheckbox[data-checked="true"] {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 18 18'%3E%3Cpath d='M15 5L7.23529 13L4 9.66667' stroke='%231A1D23' stroke-width='2' stroke-miterlimit='10' fill='none'/%3E%3C/svg%3E");
+}
+
+.metricLabel {
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-base);
+  color: var(--color-text-primary);
+}

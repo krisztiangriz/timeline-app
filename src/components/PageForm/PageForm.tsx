@@ -64,7 +64,6 @@ const EMPTY_HUBS: HubInfo[] = []
 const BLOCK_TYPE_LABELS: Partial<Record<BlockType, string>> = {
   text: 'Text',
   timeline: 'Timeline',
-  feedback: 'Feedback',
   visualization: 'Charts',
 }
 
@@ -173,7 +172,6 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
       tabKeyCounter.current = 0
       setTabs([
         { name: 'Timeline', type: 'timeline', key: tabKeyCounter.current++ },
-        { name: 'Feedback', type: 'feedback', key: tabKeyCounter.current++ },
         { name: 'Visualization', type: 'visualization', key: tabKeyCounter.current++ },
       ])
     } else {
@@ -182,7 +180,7 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
   }, [parentHubId, isHubType, isEdit, hubs])
 
   const BLOCK_TYPE_DEFAULT_NAMES: Record<BlockType, string> = {
-    timeline: 'Timeline', feedback: 'Feedback', visualization: 'Visualization', text: 'Notes', table: 'Table',
+    timeline: 'Timeline', visualization: 'Visualization', text: 'Notes', table: 'Table',
   }
 
   // Types already used (limited to 1 each except text)
@@ -450,7 +448,7 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
             </div>
             <DropdownPortal anchorRef={blockTypeAnchorRef} open={blockTypeSelectOpen} onClose={() => setBlockTypeSelectOpen(false)} autoFocus>
                 <div className={styles.hubSelectMenu} role="listbox">
-                  {(['timeline', 'feedback', 'visualization', 'text'] as BlockType[]).map((type) => {
+                  {(['timeline', 'visualization', 'text'] as BlockType[]).map((type) => {
                     const disabled = type !== 'text' && usedTypes.has(type)
                     return (
                       <button

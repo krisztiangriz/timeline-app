@@ -18,7 +18,7 @@ export interface HubProperty {
   type: 'select'      // only select for now
   options: PropertyOption[]
   order: number
-  scope?: 'page' | 'feedback'  // default 'page' for backward compat
+  scope?: 'page'
 }
 
 export interface PagePropertyValue {
@@ -54,7 +54,7 @@ export interface Tab {
   order: number
 }
 
-export type BlockType = 'text' | 'timeline' | 'feedback' | 'table' | 'visualization'
+export type BlockType = 'text' | 'timeline' | 'table' | 'visualization'
 
 export interface Block {
   id?: number
@@ -82,27 +82,25 @@ export interface TimelineEntry {
   updatedAt: Date
 }
 
-export interface Feedback {
+// ---- Regex Patterns (global library) ----
+
+export interface RegexPattern {
   id?: number
-  subjectId: number // pageId of colleague/project
-  type: string      // first feedback property value (e.g. 'positive', 'neutral', 'negative')
-  description: string
-  dimensionId?: string  // second feedback property value (option slug from hub feedback property)
-  createdAt: Date
+  name: string
+  pattern: string    // regex source string
+  order: number
+}
+
+export interface HubRegexAssignment {
+  id?: number
+  hubId: number
+  regexPatternId: number
 }
 
 // ---- Chart Configuration ----
 
-export type ChartDataSource =
-  | 'entry-count'
-  | 'entry-by-weekday'
-  | 'property-distribution'
-  | 'page-count'
-  | 'feedback-by-type'
-  | 'feedback-by-dimension'
-  | 'feedback-over-time'
-  | 'feedback-per-page'
-
+export type ChartSource = 'regex' | 'entries' | 'pages' | 'property'
+export type ChartGrouping = 'month' | 'weekday' | 'property-value'
 export type ChartType = 'bar' | 'line' | 'area' | 'pie'
 
 export type ChartScope =
@@ -114,10 +112,12 @@ export interface ChartConfig {
   id?: number
   blockId: number
   name?: string
-  dataSource: ChartDataSource
+  source: ChartSource
+  grouping: ChartGrouping
   chartType: ChartType
-  scopes?: ChartScope[]       // multi-select scopes (empty = all data)
-  propertyId?: number         // for 'property-distribution' source
+  scopes?: ChartScope[]
+  regexPatternIds?: number[]   // required when source='regex'
+  propertyId?: number        // required when source='property'
   aggregateByHub?: boolean
   order: number
 }

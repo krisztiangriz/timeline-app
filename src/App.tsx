@@ -26,14 +26,12 @@ const DetailPage = lazy(() => import('./pages/DetailPage/DetailPage').then((m) =
 
 // Lazy-loaded modal components
 const PageForm = lazy(() => import('./components/PageForm/PageForm').then((m) => ({ default: m.PageForm })))
-const FeedbackModal = lazy(() => import('./components/FeedbackModal/FeedbackModal').then((m) => ({ default: m.FeedbackModal })))
 const SettingsModal = lazy(() => import('./pages/SettingsPage/SettingsModal').then((m) => ({ default: m.SettingsModal })))
 const HelpModal = lazy(() => import('./components/HelpModal/HelpModal').then((m) => ({ default: m.HelpModal })))
 const OnboardingModal = lazy(() => import('./components/OnboardingModal/OnboardingModal').then((m) => ({ default: m.OnboardingModal })))
 
 function GlobalOverlays() {
   const {
-    feedbackOpen, setFeedbackOpen,
     addPageOpen, setAddPageOpen,
     settingsOpen, setSettingsOpen,
     helpOpen, setHelpOpen,
@@ -145,7 +143,6 @@ function GlobalOverlays() {
           />
         </Suspense>
       )}
-      {feedbackOpen && <Suspense fallback={null}><FeedbackModal open={feedbackOpen} onClose={() => setFeedbackOpen(false)} onSuccess={showToast} /></Suspense>}
       {settingsOpen && <Suspense fallback={null}><SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} onToast={showToast} /></Suspense>}
       {helpOpen && <Suspense fallback={null}><HelpModal open={helpOpen} onClose={() => setHelpOpen(false)} /></Suspense>}
       {onboardingOpen && <Suspense fallback={null}><OnboardingModal open={onboardingOpen} onClose={() => setOnboardingOpen(false)} /></Suspense>}

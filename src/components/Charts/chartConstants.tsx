@@ -1,5 +1,5 @@
 import { getColor } from '../../constants/colors'
-import type { ChartScope, ChartDataSource, ChartType } from '../../types'
+import type { ChartScope, ChartSource, ChartGrouping, ChartType } from '../../types'
 
 // ---- Shared constants ----
 
@@ -33,26 +33,30 @@ export const axisStroke = 'var(--color-border)'
 export const tickStyle = { fontSize: 10, fill: 'var(--color-text-body)' }
 
 
-// ---- Exports for AddChartModal ----
+// ---- Source / grouping configuration ----
 
-export const DATA_SOURCE_LABELS: Record<string, string> = {
-  'entry-count': 'Entry count',
-  'entry-by-weekday': 'Entry by weekday',
-  'property-distribution': 'Property distribution',
-  'page-count': 'Page count',
-  'feedback-by-type': 'Feedback by type',
-  'feedback-by-dimension': 'Feedback by dimension',
-  'feedback-over-time': 'Feedback over time',
-  'feedback-per-page': 'Feedback per page',
+export const VALID_GROUPINGS: Record<ChartSource, ChartGrouping[]> = {
+  regex:    ['month', 'weekday'],
+  entries:  ['month', 'weekday'],
+  pages:    ['month'],
+  property: ['property-value'],
 }
 
-export const VALID_CHART_TYPES: Record<ChartDataSource, ChartType[]> = {
-  'entry-count': ['bar', 'line', 'area', 'pie'],
-  'entry-by-weekday': ['bar', 'area'],
-  'property-distribution': ['bar', 'pie'],
-  'page-count': ['bar', 'line', 'area'],
-  'feedback-by-type': ['bar', 'pie'],
-  'feedback-by-dimension': ['bar', 'pie'],
-  'feedback-over-time': ['bar', 'line', 'area'],
-  'feedback-per-page': ['bar', 'pie'],
+export const CHART_TYPES_FOR_GROUPING: Record<ChartGrouping, ChartType[]> = {
+  month:            ['bar', 'line', 'area'],
+  weekday:          ['bar', 'area'],
+  'property-value': ['bar', 'pie'],
+}
+
+export const SOURCE_LABELS: Record<ChartSource, string> = {
+  regex:    'Regex pattern',
+  entries:  'Timeline entries',
+  pages:    'Pages',
+  property: 'Property values',
+}
+
+export const GROUPING_LABELS: Record<ChartGrouping, string> = {
+  month:            'By month',
+  weekday:          'By weekday',
+  'property-value': 'By value',
 }

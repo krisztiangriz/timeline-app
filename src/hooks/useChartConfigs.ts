@@ -1,6 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db/database'
-import type { ChartConfig, ChartDataSource, ChartType, ChartScope } from '../types'
+import type { ChartConfig, ChartSource, ChartGrouping, ChartType, ChartScope } from '../types'
 
 export function useChartConfigs(blockId: number) {
   return useLiveQuery(
@@ -12,15 +12,17 @@ export function useChartConfigs(blockId: number) {
 export async function addChartConfig(
   blockId: number,
   name: string,
-  dataSource: ChartDataSource,
+  source: ChartSource,
+  grouping: ChartGrouping,
   chartType: ChartType,
   scopes?: ChartScope[],
   propertyId?: number,
   aggregateByHub?: boolean,
+  regexPatternIds?: number[],
 ) {
   const existing = await db.chartConfigs.where('blockId').equals(blockId).toArray()
   const order = existing.length
-  return db.chartConfigs.add({ blockId, name, dataSource, chartType, scopes, propertyId, aggregateByHub, order })
+  return db.chartConfigs.add({ blockId, name, source, grouping, chartType, scopes, propertyId, aggregateByHub, regexPatternIds, order })
 }
 
 export async function updateChartConfig(id: number, data: Partial<ChartConfig>) {
