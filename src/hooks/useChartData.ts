@@ -150,7 +150,7 @@ function aggregateRegexByMonth(
   const months = buildMonthKeys(monthCount, entries)
   const hubIds = getHubIds(scopes, pages)
 
-  // Multi-pattern: each pattern is a series
+  // Multi-pattern
   if (patterns.length > 1) {
     const regexes: { name: string; pattern: string }[] = []
     for (const p of patterns) {
@@ -158,6 +158,76 @@ function aggregateRegexByMonth(
     }
     if (regexes.length === 0) return { data: [], keys: [], xKey: 'month' }
 
+    // Hub scope: series = child pages, count = sum across all patterns
+    if (hubIds.length > 0) {
+      const hubIdSet = new Set(hubIds)
+      const children = pages.filter((p) => p.parentId && hubIdSet.has(p.parentId))
+      const childIdSet = new Set(children.map((p) => p.id!))
+      const childById = new Map(children.map((c) => [c.id!, c]))
+      const monthToIdx = new Map(months.map((m, i) => [m, i]))
+      const hubById = new Map(hubIds.map((id) => [id, pages.find((p) => p.id === id)!]))
+
+      const bucketKeys = aggregateByHub
+        ? hubIds.map((id) => hubById.get(id)!.name)
+        : children.map((c) => c.name)
+
+      const data = months.map((m) => {
+        const row: Record<string, string | number> = { month: formatMonthLabel(m) }
+        for (const k of bucketKeys) row[k] = 0
+        return row
+      })
+      const summaryTotals = new Map<string, number>(bucketKeys.map((k) => [k, 0]))
+
+      function getBucketMulti(childId: number): string | undefined {
+        const child = childById.get(childId)
+        if (!child) return undefined
+        if (aggregateByHub) {
+          const hub = hubById.get(child.parentId!)
+          return hub?.name
+        }
+        return child.name
+      }
+
+      for (const e of entries) {
+        if (e.isPending) continue
+        const m = formatMonthKey(new Date(e.date))
+        const idx = monthToIdx.get(m)
+        if (idx === undefined) continue
+        const counted = new Set<number>()
+        if (childIdSet.has(e.pageId)) {
+          const bucket = getBucketMulti(e.pageId)
+          if (bucket) {
+            let count = 0
+            for (const { pattern } of regexes) count += countRegexMatches(e.text, new RegExp(pattern, 'g'))
+            data[idx][bucket] = (Number(data[idx][bucket]) || 0) + count
+            summaryTotals.set(bucket, (summaryTotals.get(bucket) ?? 0) + count)
+            counted.add(e.pageId)
+          }
+        }
+        if (e.tagRefs) {
+          for (const ref of e.tagRefs) {
+            const refId = Number(ref)
+            if (counted.has(refId)) continue
+            if (childIdSet.has(refId)) {
+              const bucket = getBucketMulti(refId)
+              if (bucket) {
+                let count = 0
+                for (const { pattern } of regexes) count += countRegexMentionMatches(e.text, refId, new RegExp(pattern, 'g'))
+                data[idx][bucket] = (Number(data[idx][bucket]) || 0) + count
+                summaryTotals.set(bucket, (summaryTotals.get(bucket) ?? 0) + count)
+                counted.add(refId)
+              }
+            }
+          }
+        }
+      }
+
+      const keys = bucketKeys.filter((k) => data.some((d) => Number(d[k]) > 0))
+      const summary = bucketKeys.map((k) => ({ name: k, value: summaryTotals.get(k) ?? 0 })).filter((s) => s.value > 0)
+      return { data, keys, xKey: 'month', summary }
+    }
+
+    // No hub scope: each pattern is a series
     const monthToIdx = new Map(months.map((m, i) => [m, i]))
     const keys = regexes.map((r) => r.name)
     const data = months.map((m) => {
@@ -295,7 +365,7 @@ function aggregateRegexByWeekday(
   const cutoff = getCutoff(monthCount)
   const hubIds = getHubIds(scopes, pages)
 
-  // Multi-pattern: each pattern is a series
+  // Multi-pattern
   if (patterns.length > 1) {
     const regexes: { name: string; pattern: string }[] = []
     for (const p of patterns) {
@@ -303,6 +373,57 @@ function aggregateRegexByWeekday(
     }
     if (regexes.length === 0) return { data: [], keys: [], xKey: 'name' }
 
+    // Hub scope: series = child pages, count = sum across all patterns
+    if (hubIds.length > 0) {
+      const hubIdSet = new Set(hubIds)
+      const children = pages.filter((p) => p.parentId && hubIdSet.has(p.parentId))
+      const childIdSet = new Set(children.map((p) => p.id!))
+      const childToName = new Map(children.map((c) => [c.id!, c.name]))
+
+      const bucketKeys = children.map((c) => c.name)
+      const data = WEEKDAY_LABELS.map((label) => {
+        const row: Record<string, string | number> = { name: label }
+        for (const k of bucketKeys) row[k] = 0
+        return row
+      })
+
+      for (const e of entries) {
+        if (e.isPending) continue
+        if (new Date(e.date) < cutoff) continue
+        const jsDay = new Date(e.date).getDay()
+        const idx = jsDay === 0 ? 6 : jsDay - 1
+        const counted = new Set<number>()
+        if (childIdSet.has(e.pageId)) {
+          const bucket = childToName.get(e.pageId)
+          if (bucket) {
+            let count = 0
+            for (const { pattern } of regexes) count += countRegexMatches(e.text, new RegExp(pattern, 'g'))
+            data[idx][bucket] = (Number(data[idx][bucket]) || 0) + count
+            counted.add(e.pageId)
+          }
+        }
+        if (e.tagRefs) {
+          for (const ref of e.tagRefs) {
+            const refId = Number(ref)
+            if (counted.has(refId)) continue
+            if (childIdSet.has(refId)) {
+              const bucket = childToName.get(refId)
+              if (bucket) {
+                let count = 0
+                for (const { pattern } of regexes) count += countRegexMentionMatches(e.text, refId, new RegExp(pattern, 'g'))
+                data[idx][bucket] = (Number(data[idx][bucket]) || 0) + count
+                counted.add(refId)
+              }
+            }
+          }
+        }
+      }
+
+      const keys = bucketKeys.filter((k) => data.some((d) => Number(d[k]) > 0))
+      return { data, keys, xKey: 'name' }
+    }
+
+    // No hub scope: each pattern is a series
     const keys = regexes.map((r) => r.name)
     const data = WEEKDAY_LABELS.map((label) => {
       const row: Record<string, string | number> = { name: label }
@@ -325,7 +446,7 @@ function aggregateRegexByWeekday(
     return { data, keys: activeKeys, xKey: 'name' }
   }
 
-  // Single pattern (or multi-pattern with hub breakdown — use first pattern)
+  // Single pattern
   const pat = patterns[0]
   let regex: RegExp
   try { regex = new RegExp(pat.pattern, 'g') } catch { return { data: [], keys: [], xKey: 'name' } }
