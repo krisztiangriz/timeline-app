@@ -163,30 +163,16 @@ function aggregateRegexByMonth(
       const hubIdSet = new Set(hubIds)
       const children = pages.filter((p) => p.parentId && hubIdSet.has(p.parentId))
       const childIdSet = new Set(children.map((p) => p.id!))
-      const childById = new Map(children.map((c) => [c.id!, c]))
+      const childToName = new Map(children.map((c) => [c.id!, c.name]))
       const monthToIdx = new Map(months.map((m, i) => [m, i]))
-      const hubById = new Map(hubIds.map((id) => [id, pages.find((p) => p.id === id)!]))
 
-      const bucketKeys = aggregateByHub
-        ? hubIds.map((id) => hubById.get(id)!.name)
-        : children.map((c) => c.name)
-
+      const bucketKeys = children.map((c) => c.name)
       const data = months.map((m) => {
         const row: Record<string, string | number> = { month: formatMonthLabel(m) }
         for (const k of bucketKeys) row[k] = 0
         return row
       })
       const summaryTotals = new Map<string, number>(bucketKeys.map((k) => [k, 0]))
-
-      function getBucketMulti(childId: number): string | undefined {
-        const child = childById.get(childId)
-        if (!child) return undefined
-        if (aggregateByHub) {
-          const hub = hubById.get(child.parentId!)
-          return hub?.name
-        }
-        return child.name
-      }
 
       for (const e of entries) {
         if (e.isPending) continue
@@ -195,7 +181,7 @@ function aggregateRegexByMonth(
         if (idx === undefined) continue
         const counted = new Set<number>()
         if (childIdSet.has(e.pageId)) {
-          const bucket = getBucketMulti(e.pageId)
+          const bucket = childToName.get(e.pageId)
           if (bucket) {
             let count = 0
             for (const { pattern } of regexes) count += countRegexMatches(e.text, new RegExp(pattern, 'g'))
@@ -209,7 +195,7 @@ function aggregateRegexByMonth(
             const refId = Number(ref)
             if (counted.has(refId)) continue
             if (childIdSet.has(refId)) {
-              const bucket = getBucketMulti(refId)
+              const bucket = childToName.get(refId)
               if (bucket) {
                 let count = 0
                 for (const { pattern } of regexes) count += countRegexMentionMatches(e.text, refId, new RegExp(pattern, 'g'))
