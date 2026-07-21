@@ -435,17 +435,15 @@ function aggregateRegexByWeekday(
   void regex
 
   if (hubIds.length > 0) {
-    const hubs = pages.filter((p) => p.id && hubIds.includes(p.id))
-    const childToHub = new Map<number, string>()
-    for (const hub of hubs) {
-      for (const p of pages) {
-        if (p.parentId === hub.id) childToHub.set(p.id!, hub.name)
-      }
-    }
+    const hubIdSet = new Set(hubIds)
+    const children = pages.filter((p) => p.parentId && hubIdSet.has(p.parentId))
+    const childIdSet = new Set(children.map((p) => p.id!))
+    const childToName = new Map(children.map((c) => [c.id!, c.name]))
 
+    const bucketKeys = children.map((c) => c.name)
     const data = WEEKDAY_LABELS.map((label) => {
       const row: Record<string, string | number> = { name: label }
-      for (const hub of hubs) row[hub.name] = 0
+      for (const k of bucketKeys) row[k] = 0
       return row
     })
 
@@ -454,26 +452,31 @@ function aggregateRegexByWeekday(
       if (new Date(e.date) < cutoff) continue
       const jsDay = new Date(e.date).getDay()
       const idx = jsDay === 0 ? 6 : jsDay - 1
-      const counted = new Set<string>()
-      const hubName = childToHub.get(e.pageId)
-      if (hubName && !counted.has(hubName)) {
-        const count = countRegexMatches(e.text, new RegExp(pat.pattern, 'g'))
-        data[idx][hubName] = (Number(data[idx][hubName]) || 0) + count
-        counted.add(hubName)
+      const counted = new Set<number>()
+      if (childIdSet.has(e.pageId)) {
+        const bucket = childToName.get(e.pageId)
+        if (bucket) {
+          const count = countRegexMatches(e.text, new RegExp(pat.pattern, 'g'))
+          data[idx][bucket] = (Number(data[idx][bucket]) || 0) + count
+          counted.add(e.pageId)
+        }
       }
       if (e.tagRefs) {
         for (const ref of e.tagRefs) {
-          const refHubName = childToHub.get(Number(ref))
-          if (refHubName && !counted.has(refHubName)) {
-            const count = countRegexMentionMatches(e.text, Number(ref), new RegExp(pat.pattern, 'g'))
-            data[idx][refHubName] = (Number(data[idx][refHubName]) || 0) + count
-            counted.add(refHubName)
+          const refId = Number(ref)
+          if (counted.has(refId)) continue
+          if (childIdSet.has(refId)) {
+            const bucket = childToName.get(refId)
+            if (bucket) {
+              data[idx][bucket] = (Number(data[idx][bucket]) || 0) + 1
+              counted.add(refId)
+            }
           }
         }
       }
     }
 
-    const keys = hubs.map((h) => h.name).filter((k) => data.some((d) => Number(d[k]) > 0))
+    const keys = bucketKeys.filter((k) => data.some((d) => Number(d[k]) > 0))
     return { data, keys, xKey: 'name' }
   }
 
@@ -504,18 +507,16 @@ function aggregateEntriesByMonth(
   const hubIds = getHubIds(scopes, pages)
 
   if (hubIds.length > 0) {
-    const hubs = pages.filter((p) => p.id && hubIds.includes(p.id))
-    const childToHub = new Map<number, string>()
-    for (const hub of hubs) {
-      for (const p of pages) {
-        if (p.parentId === hub.id) childToHub.set(p.id!, hub.name)
-      }
-    }
+    const hubIdSet = new Set(hubIds)
+    const children = pages.filter((p) => p.parentId && hubIdSet.has(p.parentId))
+    const childIdSet = new Set(children.map((p) => p.id!))
+    const childToName = new Map(children.map((c) => [c.id!, c.name]))
 
     const monthToIdx = new Map(months.map((m, i) => [m, i]))
+    const bucketKeys = children.map((c) => c.name)
     const data = months.map((m) => {
       const row: Record<string, string | number> = { month: formatMonthLabel(m) }
-      for (const hub of hubs) row[hub.name] = 0
+      for (const k of bucketKeys) row[k] = 0
       return row
     })
 
@@ -524,24 +525,30 @@ function aggregateEntriesByMonth(
       const m = formatMonthKey(new Date(e.date))
       const idx = monthToIdx.get(m)
       if (idx === undefined) continue
-      const counted = new Set<string>()
-      const hubName = childToHub.get(e.pageId)
-      if (hubName && !counted.has(hubName)) {
-        data[idx][hubName] = (Number(data[idx][hubName]) || 0) + 1
-        counted.add(hubName)
+      const counted = new Set<number>()
+      if (childIdSet.has(e.pageId)) {
+        const bucket = childToName.get(e.pageId)
+        if (bucket) {
+          data[idx][bucket] = (Number(data[idx][bucket]) || 0) + 1
+          counted.add(e.pageId)
+        }
       }
       if (e.tagRefs) {
         for (const ref of e.tagRefs) {
-          const refHubName = childToHub.get(Number(ref))
-          if (refHubName && !counted.has(refHubName)) {
-            data[idx][refHubName] = (Number(data[idx][refHubName]) || 0) + 1
-            counted.add(refHubName)
+          const refId = Number(ref)
+          if (counted.has(refId)) continue
+          if (childIdSet.has(refId)) {
+            const bucket = childToName.get(refId)
+            if (bucket) {
+              data[idx][bucket] = (Number(data[idx][bucket]) || 0) + 1
+              counted.add(refId)
+            }
           }
         }
       }
     }
 
-    const keys = hubs.map((h) => h.name).filter((k) => data.some((d) => Number(d[k]) > 0))
+    const keys = bucketKeys.filter((k) => data.some((d) => Number(d[k]) > 0))
     return { data, keys, xKey: 'month' }
   }
 
@@ -569,17 +576,15 @@ function aggregateEntriesByWeekday(
   const hubIds = getHubIds(scopes, pages)
 
   if (hubIds.length > 0) {
-    const hubs = pages.filter((p) => p.id && hubIds.includes(p.id))
-    const childToHub = new Map<number, string>()
-    for (const hub of hubs) {
-      for (const p of pages) {
-        if (p.parentId === hub.id) childToHub.set(p.id!, hub.name)
-      }
-    }
+    const hubIdSet = new Set(hubIds)
+    const children = pages.filter((p) => p.parentId && hubIdSet.has(p.parentId))
+    const childIdSet = new Set(children.map((p) => p.id!))
+    const childToName = new Map(children.map((c) => [c.id!, c.name]))
 
+    const bucketKeys = children.map((c) => c.name)
     const data = WEEKDAY_LABELS.map((label) => {
       const row: Record<string, string | number> = { name: label }
-      for (const hub of hubs) row[hub.name] = 0
+      for (const k of bucketKeys) row[k] = 0
       return row
     })
 
@@ -588,24 +593,30 @@ function aggregateEntriesByWeekday(
       if (new Date(e.date) < cutoff) continue
       const jsDay = new Date(e.date).getDay()
       const idx = jsDay === 0 ? 6 : jsDay - 1
-      const counted = new Set<string>()
-      const hubName = childToHub.get(e.pageId)
-      if (hubName && !counted.has(hubName)) {
-        data[idx][hubName] = (Number(data[idx][hubName]) || 0) + 1
-        counted.add(hubName)
+      const counted = new Set<number>()
+      if (childIdSet.has(e.pageId)) {
+        const bucket = childToName.get(e.pageId)
+        if (bucket) {
+          data[idx][bucket] = (Number(data[idx][bucket]) || 0) + 1
+          counted.add(e.pageId)
+        }
       }
       if (e.tagRefs) {
         for (const ref of e.tagRefs) {
-          const refHubName = childToHub.get(Number(ref))
-          if (refHubName && !counted.has(refHubName)) {
-            data[idx][refHubName] = (Number(data[idx][refHubName]) || 0) + 1
-            counted.add(refHubName)
+          const refId = Number(ref)
+          if (counted.has(refId)) continue
+          if (childIdSet.has(refId)) {
+            const bucket = childToName.get(refId)
+            if (bucket) {
+              data[idx][bucket] = (Number(data[idx][bucket]) || 0) + 1
+              counted.add(refId)
+            }
           }
         }
       }
     }
 
-    const keys = hubs.map((h) => h.name).filter((k) => data.some((d) => Number(d[k]) > 0))
+    const keys = bucketKeys.filter((k) => data.some((d) => Number(d[k]) > 0))
     return { data, keys, xKey: 'name' }
   }
 
