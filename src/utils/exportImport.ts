@@ -6,8 +6,6 @@ import type {
   TimelineEntry,
   PageSetting,
   ChartConfig,
-  HubProperty,
-  PagePropertyValue,
   RegexPattern,
   HubRegexAssignment,
 } from '../types'
@@ -25,8 +23,6 @@ interface ExportData {
   timelineEntries: TimelineEntry[]
   pageSettings: PageSetting[]
   chartConfigs: ChartConfig[]
-  hubProperties: HubProperty[]
-  pagePropertyValues: PagePropertyValue[]
   regexPatterns: RegexPattern[]
   hubRegexAssignments: HubRegexAssignment[]
 }
@@ -36,8 +32,8 @@ interface ExportData {
 const VALID_PAGE_TYPES = new Set(['general', 'candidate', 'colleague', 'project', 'hub'])
 const VALID_PAGE_ROLES = new Set(['colleague-hub', 'candidate-hub', 'project-hub', 'main-timeline'])
 const VALID_BLOCK_TYPES = new Set(['text', 'timeline', 'table', 'visualization'])
-const VALID_CHART_SOURCES = new Set(['regex', 'entries', 'pages', 'property'])
-const VALID_CHART_GROUPINGS = new Set(['month', 'weekday', 'property-value'])
+const VALID_CHART_SOURCES = new Set(['regex', 'entries', 'pages'])
+const VALID_CHART_GROUPINGS = new Set(['month', 'weekday'])
 const VALID_CHART_TYPES = new Set(['bar', 'line', 'area', 'pie'])
 
 function convertLegacyDataSource(dataSource: string): { source: string; grouping: string } | null {
@@ -46,7 +42,6 @@ function convertLegacyDataSource(dataSource: string): { source: string; grouping
     case 'regex-count': return { source: 'regex', grouping: 'month' }
     case 'entry-by-weekday': return { source: 'entries', grouping: 'weekday' }
     case 'page-count': return { source: 'pages', grouping: 'month' }
-    case 'property-distribution': return { source: 'property', grouping: 'property-value' }
     default: return null
   }
 }
@@ -190,36 +185,9 @@ function validateChartConfig(raw: unknown): ChartConfig | null {
     grouping: grouping as ChartConfig['grouping'],
     chartType: raw.chartType as ChartConfig['chartType'],
     scopes,
-    propertyId: isNumber(raw.propertyId) ? raw.propertyId : undefined,
     regexPatternIds,
     aggregateByHub: raw.aggregateByHub === true ? true : undefined,
     order: isNumber(raw.order) ? raw.order : 0,
-  }
-}
-
-function validateHubProperty(raw: unknown): HubProperty | null {
-  if (!isObject(raw)) return null
-  if (!isNumber(raw.hubId) || !isString(raw.name)) return null
-  if (raw.scope === 'feedback') return null
-  return {
-    ...(isNumber(raw.id) ? { id: raw.id } : {}),
-    hubId: raw.hubId,
-    name: raw.name,
-    type: 'select',
-    options: isArray(raw.options) ? raw.options as HubProperty['options'] : [],
-    order: isNumber(raw.order) ? raw.order : 0,
-    scope: raw.scope === 'page' ? 'page' : undefined,
-  }
-}
-
-function validatePagePropertyValue(raw: unknown): PagePropertyValue | null {
-  if (!isObject(raw)) return null
-  if (!isNumber(raw.pageId) || !isNumber(raw.propertyId) || !isString(raw.value)) return null
-  return {
-    ...(isNumber(raw.id) ? { id: raw.id } : {}),
-    pageId: raw.pageId,
-    propertyId: raw.propertyId,
-    value: raw.value,
   }
 }
 
@@ -279,7 +247,7 @@ function sanitizeHtml(records: { text?: string; content?: string; description?: 
 // ---- Export ----
 
 async function exportAllData(): Promise<string> {
-  const [pages, tabs, blocks, timelineEntries, pageSettings, chartConfigs, hubProperties, pagePropertyValues, regexPatterns, hubRegexAssignments] =
+  const [pages, tabs, blocks, timelineEntries, pageSettings, chartConfigs, regexPatterns, hubRegexAssignments] =
     await Promise.all([
       db.pages.toArray(),
       db.layouts.toArray(),
@@ -287,8 +255,6 @@ async function exportAllData(): Promise<string> {
       db.timelineEntries.toArray(),
       db.pageSettings.toArray(),
       db.chartConfigs.toArray(),
-      db.hubProperties.toArray(),
-      db.pagePropertyValues.toArray(),
       db.regexPatterns.toArray(),
       db.hubRegexAssignments.toArray(),
     ])
@@ -302,8 +268,6 @@ async function exportAllData(): Promise<string> {
     timelineEntries,
     pageSettings,
     chartConfigs,
-    hubProperties,
-    pagePropertyValues,
     regexPatterns,
     hubRegexAssignments,
   }
@@ -350,8 +314,6 @@ async function importData(jsonString: string): Promise<void> {
   const timelineEntries = validateArray(raw.timelineEntries, validateTimelineEntry)
   const pageSettings = validateArray(raw.pageSettings, validatePageSetting)
   const chartConfigs = validateArray(raw.chartConfigs, validateChartConfig)
-  const hubProperties = validateArray(raw.hubProperties, validateHubProperty)
-  const pagePropertyValues = validateArray(raw.pagePropertyValues, validatePagePropertyValue)
   const regexPatterns = validateArray(raw.regexPatterns, validateRegexPattern)
   const hubRegexAssignments = validateArray(raw.hubRegexAssignments, validateHubRegexAssignment)
 
@@ -440,7 +402,7 @@ async function importData(jsonString: string): Promise<void> {
 
   // Run everything in a transaction so failure rolls back
   await db.transaction('rw',
-    [db.pages, db.layouts, db.blocks, db.timelineEntries, db.pageSettings, db.chartConfigs, db.hubProperties, db.pagePropertyValues, db.regexPatterns, db.hubRegexAssignments],
+    [db.pages, db.layouts, db.blocks, db.timelineEntries, db.pageSettings, db.chartConfigs, db.regexPatterns, db.hubRegexAssignments],
     async () => {
       await Promise.all([
         db.pages.clear(),
@@ -449,8 +411,6 @@ async function importData(jsonString: string): Promise<void> {
         db.timelineEntries.clear(),
         db.pageSettings.clear(),
         db.chartConfigs.clear(),
-        db.hubProperties.clear(),
-        db.pagePropertyValues.clear(),
         db.regexPatterns.clear(),
         db.hubRegexAssignments.clear(),
       ])
@@ -461,8 +421,6 @@ async function importData(jsonString: string): Promise<void> {
         db.timelineEntries.bulkAdd(timelineEntries),
         pageSettings.length > 0 ? db.pageSettings.bulkAdd(pageSettings) : Promise.resolve(),
         chartConfigs.length > 0 ? db.chartConfigs.bulkAdd(chartConfigs) : Promise.resolve(),
-        hubProperties.length > 0 ? db.hubProperties.bulkAdd(hubProperties) : Promise.resolve(),
-        pagePropertyValues.length > 0 ? db.pagePropertyValues.bulkAdd(pagePropertyValues) : Promise.resolve(),
         regexPatterns.length > 0 ? db.regexPatterns.bulkAdd(regexPatterns) : Promise.resolve(),
         hubRegexAssignments.length > 0 ? db.hubRegexAssignments.bulkAdd(hubRegexAssignments) : Promise.resolve(),
       ])

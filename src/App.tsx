@@ -7,7 +7,6 @@ import { ToastContainer } from './components/Toast/Toast'
 import { ToastProvider, useToast } from './hooks/useToast'
 import { useAutoBackup } from './hooks/useAutoBackup'
 import { addPage, usePageByRole, getPagePath } from './hooks/usePages'
-import { seedDefaultPropertyValues } from './hooks/useHubProperties'
 import { initializeTheme } from './hooks/useTheme'
 import { safeSetItem } from './utils/safeStorage'
 import { db } from './db/database'
@@ -89,11 +88,6 @@ function GlobalOverlays() {
       }
 
       const pageId = await addPage({ name: data.name, type: pageType, parentId, description: '', mentionTrigger: data.mentionTrigger, mentionCollapsed: data.mentionCollapsed })
-
-      // Seed default property values if the parent hub has properties defined
-      if (parentId) {
-        await seedDefaultPropertyValues(pageId, parentId)
-      }
 
       // Create tabs + blocks from the form data
       for (let i = 0; i < data.tabs.length; i++) {

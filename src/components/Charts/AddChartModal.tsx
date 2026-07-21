@@ -1,12 +1,10 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useRadioGroupKeyboard } from '../../hooks/useRadioGroupKeyboard'
-import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '../../db/database'
 import { Modal } from '../Modal/Modal'
 import { DropdownPortal } from '../DropdownPortal/DropdownPortal'
 import { SOURCE_LABELS, VALID_GROUPINGS, CHART_TYPES_FOR_GROUPING, GROUPING_LABELS } from './ChartRenderer'
 import { useHubAssignedPatterns } from '../../hooks/useRegexPatterns'
-import type { ChartSource, ChartGrouping, ChartType, ChartConfig, ChartScope, Page, HubProperty, RegexPattern } from '../../types'
+import type { ChartSource, ChartGrouping, ChartType, ChartConfig, ChartScope, Page, RegexPattern } from '../../types'
 import styles from './Charts.module.css'
 import radio from '../../styles/radio.module.css'
 
@@ -50,9 +48,9 @@ function isScopeSelected(scopes: ChartScope[], scope: ChartScope): boolean {
 interface AddChartModalProps {
   open: boolean
   onClose: () => void
-  onAdd: (name: string, source: ChartSource, grouping: ChartGrouping, chartType: ChartType, scopes?: ChartScope[], propertyId?: number, aggregateByHub?: boolean, regexPatternIds?: number[]) => void
+  onAdd: (name: string, source: ChartSource, grouping: ChartGrouping, chartType: ChartType, scopes?: ChartScope[], aggregateByHub?: boolean, regexPatternIds?: number[]) => void
   editing?: ChartConfig
-  onUpdate?: (id: number, name: string, source: ChartSource, grouping: ChartGrouping, chartType: ChartType, scopes?: ChartScope[], propertyId?: number, aggregateByHub?: boolean, regexPatternIds?: number[]) => void
+  onUpdate?: (id: number, name: string, source: ChartSource, grouping: ChartGrouping, chartType: ChartType, scopes?: ChartScope[], aggregateByHub?: boolean, regexPatternIds?: number[]) => void
   pageId: number
   allPages: Page[]
 }
@@ -63,7 +61,6 @@ export function AddChartModal({ open, onClose, onAdd, editing, onUpdate, pageId,
   const [source, setSource] = useState<ChartSource>(editing?.source ?? 'regex')
   const [grouping, setGrouping] = useState<ChartGrouping>(editing?.grouping ?? 'month')
   const [type, setType] = useState<ChartType>(editing?.chartType ?? 'bar')
-  const [propertyId, setPropertyId] = useState<number | undefined>(editing?.propertyId)
   const [regexPatternIds, setRegexPatternIds] = useState<number[]>(editing?.regexPatternIds ?? [])
   const [aggregateByHub, setAggregateByHub] = useState(editing?.aggregateByHub ?? false)
   const [scopeOpen, setScopeOpen] = useState(false)
@@ -75,13 +72,9 @@ export function AddChartModal({ open, onClose, onAdd, editing, onUpdate, pageId,
   const scopeTriggerRef = useRef<HTMLButtonElement>(null)
   const sourceTriggerRef = useRef<HTMLButtonElement>(null)
 
-  // Load all hub properties for the property picker
-  const allHubProperties = useLiveQuery(() => db.hubProperties.toArray(), []) ?? [] as HubProperty[]
-  const pageProperties = allHubProperties.filter((p: HubProperty) => !p.scope || p.scope === 'page')
-
   // Determine relevant hub for regex pattern loading
   const currentPage = allPages.find((p) => p.id === pageId)
-  const relevantHubId = currentPage?.type === 'hub' ? pageId : currentPage?.parentId
+  const relevantHubId = currentPage?.type === 'hub' ? pageId : (currentPage?.parentId ?? pageId)
   const assignedPatterns = useHubAssignedPatterns(relevantHubId)
 
   // Build scope options
@@ -141,9 +134,6 @@ export function AddChartModal({ open, onClose, onAdd, editing, onUpdate, pageId,
 
   // Source display text
   const sourceDisplayText = useMemo(() => {
-    if (source === 'property') {
-      return pageProperties.find((p: HubProperty) => p.id === propertyId)?.name ?? 'Select property...'
-    }
     if (source === 'regex') {
       if (regexPatternIds.length === 0) return 'Select pattern...'
       if (regexPatternIds.length === 1) return assignedPatterns.find((p: RegexPattern) => p.id === regexPatternIds[0])?.name ?? 'Select pattern...'
@@ -151,7 +141,7 @@ export function AddChartModal({ open, onClose, onAdd, editing, onUpdate, pageId,
       return `${regexPatternIds.length} patterns`
     }
     return SOURCE_LABELS[source]
-  }, [source, propertyId, regexPatternIds, pageProperties, assignedPatterns])
+  }, [source, regexPatternIds, assignedPatterns])
 
   // Valid groupings for current source
   const validGroupings = VALID_GROUPINGS[source]
@@ -173,7 +163,6 @@ export function AddChartModal({ open, onClose, onAdd, editing, onUpdate, pageId,
         setSource(editing.source)
         setGrouping(editing.grouping)
         setType(editing.chartType)
-        setPropertyId(editing.propertyId)
         setRegexPatternIds(editing.regexPatternIds ?? [])
         setAggregateByHub(editing.aggregateByHub ?? false)
         userEditedName.current = true
@@ -187,7 +176,6 @@ export function AddChartModal({ open, onClose, onAdd, editing, onUpdate, pageId,
         setSource(firstPattern ? 'regex' : 'entries')
         setGrouping(firstPattern ? 'month' : 'weekday')
         setType('bar')
-        setPropertyId(undefined)
         setRegexPatternIds(firstPattern ? [firstPattern.id!] : [])
         setAggregateByHub(false)
         userEditedName.current = false
@@ -203,17 +191,14 @@ export function AddChartModal({ open, onClose, onAdd, editing, onUpdate, pageId,
         : regexPatternIds.length > 1
           ? regexPatternIds.map((id) => assignedPatterns.find((p: RegexPattern) => p.id === id)?.name).filter(Boolean).join(', ')
           : 'Chart')
-      : source === 'property'
-        ? (pageProperties.find((p: HubProperty) => p.id === propertyId)?.name ?? 'Chart')
-        : (SOURCE_LABELS[source] ?? 'Chart'))
+      : (SOURCE_LABELS[source] ?? 'Chart'))
     const scopesValue = scopes.length > 0 ? scopes : undefined
-    const propId = source === 'property' ? propertyId : undefined
     const regIds = source === 'regex' && regexPatternIds.length > 0 ? regexPatternIds : undefined
     const hubAgg = effectiveType === 'pie' && aggregateByHub ? true : undefined
     if (editing && onUpdate) {
-      onUpdate(editing.id!, chartName, source, effectiveGrouping, effectiveType, scopesValue, propId, hubAgg, regIds)
+      onUpdate(editing.id!, chartName, source, effectiveGrouping, effectiveType, scopesValue, hubAgg, regIds)
     } else {
-      onAdd(chartName, source, effectiveGrouping, effectiveType, scopesValue, propId, hubAgg, regIds)
+      onAdd(chartName, source, effectiveGrouping, effectiveType, scopesValue, hubAgg, regIds)
     }
     onClose()
   }
@@ -306,7 +291,6 @@ export function AddChartModal({ open, onClose, onAdd, editing, onUpdate, pageId,
                     className={styles.scopeOption}
                     onClick={() => {
                       setSource('regex')
-                      setPropertyId(undefined)
                       setRegexPatternIds((prev) => {
                         const next = prev.includes(rp.id!) ? prev.filter((id) => id !== rp.id) : [...prev, rp.id!]
                         if (!userEditedName.current) {
@@ -331,37 +315,18 @@ export function AddChartModal({ open, onClose, onAdd, editing, onUpdate, pageId,
                   <button
                     key={s}
                     className={styles.scopeOption}
-                    onClick={() => { setSource(s); setPropertyId(undefined); setRegexPatternIds([]); setSourceOpen(false); if (!userEditedName.current) setName(SOURCE_LABELS[s] ?? '') }}
+                    onClick={() => { setSource(s); setRegexPatternIds([]); setSourceOpen(false); if (!userEditedName.current) setName(SOURCE_LABELS[s] ?? '') }}
                     type="button"
                     role="option"
-                    aria-selected={source === s && !propertyId}
+                    aria-selected={source === s}
                   >
                     <div
                       className={styles.scopeRadio}
-                      data-checked={source === s && !propertyId}
+                      data-checked={source === s}
                     />
                     {SOURCE_LABELS[s]}
                   </button>
                 ))}
-                {pageProperties.length > 0 && pageProperties.map((prop: HubProperty) => {
-                  const hub = allPages.find((p) => p.id === prop.hubId)
-                  return (
-                    <button
-                      key={`prop-${prop.id}`}
-                      className={styles.scopeOption}
-                      onClick={() => { setSource('property'); setPropertyId(prop.id); setRegexPatternIds([]); setSourceOpen(false); if (!userEditedName.current) setName(prop.name ?? '') }}
-                      type="button"
-                      role="option"
-                      aria-selected={source === 'property' && propertyId === prop.id}
-                    >
-                      <div
-                        className={styles.scopeRadio}
-                        data-checked={source === 'property' && propertyId === prop.id}
-                      />
-                      {hub ? `${hub.name} — ${prop.name}` : prop.name}
-                    </button>
-                  )
-                })}
               </div>
             </DropdownPortal>
           </div>

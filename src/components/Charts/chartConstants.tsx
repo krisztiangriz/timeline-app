@@ -39,24 +39,20 @@ export const VALID_GROUPINGS: Record<ChartSource, ChartGrouping[]> = {
   regex:    ['month', 'weekday'],
   entries:  ['month', 'weekday'],
   pages:    ['month'],
-  property: ['property-value'],
 }
 
 export const CHART_TYPES_FOR_GROUPING: Record<ChartGrouping, ChartType[]> = {
   month:            ['bar', 'line', 'area'],
   weekday:          ['bar', 'area'],
-  'property-value': ['bar', 'pie'],
 }
 
 export const SOURCE_LABELS: Record<ChartSource, string> = {
   regex:    'Regex pattern',
   entries:  'Timeline entries',
   pages:    'Pages',
-  property: 'Property values',
 }
 
 export const GROUPING_LABELS: Record<ChartGrouping, string> = {
   month:            'By month',
   weekday:          'By weekday',
-  'property-value': 'By value',
 }

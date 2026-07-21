@@ -3,31 +3,6 @@
 export type PageType = 'general' | 'candidate' | 'colleague' | 'project' | 'hub'
 export type PageRole = 'colleague-hub' | 'candidate-hub' | 'project-hub' | 'main-timeline'
 
-// ---- Hub Properties (configurable per hub) ----
-
-export interface PropertyOption {
-  value: string       // slug/key: "active", "engineer"
-  label: string       // display label: "Active", "Engineer"
-  color?: string      // hex color from palette
-}
-
-export interface HubProperty {
-  id?: number
-  hubId: number       // which hub owns this property
-  name: string        // "Status", "Role", "Level"
-  type: 'select'      // only select for now
-  options: PropertyOption[]
-  order: number
-  scope?: 'page'
-}
-
-export interface PagePropertyValue {
-  id?: number
-  pageId: number      // child page
-  propertyId: number  // which HubProperty
-  value: string       // matches a PropertyOption.value
-}
-
 // ---- Database Entities ----
 
 export interface Page {
@@ -99,8 +74,8 @@ export interface HubRegexAssignment {
 
 // ---- Chart Configuration ----
 
-export type ChartSource = 'regex' | 'entries' | 'pages' | 'property'
-export type ChartGrouping = 'month' | 'weekday' | 'property-value'
+export type ChartSource = 'regex' | 'entries' | 'pages'
+export type ChartGrouping = 'month' | 'weekday'
 export type ChartType = 'bar' | 'line' | 'area' | 'pie'
 
 export type ChartScope =
@@ -117,7 +92,6 @@ export interface ChartConfig {
   chartType: ChartType
   scopes?: ChartScope[]
   regexPatternIds?: number[]   // required when source='regex'
-  propertyId?: number        // required when source='property'
   aggregateByHub?: boolean
   order: number
 }

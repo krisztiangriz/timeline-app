@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { Modal } from '../Modal/Modal'
 import { ConfirmModal } from '../ConfirmModal/ConfirmModal'
-import { PropertyEditorContent } from '../PropertyEditor/PropertyEditor'
+import { RegexPatternAssignment } from '../PropertyEditor/PropertyEditor'
 import { DragHandleIcon, TrashIcon, CheckIcon, PlusIcon, CloseIcon } from '../Icons/Icons'
 import { DropdownPortal } from '../DropdownPortal/DropdownPortal'
 import { db } from '../../db/database'
@@ -38,7 +38,8 @@ interface PageFormProps {
   isEdit?: boolean
   isHub?: boolean
   hubs?: HubInfo[]
-  hubId?: number  // when editing a hub, enables step 2 (property config)
+  hubId?: number  // when editing a hub
+  pageId?: number // page being edited — shows regex pattern assignment for hubs and standalone pages
 }
 
 function RadioOption({ selected, onChange, label, description, disabled, tabIdx }: {
@@ -67,7 +68,7 @@ const BLOCK_TYPE_LABELS: Partial<Record<BlockType, string>> = {
   visualization: 'Charts',
 }
 
-export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHubProp, hubs = EMPTY_HUBS, hubId }: PageFormProps) {
+export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHubProp, hubs = EMPTY_HUBS, hubId, pageId }: PageFormProps) {
   const { show: showToast } = useToast()
   const [name, setName] = useState('')
   const [tabs, setTabs] = useState<{ name: string; type: BlockType; key: number }[]>([])
@@ -130,15 +131,12 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
   // Cleanup function for cancel/close
   const cleanupPlaceholderHub = useCallback(async () => {
     if (createdHubId && !hubConfirmed.current) {
-      // Delete the placeholder hub and any properties/blocks/chartConfigs created on it
-      await db.transaction('rw', [db.pages, db.blocks, db.hubProperties, db.pagePropertyValues, db.chartConfigs], async () => {
-        // Delete chart configs for any visualization blocks
+      await db.transaction('rw', [db.pages, db.blocks, db.chartConfigs], async () => {
         const vizBlocks = await db.blocks.where('pageId').equals(createdHubId).filter((b) => b.type === 'visualization').toArray()
         const vizBlockIds = vizBlocks.map((b) => b.id!)
         if (vizBlockIds.length > 0) {
           await db.chartConfigs.where('blockId').anyOf(vizBlockIds).delete()
         }
-        await db.hubProperties.where('hubId').equals(createdHubId).delete()
         await db.blocks.where('pageId').equals(createdHubId).delete()
         await db.pages.delete(createdHubId)
       })
@@ -474,9 +472,9 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
         )}
       </div>}
 
-      {/* Properties section (hub edit mode, or after hub creation) */}
-      {effectiveHubId && (
-        <PropertyEditorContent hubId={effectiveHubId} />
+      {/* Regex pattern assignment (hubs and standalone pages) */}
+      {(effectiveHubId || pageId) && (
+        <RegexPatternAssignment pageId={(effectiveHubId || pageId)!} />
       )}
     </Modal>
     <ConfirmModal

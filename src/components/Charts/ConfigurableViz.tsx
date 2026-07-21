@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo, memo } from 'react'
+import { useState, useEffect, useRef, memo } from 'react'
 import { EmptyState } from '../EmptyState/EmptyState'
 import { CloseIcon } from '../Icons/Icons'
 import { RangeToggle, type RangeMonths } from '../RangeToggle/RangeToggle'
@@ -9,9 +9,7 @@ import { useAutocomplete } from '../../hooks/useAutocomplete'
 import { useAllEntries } from '../../hooks/useChartData'
 import { useChartPalette } from '../../hooks/useChartPalette'
 import { useRegexPatterns } from '../../hooks/useRegexPatterns'
-import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '../../db/database'
-import type { ChartConfig, ChartSource, ChartGrouping, ChartType, ChartScope, TimelineEntry, Page, HubProperty, PagePropertyValue, RegexPattern } from '../../types'
+import type { ChartConfig, ChartSource, ChartGrouping, ChartType, ChartScope, TimelineEntry, Page, RegexPattern } from '../../types'
 import { useOnboardingActions } from '../../hooks/useOnboardingGuides'
 import { OnboardingGuide } from '../OnboardingGuide/OnboardingGuide'
 import { safeGetItem, safeSetItem } from '../../utils/safeStorage'
@@ -34,45 +32,6 @@ export const ConfigurableViz = memo(function ConfigurableViz({ blockId, pageId }
   })
   const allEntries = useAllEntries(range || undefined)
 
-  // Scope hub/property queries to hub IDs referenced by configs
-  const relevantHubIds = useMemo(() => {
-    const ids = new Set<number>()
-    for (const c of configs) {
-      for (const s of c.scopes ?? []) {
-        if (s.type === 'hub') ids.add(s.hubId)
-        if (s.type === 'page') {
-          const page = allPages.find((p) => p.id === s.pageId)
-          if (page?.type === 'hub') ids.add(s.pageId)
-          else if (page?.parentId) ids.add(page.parentId)
-        }
-      }
-    }
-    const currentPage = allPages.find((p) => p.id === pageId)
-    if (currentPage?.type === 'hub') ids.add(pageId)
-    else if (currentPage?.parentId) ids.add(currentPage.parentId)
-    else ids.add(pageId)
-    return [...ids]
-  }, [configs, pageId, allPages])
-
-  const allHubProperties = useLiveQuery(
-    () => relevantHubIds.length > 0
-      ? db.hubProperties.where('hubId').anyOf(relevantHubIds).toArray()
-      : db.hubProperties.toArray(),
-    [relevantHubIds.join(',')]
-  ) ?? []
-
-  const relevantPageIds = useMemo(
-    () => allPages.filter((p) => p.parentId && relevantHubIds.includes(p.parentId)).map((p) => p.id!),
-    [allPages, relevantHubIds]
-  )
-
-  const allPropertyValues = useLiveQuery(
-    () => relevantPageIds.length > 0
-      ? db.pagePropertyValues.where('pageId').anyOf(relevantPageIds).toArray()
-      : db.pagePropertyValues.toArray(),
-    [relevantPageIds.join(',')]
-  ) ?? []
-
   const allRegexPatterns = useRegexPatterns()
   const [addOpen, setAddOpen] = useState(false)
   const [editing, setEditing] = useState<ChartConfig | undefined>()
@@ -88,12 +47,12 @@ export const ConfigurableViz = memo(function ConfigurableViz({ blockId, pageId }
     safeSetItem(`viz-range-${blockId}`, String(r))
   }
 
-  async function handleAdd(name: string, source: ChartSource, grouping: ChartGrouping, chartType: ChartType, scopes?: ChartScope[], propertyId?: number, aggregateByHub?: boolean, regexPatternIds?: number[]) {
-    try { await addChartConfig(blockId, name, source, grouping, chartType, scopes, propertyId, aggregateByHub, regexPatternIds) } catch { showToast('Failed to add chart') }
+  async function handleAdd(name: string, source: ChartSource, grouping: ChartGrouping, chartType: ChartType, scopes?: ChartScope[], aggregateByHub?: boolean, regexPatternIds?: number[]) {
+    try { await addChartConfig(blockId, name, source, grouping, chartType, scopes, aggregateByHub, regexPatternIds) } catch { showToast('Failed to add chart') }
   }
 
-  async function handleUpdate(id: number, name: string, source: ChartSource, grouping: ChartGrouping, chartType: ChartType, scopes?: ChartScope[], propertyId?: number, aggregateByHub?: boolean, regexPatternIds?: number[]) {
-    try { await updateChartConfig(id, { name, source, grouping, chartType, scopes, propertyId, aggregateByHub, regexPatternIds }) } catch { showToast('Failed to update chart') }
+  async function handleUpdate(id: number, name: string, source: ChartSource, grouping: ChartGrouping, chartType: ChartType, scopes?: ChartScope[], aggregateByHub?: boolean, regexPatternIds?: number[]) {
+    try { await updateChartConfig(id, { name, source, grouping, chartType, scopes, aggregateByHub, regexPatternIds }) } catch { showToast('Failed to update chart') }
   }
 
   async function handleDelete(id: number) {
@@ -119,7 +78,7 @@ export const ConfigurableViz = memo(function ConfigurableViz({ blockId, pageId }
       ) : (
         configs.map((config) => (
           <div key={config.id} className={styles.chartSection}>
-            <ChartCard config={config} monthCount={range} entries={allEntries} pages={allPages} hubProperties={allHubProperties} propertyValues={allPropertyValues} regexPatterns={allRegexPatterns} onEdit={setEditing} onDelete={handleDelete} isPie={config.chartType === 'pie'} palette={palette} />
+            <ChartCard config={config} monthCount={range} entries={allEntries} pages={allPages} regexPatterns={allRegexPatterns} onEdit={setEditing} onDelete={handleDelete} isPie={config.chartType === 'pie'} palette={palette} />
           </div>
         ))
       )}
@@ -145,8 +104,6 @@ const ChartCard = memo(function ChartCard({
   monthCount,
   entries,
   pages,
-  hubProperties,
-  propertyValues,
   regexPatterns,
   onEdit,
   onDelete,
@@ -157,8 +114,6 @@ const ChartCard = memo(function ChartCard({
   monthCount: 0 | 3 | 6 | 12
   entries: TimelineEntry[]
   pages: Page[]
-  hubProperties: HubProperty[]
-  propertyValues: PagePropertyValue[]
   regexPatterns: RegexPattern[]
   onEdit: (c: ChartConfig) => void
   onDelete: (id: number) => void
@@ -185,8 +140,6 @@ const ChartCard = memo(function ChartCard({
         monthCount={monthCount}
         entries={entries}
         pages={pages}
-        hubProperties={hubProperties}
-        propertyValues={propertyValues}
         regexPatterns={regexPatterns}
         containerClass={isPie ? styles.chartContainerPie : styles.chartContainer}
         palette={palette}

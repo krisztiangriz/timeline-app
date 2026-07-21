@@ -6,8 +6,6 @@ import type {
   TimelineEntry,
   PageSetting,
   ChartConfig,
-  HubProperty,
-  PagePropertyValue,
   RegexPattern,
   HubRegexAssignment,
 } from '../types'
@@ -21,8 +19,6 @@ class TimelineDB extends Dexie {
 
   pageSettings!: Table<PageSetting>
   chartConfigs!: Table<ChartConfig>
-  hubProperties!: Table<HubProperty>
-  pagePropertyValues!: Table<PagePropertyValue>
   regexPatterns!: Table<RegexPattern>
   hubRegexAssignments!: Table<HubRegexAssignment>
 
@@ -513,6 +509,19 @@ class TimelineDB extends Dexie {
         if (config.regexPatternId) {
           config.regexPatternIds = [config.regexPatternId as number]
           delete config.regexPatternId
+        }
+      })
+    })
+
+    this.version(25).stores({
+      hubProperties: null,
+      pagePropertyValues: null,
+    }).upgrade(async (tx) => {
+      await tx.table('chartConfigs').toCollection().modify((config: Record<string, unknown>) => {
+        if (config.source === 'property') {
+          config.source = 'entries'
+          config.grouping = 'month'
+          delete config.propertyId
         }
       })
     })

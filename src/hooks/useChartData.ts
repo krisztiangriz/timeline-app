@@ -1,10 +1,9 @@
 import { useMemo } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db/database'
-import type { TimelineEntry, Page, ChartScope, ChartConfig, HubProperty, PagePropertyValue, RegexPattern } from '../types'
+import type { TimelineEntry, Page, ChartScope, ChartConfig, RegexPattern } from '../types'
 import { stripHtml } from '../utils/stripHtml'
 import { filterHtmlToMentionLines } from '../utils/mentionParser'
-import { CHART_COLORS } from '../constants/colors'
 
 // Native date helpers
 function formatMonthKey(d: Date): string {
@@ -676,48 +675,12 @@ function aggregatePagesByMonth(
   return { data, keys: ['count'], xKey: 'month' }
 }
 
-// ---- Aggregation: property distribution ----
-
-function aggregatePropertyDistribution(
-  pages: Page[], property: HubProperty | undefined, propertyValues: PagePropertyValue[],
-): UnifiedChartData {
-  if (!property) return { data: [], keys: [], xKey: 'name' }
-
-  const counts = new Map<string, number>()
-  const childPages = pages.filter((p) => p.parentId === property.hubId)
-  const valuesByPage = new Map<number, string>()
-  for (const pv of propertyValues) {
-    if (pv.propertyId === property.id) {
-      valuesByPage.set(pv.pageId, pv.value)
-    }
-  }
-
-  for (const page of childPages) {
-    const val = valuesByPage.get(page.id!) ?? property.options[0]?.value
-    if (val) counts.set(val, (counts.get(val) || 0) + 1)
-  }
-
-  const summary = property.options
-    .map((opt, i) => ({
-      name: opt.label,
-      value: counts.get(opt.value) || 0,
-      color: opt.color ?? CHART_COLORS[i % CHART_COLORS.length],
-    }))
-    .filter((s) => s.value > 0)
-
-  // For bar charts, provide data array
-  const data = summary.map((s) => ({ name: s.name, value: s.value } as Record<string, string | number>))
-  return { data, keys: ['value'], xKey: 'name', summary }
-}
-
 // ---- Unified dispatcher hook ----
 
 export function useUnifiedChartData(
   config: ChartConfig,
   entries: TimelineEntry[],
   pages: Page[],
-  hubProperties: HubProperty[],
-  propertyValues: PagePropertyValue[],
   regexPatterns: RegexPattern[],
   monthCount: number,
 ): UnifiedChartData {
@@ -734,10 +697,6 @@ export function useUnifiedChartData(
       .filter((p): p is RegexPattern => !!p)
       .map((p) => ({ id: p.id!, name: p.name, pattern: p.pattern }))
   }, [config.source, config.regexPatternIds, regexPatterns])
-
-  const property = config.source === 'property'
-    ? hubProperties.find((p) => p.id === config.propertyId)
-    : undefined
 
   return useMemo(() => {
     const { source, grouping } = config
@@ -757,10 +716,7 @@ export function useUnifiedChartData(
     if (source === 'pages' && grouping === 'month') {
       return aggregatePagesByMonth(pages, scopes, monthCount)
     }
-    if (source === 'property' && grouping === 'property-value') {
-      return aggregatePropertyDistribution(pages, property, propertyValues)
-    }
 
     return { data: [], keys: [], xKey: 'month' }
-  }, [config, scopedEntries, pages, scopes, patterns, property, propertyValues, monthCount])
+  }, [config, scopedEntries, pages, scopes, patterns, monthCount])
 }

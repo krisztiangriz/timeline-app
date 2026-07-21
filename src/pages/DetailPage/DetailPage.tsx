@@ -1,18 +1,16 @@
 import { useStickyScroll } from '../../hooks/useStickyScroll'
-import { useState, useEffect, useCallback, useMemo, lazy, Suspense } from 'react'
+import { useState, useEffect, useCallback, lazy, Suspense } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { BreadcrumbNav } from '../../components/Breadcrumb/Breadcrumb'
 import { PageHeader } from '../../components/PageHeader/PageHeader'
 import type { PageFormData } from '../../components/PageForm/PageForm'
 import { ConfirmModal } from '../../components/ConfirmModal/ConfirmModal'
 import { BlockRenderer } from '../../components/BlockRenderer/BlockRenderer'
-import { PropertyRow } from '../../components/PropertyRow/PropertyRow'
 import { usePage, updatePage, deletePage, updateTabs, archivePage, unarchivePage, usePageTabs, getPagePath } from '../../hooks/usePages'
 import { useBlocks } from '../../hooks/useBlocks'
 import { usePageMenus } from '../../hooks/usePageMenus'
 import { useAutocomplete } from '../../hooks/useAutocomplete'
 import { useToast } from '../../hooks/useToast'
-import { useHubPageProperties, usePagePropertyValues, setPagePropertyValue, getPagePropertyValue } from '../../hooks/useHubProperties'
 import layout from '../../styles/layout.module.css'
 import pd from '../../components/PageDetail/PageDetail.module.css'
 
@@ -37,10 +35,7 @@ export function DetailPage({ routePrefix }: DetailPageProps) {
   const [activeTabId, setActiveTabId] = useState<number | null>(null)
   const allBlocks = useBlocks(pageId)
 
-  // Hub properties
   const parentHub = page?.parentId ? allPages.find((p) => p.id === page.parentId) : undefined
-  const hubProperties = useHubPageProperties(parentHub?.id)
-  const propertyValues = usePagePropertyValues(pageId)
 
   const tabIds = tabs.map(t => t.id).join(',')
   useEffect(() => {
@@ -100,14 +95,6 @@ export function DetailPage({ routePrefix }: DetailPageProps) {
   }
 
   const handleUpdateName = useCallback((name: string) => updatePage(pageId!, { name }), [pageId])
-  const handlePropertyChange = useMemo(
-    () => hubProperties.reduce((acc, prop) => {
-      acc[prop.id!] = (value: string) => setPagePropertyValue(pageId!, prop.id!, value)
-      return acc
-    }, {} as Record<number, (value: string) => void>),
-    [pageId, hubProperties]
-  )
-
   if (!page) return null
 
   return (
@@ -116,38 +103,7 @@ export function DetailPage({ routePrefix }: DetailPageProps) {
         <div ref={sentinelRef} />
         <div className={isScrolled ? layout.stickyHeaderScrolled : layout.stickyHeader}>
           <BreadcrumbNav items={[{ label: 'Home', path: '/' }, ...(parentHub ? [{ label: parentHub.name, path: hubPath }] : []), { label: page.name, path: pagePath }]} moreMenuItems={moreMenuItems} />
-          {hubProperties.length === 1 ? (
-            <PageHeader
-              name={page.name}
-              onUpdateName={handleUpdateName}
-              tabs={tabs}
-              activeTabId={activeTabId}
-              onTabChange={setActiveTabId}
-              actions={
-                <PropertyRow
-                  property={hubProperties[0]}
-                  value={getPagePropertyValue(propertyValues, hubProperties[0].id!)}
-                  onChange={handlePropertyChange[hubProperties[0].id!]}
-                />
-              }
-            />
-          ) : (
-            <>
-              <PageHeader name={page.name} onUpdateName={handleUpdateName} tabs={tabs} activeTabId={activeTabId} onTabChange={setActiveTabId} />
-              {hubProperties.length > 1 && (
-                <div className={pd.propertyRow}>
-                  {hubProperties.map((prop) => (
-                    <PropertyRow
-                      key={prop.id}
-                      property={prop}
-                      value={getPagePropertyValue(propertyValues, prop.id!)}
-                      onChange={handlePropertyChange[prop.id!]}
-                    />
-                  ))}
-                </div>
-              )}
-            </>
-          )}
+          <PageHeader name={page.name} onUpdateName={handleUpdateName} tabs={tabs} activeTabId={activeTabId} onTabChange={setActiveTabId} />
         </div>
         <BlockRenderer page={page} activeTabId={activeTabId} />
         {tabs.length === 0 && page.type !== 'hub' && page.role !== 'main-timeline' && (
@@ -156,7 +112,7 @@ export function DetailPage({ routePrefix }: DetailPageProps) {
           </div>
         )}
       </div>
-      {editPageOpen && <Suspense fallback={null}><PageForm open={editPageOpen} onClose={() => setEditPageOpen(false)} onSubmit={handleEditSubmit} initial={getEditInitial()} isEdit isHub={page.type === 'hub' || undefined} hubId={page.type === 'hub' ? page.id : undefined} /></Suspense>}
+      {editPageOpen && <Suspense fallback={null}><PageForm open={editPageOpen} onClose={() => setEditPageOpen(false)} onSubmit={handleEditSubmit} initial={getEditInitial()} isEdit isHub={page.type === 'hub' || undefined} hubId={page.type === 'hub' ? page.id : undefined} pageId={!page.parentId ? page.id : undefined} /></Suspense>}
       <ConfirmModal
         open={deleteConfirm}
         title={page.type === 'hub' ? 'Delete hub' : 'Delete page'}
