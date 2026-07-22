@@ -223,7 +223,6 @@ function aggregateRegexByMonth(
                 data[idx][bucket] = (Number(data[idx][bucket]) || 0) + c
                 summaryTotals.set(bucket, (summaryTotals.get(bucket) ?? 0) + c)
               }
-              break
             }
           }
         }
@@ -323,7 +322,6 @@ function aggregateRegexByMonth(
               data[idx][bucket] = (Number(data[idx][bucket]) || 0) + c
               summaryTotals.set(bucket, (summaryTotals.get(bucket) ?? 0) + c)
             }
-            break
           }
         }
       }
@@ -426,7 +424,6 @@ function aggregateRegexByWeekday(
                 const c = countMode === 'line' ? countNonEmptyLines(e.text) : 1
                 data[idx][bucket] = (Number(data[idx][bucket]) || 0) + c
               }
-              break
             }
           }
         }
@@ -502,7 +499,6 @@ function aggregateRegexByWeekday(
               const c = countMode === 'line' ? countNonEmptyLines(e.text) : 1
               data[idx][bucket] = (Number(data[idx][bucket]) || 0) + c
             }
-            break
           }
         }
       }
@@ -572,7 +568,6 @@ function aggregateEntriesByMonth(
           if (childIdSet.has(refId)) {
             const bucket = childToName.get(refId)
             if (bucket) data[idx][bucket] = (Number(data[idx][bucket]) || 0) + inc
-            break
           }
         }
       }
@@ -641,7 +636,6 @@ function aggregateEntriesByWeekday(
           if (childIdSet.has(refId)) {
             const bucket = childToName.get(refId)
             if (bucket) data[idx][bucket] = (Number(data[idx][bucket]) || 0) + inc
-            break
           }
         }
       }
