@@ -122,6 +122,29 @@ function countRegexMentionMatches(html: string, pageId: number, regex: RegExp): 
   return count
 }
 
+// ---- Line-counting helpers ----
+
+function splitIntoLines(html: string): string[] {
+  return html.split(/<br\s*\/?>|<\/div>|<\/p>|\n/i)
+}
+
+function countNonEmptyLines(html: string): number {
+  let count = 0
+  for (const segment of splitIntoLines(html)) {
+    if (stripHtml(segment).trim()) count++
+  }
+  return count
+}
+
+function countLinesWithMatch(html: string, regex: RegExp): number {
+  let count = 0
+  for (const segment of splitIntoLines(html)) {
+    const plain = stripHtml(segment).trim()
+    if (plain && plain.match(regex)) count++
+  }
+  return count
+}
+
 // ---- Hub breakdown helpers ----
 
 function getHubIds(scopes: ChartScope[], pages: Page[]): number[] {
@@ -142,7 +165,7 @@ interface PatternInfo { id: number; name: string; pattern: string }
 
 function aggregateRegexByMonth(
   entries: TimelineEntry[], pages: Page[], scopes: ChartScope[],
-  patterns: PatternInfo[], monthCount: number, aggregateByHub?: boolean,
+  patterns: PatternInfo[], monthCount: number, aggregateByHub?: boolean, countMode?: 'date' | 'line',
 ): UnifiedChartData {
   if (patterns.length === 0) return { data: [], keys: [], xKey: 'month' }
 
@@ -178,12 +201,15 @@ function aggregateRegexByMonth(
         const m = formatMonthKey(new Date(e.date))
         const idx = monthToIdx.get(m)
         if (idx === undefined) continue
-        // Each entry attributed to one child: direct page gets regex counts, tagRef gets 1
         if (childIdSet.has(e.pageId)) {
           const bucket = childToName.get(e.pageId)
           if (bucket) {
             let count = 0
-            for (const { pattern } of regexes) count += countRegexMatches(e.text, new RegExp(pattern, 'g'))
+            if (countMode === 'line') {
+              for (const { pattern } of regexes) count += countLinesWithMatch(e.text, new RegExp(pattern, 'g'))
+            } else {
+              for (const { pattern } of regexes) count += countRegexMatches(e.text, new RegExp(pattern, 'g'))
+            }
             data[idx][bucket] = (Number(data[idx][bucket]) || 0) + count
             summaryTotals.set(bucket, (summaryTotals.get(bucket) ?? 0) + count)
           }
@@ -193,8 +219,9 @@ function aggregateRegexByMonth(
             if (childIdSet.has(refId)) {
               const bucket = childToName.get(refId)
               if (bucket) {
-                data[idx][bucket] = (Number(data[idx][bucket]) || 0) + 1
-                summaryTotals.set(bucket, (summaryTotals.get(bucket) ?? 0) + 1)
+                const c = countMode === 'line' ? countNonEmptyLines(e.text) : 1
+                data[idx][bucket] = (Number(data[idx][bucket]) || 0) + c
+                summaryTotals.set(bucket, (summaryTotals.get(bucket) ?? 0) + c)
               }
               break
             }
@@ -223,7 +250,9 @@ function aggregateRegexByMonth(
       const idx = monthToIdx.get(m)
       if (idx === undefined) continue
       for (const { name, pattern } of regexes) {
-        const count = countRegexMatches(e.text, new RegExp(pattern, 'g'))
+        const count = countMode === 'line'
+          ? countLinesWithMatch(e.text, new RegExp(pattern, 'g'))
+          : countRegexMatches(e.text, new RegExp(pattern, 'g'))
         data[idx][name] = (Number(data[idx][name]) || 0) + count
         totals.set(name, (totals.get(name) ?? 0) + count)
       }
@@ -278,7 +307,9 @@ function aggregateRegexByMonth(
       if (childIdSet.has(e.pageId)) {
         const bucket = getBucket(e.pageId)
         if (bucket) {
-          const count = countRegexMatches(e.text, new RegExp(pat.pattern, 'g'))
+          const count = countMode === 'line'
+            ? countLinesWithMatch(e.text, new RegExp(pat.pattern, 'g'))
+            : countRegexMatches(e.text, new RegExp(pat.pattern, 'g'))
           data[idx][bucket] = (Number(data[idx][bucket]) || 0) + count
           summaryTotals.set(bucket, (summaryTotals.get(bucket) ?? 0) + count)
         }
@@ -288,8 +319,9 @@ function aggregateRegexByMonth(
           if (childIdSet.has(refId)) {
             const bucket = getBucket(refId)
             if (bucket) {
-              data[idx][bucket] = (Number(data[idx][bucket]) || 0) + 1
-              summaryTotals.set(bucket, (summaryTotals.get(bucket) ?? 0) + 1)
+              const c = countMode === 'line' ? countNonEmptyLines(e.text) : 1
+              data[idx][bucket] = (Number(data[idx][bucket]) || 0) + c
+              summaryTotals.set(bucket, (summaryTotals.get(bucket) ?? 0) + c)
             }
             break
           }
@@ -316,9 +348,16 @@ function aggregateRegexByMonth(
     const m = formatMonthKey(new Date(e.date))
     const idx = monthToIdx2.get(m)
     if (idx === undefined) continue
-    const count = scopePageId && e.pageId !== scopePageId
-      ? countRegexMentionMatches(e.text, scopePageId, new RegExp(pat.pattern, 'g'))
-      : countRegexMatches(e.text, new RegExp(pat.pattern, 'g'))
+    let count: number
+    if (countMode === 'line') {
+      count = scopePageId && e.pageId !== scopePageId
+        ? countLinesWithMatch(e.text, new RegExp(pat.pattern, 'g'))
+        : countLinesWithMatch(e.text, new RegExp(pat.pattern, 'g'))
+    } else {
+      count = scopePageId && e.pageId !== scopePageId
+        ? countRegexMentionMatches(e.text, scopePageId, new RegExp(pat.pattern, 'g'))
+        : countRegexMatches(e.text, new RegExp(pat.pattern, 'g'))
+    }
     data[idx].Matches = (Number(data[idx].Matches) || 0) + count
     total += count
   }
@@ -333,7 +372,7 @@ const WEEKDAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
 function aggregateRegexByWeekday(
   entries: TimelineEntry[], pages: Page[], scopes: ChartScope[],
-  patterns: PatternInfo[], monthCount: number,
+  patterns: PatternInfo[], monthCount: number, countMode?: 'date' | 'line',
 ): UnifiedChartData {
   if (patterns.length === 0) return { data: [], keys: [], xKey: 'name' }
 
@@ -371,7 +410,11 @@ function aggregateRegexByWeekday(
           const bucket = childToName.get(e.pageId)
           if (bucket) {
             let count = 0
-            for (const { pattern } of regexes) count += countRegexMatches(e.text, new RegExp(pattern, 'g'))
+            if (countMode === 'line') {
+              for (const { pattern } of regexes) count += countLinesWithMatch(e.text, new RegExp(pattern, 'g'))
+            } else {
+              for (const { pattern } of regexes) count += countRegexMatches(e.text, new RegExp(pattern, 'g'))
+            }
             data[idx][bucket] = (Number(data[idx][bucket]) || 0) + count
           }
         } else if (e.tagRefs) {
@@ -379,7 +422,10 @@ function aggregateRegexByWeekday(
             const refId = Number(ref)
             if (childIdSet.has(refId)) {
               const bucket = childToName.get(refId)
-              if (bucket) data[idx][bucket] = (Number(data[idx][bucket]) || 0) + 1
+              if (bucket) {
+                const c = countMode === 'line' ? countNonEmptyLines(e.text) : 1
+                data[idx][bucket] = (Number(data[idx][bucket]) || 0) + c
+              }
               break
             }
           }
@@ -404,7 +450,9 @@ function aggregateRegexByWeekday(
       const jsDay = new Date(e.date).getDay()
       const idx = jsDay === 0 ? 6 : jsDay - 1
       for (const { name, pattern } of regexes) {
-        const count = countRegexMatches(e.text, new RegExp(pattern, 'g'))
+        const count = countMode === 'line'
+          ? countLinesWithMatch(e.text, new RegExp(pattern, 'g'))
+          : countRegexMatches(e.text, new RegExp(pattern, 'g'))
         data[idx][name] = (Number(data[idx][name]) || 0) + count
       }
     }
@@ -440,7 +488,9 @@ function aggregateRegexByWeekday(
       if (childIdSet.has(e.pageId)) {
         const bucket = childToName.get(e.pageId)
         if (bucket) {
-          const count = countRegexMatches(e.text, new RegExp(pat.pattern, 'g'))
+          const count = countMode === 'line'
+            ? countLinesWithMatch(e.text, new RegExp(pat.pattern, 'g'))
+            : countRegexMatches(e.text, new RegExp(pat.pattern, 'g'))
           data[idx][bucket] = (Number(data[idx][bucket]) || 0) + count
         }
       } else if (e.tagRefs) {
@@ -448,7 +498,10 @@ function aggregateRegexByWeekday(
           const refId = Number(ref)
           if (childIdSet.has(refId)) {
             const bucket = childToName.get(refId)
-            if (bucket) data[idx][bucket] = (Number(data[idx][bucket]) || 0) + 1
+            if (bucket) {
+              const c = countMode === 'line' ? countNonEmptyLines(e.text) : 1
+              data[idx][bucket] = (Number(data[idx][bucket]) || 0) + c
+            }
             break
           }
         }
@@ -468,9 +521,14 @@ function aggregateRegexByWeekday(
     if (new Date(e.date) < cutoff) continue
     const jsDay = new Date(e.date).getDay()
     const idx = jsDay === 0 ? 6 : jsDay - 1
-    const count = scopePageId && e.pageId !== scopePageId
-      ? countRegexMentionMatches(e.text, scopePageId, new RegExp(pat.pattern, 'g'))
-      : countRegexMatches(e.text, new RegExp(pat.pattern, 'g'))
+    let count: number
+    if (countMode === 'line') {
+      count = countLinesWithMatch(e.text, new RegExp(pat.pattern, 'g'))
+    } else {
+      count = scopePageId && e.pageId !== scopePageId
+        ? countRegexMentionMatches(e.text, scopePageId, new RegExp(pat.pattern, 'g'))
+        : countRegexMatches(e.text, new RegExp(pat.pattern, 'g'))
+    }
     data[idx].Matches = (Number(data[idx].Matches) || 0) + count
   }
 
@@ -480,7 +538,7 @@ function aggregateRegexByWeekday(
 // ---- Aggregation: entries by month (NEW) ----
 
 function aggregateEntriesByMonth(
-  entries: TimelineEntry[], pages: Page[], scopes: ChartScope[], monthCount: number,
+  entries: TimelineEntry[], pages: Page[], scopes: ChartScope[], monthCount: number, countMode?: 'date' | 'line',
 ): UnifiedChartData {
   const months = buildMonthKeys(monthCount, entries)
   const hubIds = getHubIds(scopes, pages)
@@ -504,16 +562,16 @@ function aggregateEntriesByMonth(
       const m = formatMonthKey(new Date(e.date))
       const idx = monthToIdx.get(m)
       if (idx === undefined) continue
-      // Each entry counts once — attributed to pageId if direct child, else first tagRef match
+      const inc = countMode === 'line' ? countNonEmptyLines(e.text) : 1
       if (childIdSet.has(e.pageId)) {
         const bucket = childToName.get(e.pageId)
-        if (bucket) data[idx][bucket] = (Number(data[idx][bucket]) || 0) + 1
+        if (bucket) data[idx][bucket] = (Number(data[idx][bucket]) || 0) + inc
       } else if (e.tagRefs) {
         for (const ref of e.tagRefs) {
           const refId = Number(ref)
           if (childIdSet.has(refId)) {
             const bucket = childToName.get(refId)
-            if (bucket) data[idx][bucket] = (Number(data[idx][bucket]) || 0) + 1
+            if (bucket) data[idx][bucket] = (Number(data[idx][bucket]) || 0) + inc
             break
           }
         }
@@ -524,16 +582,19 @@ function aggregateEntriesByMonth(
     return { data, keys, xKey: 'month' }
   }
 
-  // Single series
+  // Single series — only count direct page entries (skip tagRef-included entries)
+  const scopePageId = scopes.length === 1 && scopes[0].type === 'page' ? scopes[0].pageId : undefined
   const monthToIdx = new Map(months.map((m, i) => [m, i]))
   const data = months.map((m) => ({ month: formatMonthLabel(m), Entries: 0 } as Record<string, string | number>))
 
   for (const e of entries) {
     if (e.isPending) continue
+    if (scopePageId && e.pageId !== scopePageId) continue
     const m = formatMonthKey(new Date(e.date))
     const idx = monthToIdx.get(m)
     if (idx === undefined) continue
-    data[idx].Entries = (Number(data[idx].Entries) || 0) + 1
+    const inc = countMode === 'line' ? countNonEmptyLines(e.text) : 1
+    data[idx].Entries = (Number(data[idx].Entries) || 0) + inc
   }
 
   return { data, keys: ['Entries'], xKey: 'month' }
@@ -542,7 +603,7 @@ function aggregateEntriesByMonth(
 // ---- Aggregation: entries by weekday ----
 
 function aggregateEntriesByWeekday(
-  entries: TimelineEntry[], pages: Page[], scopes: ChartScope[], monthCount: number,
+  entries: TimelineEntry[], pages: Page[], scopes: ChartScope[], monthCount: number, countMode?: 'date' | 'line',
 ): UnifiedChartData {
   const cutoff = getCutoff(monthCount)
   const hubIds = getHubIds(scopes, pages)
@@ -565,15 +626,16 @@ function aggregateEntriesByWeekday(
       if (new Date(e.date) < cutoff) continue
       const jsDay = new Date(e.date).getDay()
       const idx = jsDay === 0 ? 6 : jsDay - 1
+      const inc = countMode === 'line' ? countNonEmptyLines(e.text) : 1
       if (childIdSet.has(e.pageId)) {
         const bucket = childToName.get(e.pageId)
-        if (bucket) data[idx][bucket] = (Number(data[idx][bucket]) || 0) + 1
+        if (bucket) data[idx][bucket] = (Number(data[idx][bucket]) || 0) + inc
       } else if (e.tagRefs) {
         for (const ref of e.tagRefs) {
           const refId = Number(ref)
           if (childIdSet.has(refId)) {
             const bucket = childToName.get(refId)
-            if (bucket) data[idx][bucket] = (Number(data[idx][bucket]) || 0) + 1
+            if (bucket) data[idx][bucket] = (Number(data[idx][bucket]) || 0) + inc
             break
           }
         }
@@ -584,14 +646,16 @@ function aggregateEntriesByWeekday(
     return { data, keys, xKey: 'name' }
   }
 
-  // Single series
+  // Single series — only count direct page entries (skip tagRef-included entries)
+  const scopePageId = scopes.length === 1 && scopes[0].type === 'page' ? scopes[0].pageId : undefined
   const counts = [0, 0, 0, 0, 0, 0, 0]
   for (const e of entries) {
     if (e.isPending) continue
+    if (scopePageId && e.pageId !== scopePageId) continue
     if (new Date(e.date) < cutoff) continue
     const jsDay = new Date(e.date).getDay()
     const idx = jsDay === 0 ? 6 : jsDay - 1
-    counts[idx]++
+    counts[idx] += countMode === 'line' ? countNonEmptyLines(e.text) : 1
   }
 
   const data = WEEKDAY_LABELS.map((label, i) => ({ name: label, Entries: counts[i] } as Record<string, string | number>))
@@ -664,19 +728,19 @@ export function useUnifiedChartData(
   }, [config.source, config.regexPatternIds, regexPatterns])
 
   return useMemo(() => {
-    const { source, grouping } = config
+    const { source, grouping, countMode } = config
 
     if (source === 'regex' && grouping === 'month') {
-      return aggregateRegexByMonth(scopedEntries, pages, scopes, patterns, monthCount, config.aggregateByHub)
+      return aggregateRegexByMonth(scopedEntries, pages, scopes, patterns, monthCount, config.aggregateByHub, countMode)
     }
     if (source === 'regex' && grouping === 'weekday') {
-      return aggregateRegexByWeekday(scopedEntries, pages, scopes, patterns, monthCount)
+      return aggregateRegexByWeekday(scopedEntries, pages, scopes, patterns, monthCount, countMode)
     }
     if (source === 'entries' && grouping === 'month') {
-      return aggregateEntriesByMonth(scopedEntries, pages, scopes, monthCount)
+      return aggregateEntriesByMonth(scopedEntries, pages, scopes, monthCount, countMode)
     }
     if (source === 'entries' && grouping === 'weekday') {
-      return aggregateEntriesByWeekday(scopedEntries, pages, scopes, monthCount)
+      return aggregateEntriesByWeekday(scopedEntries, pages, scopes, monthCount, countMode)
     }
     if (source === 'pages' && grouping === 'month') {
       return aggregatePagesByMonth(pages, scopes, monthCount)

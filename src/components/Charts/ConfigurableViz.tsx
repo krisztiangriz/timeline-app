@@ -47,12 +47,12 @@ export const ConfigurableViz = memo(function ConfigurableViz({ blockId, pageId }
     safeSetItem(`viz-range-${blockId}`, String(r))
   }
 
-  async function handleAdd(name: string, source: ChartSource, grouping: ChartGrouping, chartType: ChartType, scopes?: ChartScope[], aggregateByHub?: boolean, regexPatternIds?: number[]) {
-    try { await addChartConfig(blockId, name, source, grouping, chartType, scopes, aggregateByHub, regexPatternIds) } catch { showToast('Failed to add chart') }
+  async function handleAdd(name: string, source: ChartSource, grouping: ChartGrouping, chartType: ChartType, scopes?: ChartScope[], aggregateByHub?: boolean, regexPatternIds?: number[], countMode?: 'date' | 'line') {
+    try { await addChartConfig(blockId, name, source, grouping, chartType, scopes, aggregateByHub, regexPatternIds, countMode) } catch { showToast('Failed to add chart') }
   }
 
-  async function handleUpdate(id: number, name: string, source: ChartSource, grouping: ChartGrouping, chartType: ChartType, scopes?: ChartScope[], aggregateByHub?: boolean, regexPatternIds?: number[]) {
-    try { await updateChartConfig(id, { name, source, grouping, chartType, scopes, aggregateByHub, regexPatternIds }) } catch { showToast('Failed to update chart') }
+  async function handleUpdate(id: number, name: string, source: ChartSource, grouping: ChartGrouping, chartType: ChartType, scopes?: ChartScope[], aggregateByHub?: boolean, regexPatternIds?: number[], countMode?: 'date' | 'line') {
+    try { await updateChartConfig(id, { name, source, grouping, chartType, scopes, aggregateByHub, regexPatternIds, countMode }) } catch { showToast('Failed to update chart') }
   }
 
   async function handleDelete(id: number) {

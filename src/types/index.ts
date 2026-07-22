@@ -93,6 +93,7 @@ export interface ChartConfig {
   scopes?: ChartScope[]
   regexPatternIds?: number[]   // required when source='regex'
   aggregateByHub?: boolean
+  countMode?: 'date' | 'line'
   order: number
 }
 

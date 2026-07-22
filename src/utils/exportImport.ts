@@ -187,6 +187,7 @@ function validateChartConfig(raw: unknown): ChartConfig | null {
     scopes,
     regexPatternIds,
     aggregateByHub: raw.aggregateByHub === true ? true : undefined,
+    countMode: raw.countMode === 'line' ? 'line' : undefined,
     order: isNumber(raw.order) ? raw.order : 0,
   }
 }

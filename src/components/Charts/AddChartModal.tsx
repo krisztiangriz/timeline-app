@@ -48,9 +48,9 @@ function isScopeSelected(scopes: ChartScope[], scope: ChartScope): boolean {
 interface AddChartModalProps {
   open: boolean
   onClose: () => void
-  onAdd: (name: string, source: ChartSource, grouping: ChartGrouping, chartType: ChartType, scopes?: ChartScope[], aggregateByHub?: boolean, regexPatternIds?: number[]) => void
+  onAdd: (name: string, source: ChartSource, grouping: ChartGrouping, chartType: ChartType, scopes?: ChartScope[], aggregateByHub?: boolean, regexPatternIds?: number[], countMode?: 'date' | 'line') => void
   editing?: ChartConfig
-  onUpdate?: (id: number, name: string, source: ChartSource, grouping: ChartGrouping, chartType: ChartType, scopes?: ChartScope[], aggregateByHub?: boolean, regexPatternIds?: number[]) => void
+  onUpdate?: (id: number, name: string, source: ChartSource, grouping: ChartGrouping, chartType: ChartType, scopes?: ChartScope[], aggregateByHub?: boolean, regexPatternIds?: number[], countMode?: 'date' | 'line') => void
   pageId: number
   allPages: Page[]
 }
@@ -63,6 +63,7 @@ export function AddChartModal({ open, onClose, onAdd, editing, onUpdate, pageId,
   const [type, setType] = useState<ChartType>(editing?.chartType ?? 'bar')
   const [regexPatternIds, setRegexPatternIds] = useState<number[]>(editing?.regexPatternIds ?? [])
   const [aggregateByHub, setAggregateByHub] = useState(editing?.aggregateByHub ?? false)
+  const [countMode, setCountMode] = useState<'date' | 'line'>(editing?.countMode ?? 'date')
   const [scopeOpen, setScopeOpen] = useState(false)
   const [sourceOpen, setSourceOpen] = useState(false)
   const prevOpen = useRef(false)
@@ -165,6 +166,7 @@ export function AddChartModal({ open, onClose, onAdd, editing, onUpdate, pageId,
         setType(editing.chartType)
         setRegexPatternIds(editing.regexPatternIds ?? [])
         setAggregateByHub(editing.aggregateByHub ?? false)
+        setCountMode(editing.countMode ?? 'date')
         userEditedName.current = true
       } else {
         const firstPattern = assignedPatterns[0]
@@ -178,6 +180,7 @@ export function AddChartModal({ open, onClose, onAdd, editing, onUpdate, pageId,
         setType('bar')
         setRegexPatternIds(firstPattern ? [firstPattern.id!] : [])
         setAggregateByHub(false)
+        setCountMode('date')
         userEditedName.current = false
       }
     }
@@ -195,10 +198,11 @@ export function AddChartModal({ open, onClose, onAdd, editing, onUpdate, pageId,
     const scopesValue = scopes.length > 0 ? scopes : undefined
     const regIds = source === 'regex' && regexPatternIds.length > 0 ? regexPatternIds : undefined
     const hubAgg = effectiveType === 'pie' && aggregateByHub ? true : undefined
+    const cm = source !== 'pages' && countMode === 'line' ? 'line' as const : undefined
     if (editing && onUpdate) {
-      onUpdate(editing.id!, chartName, source, effectiveGrouping, effectiveType, scopesValue, hubAgg, regIds)
+      onUpdate(editing.id!, chartName, source, effectiveGrouping, effectiveType, scopesValue, hubAgg, regIds, cm)
     } else {
-      onAdd(chartName, source, effectiveGrouping, effectiveType, scopesValue, hubAgg, regIds)
+      onAdd(chartName, source, effectiveGrouping, effectiveType, scopesValue, hubAgg, regIds, cm)
     }
     onClose()
   }
@@ -343,6 +347,23 @@ export function AddChartModal({ open, onClose, onAdd, editing, onUpdate, pageId,
                   {GROUPING_LABELS[g]}
                 </button>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* Count mode — only for entries and regex */}
+        {source !== 'pages' && (
+          <div className={styles.formSection}>
+            <span className={styles.formLabel}>Count by</span>
+            <div className={styles.radioRow} role="radiogroup" aria-label="Count by">
+              <button className={radio.radioOption} onClick={() => setCountMode('date')} role="radio" aria-checked={countMode === 'date'} tabIndex={countMode === 'date' ? 0 : -1}>
+                <div className={radio.radioCircle} data-checked={countMode === 'date'} />
+                By date
+              </button>
+              <button className={radio.radioOption} onClick={() => setCountMode('line')} role="radio" aria-checked={countMode === 'line'} tabIndex={countMode === 'line' ? 0 : -1}>
+                <div className={radio.radioCircle} data-checked={countMode === 'line'} />
+                By line
+              </button>
             </div>
           </div>
         )}
