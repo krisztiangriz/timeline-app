@@ -7,6 +7,7 @@ import {
   type KeyboardEvent,
 } from 'react'
 import { useAutocomplete } from '../../hooks/useAutocomplete'
+import { useEntryTags } from '../../hooks/useEntryTags'
 import { useModalContext } from '../../hooks/useAppContext'
 import { enrichMentionHtml } from '../../utils/mentionEnricher'
 import { sanitizeForEditor, sanitizeForPaste } from '../../utils/domPurify'
@@ -72,6 +73,7 @@ export function RichTextEditor({
 
   // Load pages for autocomplete (shared context — single subscription for all editors)
   const { allPages } = useAutocomplete()
+  const entryTags = useEntryTags()
   const { setAddPageOpen, setAddPageInitial } = useModalContext()
 
   const emitChange = useCallback(() => {
@@ -82,7 +84,7 @@ export function RichTextEditor({
     onChange(html)
     // Toggle empty state — but never show placeholder while focused
     const text = el.textContent?.trim() ?? ''
-    const hasElements = el.querySelector('[data-checkbox], [data-mention]') !== null
+    const hasElements = el.querySelector('[data-checkbox], [data-mention], [data-entry-tag]') !== null
     if (text !== '' || hasElements) {
       el.removeAttribute('data-empty')
     } else if (!isFocusedRef.current) {
@@ -110,6 +112,7 @@ export function RichTextEditor({
   } = useMentionDetection(
     editorRef,
     allPages,
+    entryTags,
     collapseMentions,
     emitChange,
     setAddPageOpen,
@@ -140,7 +143,7 @@ export function RichTextEditor({
       lastSetValue.current = value
     }
     const text = el.textContent?.trim() ?? ''
-    const hasElements = el.querySelector('[data-checkbox], [data-mention]') !== null
+    const hasElements = el.querySelector('[data-checkbox], [data-mention], [data-entry-tag]') !== null
     if (text === '' && !hasElements && !isFocusedRef.current) {
       el.setAttribute('data-empty', 'true')
     } else if (text !== '' || hasElements) {
@@ -376,8 +379,8 @@ export function RichTextEditor({
       }
     }
 
-    // "Add page" option showing (no results, non-~ trigger)
-    if (mentionQuery && autocompleteOptions.length === 0) {
+    // "Add page" option showing (no results, page-mention triggers only)
+    if (mentionQuery && autocompleteOptions.length === 0 && mentionQuery.prefix !== '!') {
       if (e.key === 'Enter' || e.key === 'Tab') {
         e.preventDefault()
         handleAddPageFromDropdown()
@@ -681,8 +684,8 @@ export function RichTextEditor({
         </div>
       )}
 
-      {/* "Add page" option when no matches for a trigger lookup */}
-      {mentionQuery && autocompleteOptions.length === 0 && (
+      {/* "Add page" option when no matches for a page-mention trigger lookup */}
+      {mentionQuery && autocompleteOptions.length === 0 && mentionQuery.prefix !== '!' && (
         <div
           className={styles.mentionDropdown}
           style={{ top: mentionPos.top, left: mentionPos.left }}

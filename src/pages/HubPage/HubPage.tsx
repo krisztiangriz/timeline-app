@@ -84,7 +84,7 @@ export function HubPage({ role }: HubPageProps) {
         </div>
         <BlockRenderer page={hub} />
       </div>
-      {editPageOpen && <Suspense fallback={null}><PageForm open={editPageOpen} onClose={() => setEditPageOpen(false)} onSubmit={handleEditSubmit} initial={editInitial} isEdit isHub hubId={hub.id!} /></Suspense>}
+      {editPageOpen && <Suspense fallback={null}><PageForm open={editPageOpen} onClose={() => setEditPageOpen(false)} onSubmit={handleEditSubmit} initial={editInitial} isEdit isHub /></Suspense>}
       <ConfirmModal
         open={deleteConfirm}
         title="Delete hub"

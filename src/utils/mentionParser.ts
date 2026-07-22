@@ -30,3 +30,14 @@ export function filterHtmlToMentionLines(html: string, pageId: number): string[]
   const lines = splitHtmlLines(html)
   return lines.filter((line) => line.includes(marker))
 }
+
+/** Extract all unique entry tag slugs from HTML tag spans. */
+export function extractEntryTagSlugs(html: string): string[] {
+  const regex = /data-tag-slug="([^"]+)"/g
+  const slugs = new Set<string>()
+  let match: RegExpExecArray | null
+  while ((match = regex.exec(html)) !== null) {
+    slugs.add(match[1])
+  }
+  return [...slugs]
+}

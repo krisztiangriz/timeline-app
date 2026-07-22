@@ -6,8 +6,7 @@ import type {
   TimelineEntry,
   PageSetting,
   ChartConfig,
-  RegexPattern,
-  HubRegexAssignment,
+  EntryTag,
 } from '../types'
 
 class TimelineDB extends Dexie {
@@ -19,8 +18,7 @@ class TimelineDB extends Dexie {
 
   pageSettings!: Table<PageSetting>
   chartConfigs!: Table<ChartConfig>
-  regexPatterns!: Table<RegexPattern>
-  hubRegexAssignments!: Table<HubRegexAssignment>
+  entryTags!: Table<EntryTag>
 
   constructor() {
     super('TimelineApp')
@@ -522,6 +520,27 @@ class TimelineDB extends Dexie {
           config.source = 'entries'
           config.grouping = 'month'
           delete config.propertyId
+        }
+      })
+    })
+    // v26: replace regex patterns with entry tags for classification
+    this.version(26).stores({
+      entryTags: '++id, slug, order',
+      regexPatterns: null,
+      hubRegexAssignments: null,
+    }).upgrade(async (tx) => {
+      const entryTags = tx.table('entryTags')
+      await entryTags.bulkAdd([
+        { name: 'Meeting', slug: 'meeting', category: 'Meeting', order: 0 },
+        { name: 'Jira', slug: 'jira', category: 'Work with Ticket', order: 1 },
+        { name: 'Positive', slug: 'pos', category: 'Positive Feedback', order: 2 },
+        { name: 'Negative', slug: 'neg', category: 'Negative Feedback', order: 3 },
+      ])
+      await tx.table('chartConfigs').toCollection().modify((config: Record<string, unknown>) => {
+        if (config.source === 'regex') {
+          config.source = 'classify'
+          delete config.regexPatternIds
+          delete config.countMode
         }
       })
     })

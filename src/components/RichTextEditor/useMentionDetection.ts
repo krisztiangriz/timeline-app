@@ -1,9 +1,12 @@
 import { useState, useMemo, useRef, useCallback } from 'react'
-import type { Page } from '../../types'
+import type { Page, EntryTag } from '../../types'
 import type { AddPageInitial } from '../../hooks/useAppContext'
+
+export const ENTRY_TAG_TRIGGER = '!'
 
 export type AutocompleteOption =
   | { kind: 'mention'; id: number; name: string; prefix: string }
+  | { kind: 'entryTag'; id: number; name: string; slug: string; prefix: string }
 
 /** Get the mention trigger and collapse info for a page (via its parent hub) */
 export function getMentionTriggerInfo(pageId: number, allPages: Page[]) {
@@ -17,6 +20,7 @@ export function getMentionTriggerInfo(pageId: number, allPages: Page[]) {
 export function useMentionDetection(
   editorRef: React.RefObject<HTMLDivElement | null>,
   allPages: Page[],
+  entryTags: EntryTag[],
   collapseMentions: boolean | undefined,
   emitChange: () => void,
   setAddPageOpen: (v: boolean) => void,
@@ -27,22 +31,30 @@ export function useMentionDetection(
   const [mentionIndex, setMentionIndex] = useState(0)
   const mentionRange = useRef<{ node: Text; start: number } | null>(null)
 
-  // Build set of active hub trigger characters
-  const hubTriggers = useMemo<Set<string>>(() =>
-    new Set(allPages.filter((p) => p.mentionTrigger).map((p) => p.mentionTrigger!)),
-    [allPages]
-  )
+  // Build set of active trigger characters (hub triggers + entry tag trigger)
+  const hubTriggers = useMemo<Set<string>>(() => {
+    const set = new Set(allPages.filter((p) => p.mentionTrigger).map((p) => p.mentionTrigger!))
+    if (entryTags.length > 0) set.add(ENTRY_TAG_TRIGGER)
+    return set
+  }, [allPages, entryTags])
 
   const autocompleteOptions = useMemo<AutocompleteOption[]>(() => {
     if (!mentionQuery) return []
     const q = mentionQuery.text.toLowerCase()
 
-    // Trigger — find the page that owns this trigger
+    // Entry tag trigger
+    if (mentionQuery.prefix === ENTRY_TAG_TRIGGER) {
+      return entryTags
+        .filter((t) => t.name.toLowerCase().includes(q) || t.slug.toLowerCase().includes(q))
+        .slice(0, 8)
+        .map((t) => ({ kind: 'entryTag' as const, id: t.id!, name: t.name, slug: t.slug, prefix: ENTRY_TAG_TRIGGER }))
+    }
+
+    // Page mention trigger — find the page that owns this trigger
     const triggerPage = allPages.find((p) => p.mentionTrigger === mentionQuery.prefix && !p.archived)
     if (!triggerPage?.id) return []
 
     if (triggerPage.type === 'hub') {
-      // Hub trigger: list children (exclude archived)
       return allPages
         .filter((p) => p.parentId === triggerPage.id && !p.archived && p.name.toLowerCase().includes(q))
         .slice(0, 8)
@@ -53,13 +65,12 @@ export function useMentionDetection(
           prefix: mentionQuery.prefix,
         }))
     } else {
-      // Page-level trigger: show the page itself as the single option
       if (triggerPage.name.toLowerCase().includes(q)) {
         return [{ kind: 'mention' as const, id: triggerPage.id!, name: triggerPage.name, prefix: mentionQuery.prefix }]
       }
       return []
     }
-  }, [mentionQuery, allPages])
+  }, [mentionQuery, allPages, entryTags])
 
   const detectMention = useCallback(() => {
     const sel = window.getSelection()
@@ -126,17 +137,23 @@ export function useMentionDetection(
     const after = text.substring(offset)
 
     const span = document.createElement('span')
-    span.setAttribute('data-mention', 'true')
-    span.setAttribute('data-page-id', String(option.id))
     span.contentEditable = 'false'
-    span.appendChild(document.createTextNode(option.name))
-    // Store trigger character for CSS-based collapse
-    const { trigger, collapsed } = getMentionTriggerInfo(option.id, allPages)
-    if (trigger) {
-      span.setAttribute('data-trigger', trigger)
-      span.setAttribute('title', option.name)
-      if (collapseMentions && collapsed) {
-        span.setAttribute('data-collapsed', 'true')
+
+    if (option.kind === 'entryTag') {
+      span.setAttribute('data-entry-tag', 'true')
+      span.setAttribute('data-tag-slug', option.slug)
+      span.appendChild(document.createTextNode(option.name))
+    } else {
+      span.setAttribute('data-mention', 'true')
+      span.setAttribute('data-page-id', String(option.id))
+      span.appendChild(document.createTextNode(option.name))
+      const { trigger, collapsed } = getMentionTriggerInfo(option.id, allPages)
+      if (trigger) {
+        span.setAttribute('data-trigger', trigger)
+        span.setAttribute('title', option.name)
+        if (collapseMentions && collapsed) {
+          span.setAttribute('data-collapsed', 'true')
+        }
       }
     }
 

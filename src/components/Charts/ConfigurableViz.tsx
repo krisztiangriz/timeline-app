@@ -8,8 +8,8 @@ import { useChartConfigs, addChartConfig, updateChartConfig, deleteChartConfig }
 import { useAutocomplete } from '../../hooks/useAutocomplete'
 import { useAllEntries } from '../../hooks/useChartData'
 import { useChartPalette } from '../../hooks/useChartPalette'
-import { useRegexPatterns } from '../../hooks/useRegexPatterns'
-import type { ChartConfig, ChartSource, ChartGrouping, ChartType, ChartScope, TimelineEntry, Page, RegexPattern } from '../../types'
+import { useEntryTags } from '../../hooks/useEntryTags'
+import type { ChartConfig, ChartSource, ChartGrouping, ChartType, ChartScope, TimelineEntry, Page, EntryTag } from '../../types'
 import { useOnboardingActions } from '../../hooks/useOnboardingGuides'
 import { OnboardingGuide } from '../OnboardingGuide/OnboardingGuide'
 import { safeGetItem, safeSetItem } from '../../utils/safeStorage'
@@ -31,8 +31,8 @@ export const ConfigurableViz = memo(function ConfigurableViz({ blockId, pageId }
     return stored === '0' ? 0 : stored === '3' ? 3 : stored === '6' ? 6 : 12
   })
   const allEntries = useAllEntries(range || undefined)
+  const entryTags = useEntryTags()
 
-  const allRegexPatterns = useRegexPatterns()
   const [addOpen, setAddOpen] = useState(false)
   const [editing, setEditing] = useState<ChartConfig | undefined>()
 
@@ -47,12 +47,12 @@ export const ConfigurableViz = memo(function ConfigurableViz({ blockId, pageId }
     safeSetItem(`viz-range-${blockId}`, String(r))
   }
 
-  async function handleAdd(name: string, source: ChartSource, grouping: ChartGrouping, chartType: ChartType, scopes?: ChartScope[], aggregateByHub?: boolean, regexPatternIds?: number[], countMode?: 'date' | 'line') {
-    try { await addChartConfig(blockId, name, source, grouping, chartType, scopes, aggregateByHub, regexPatternIds, countMode) } catch { showToast('Failed to add chart') }
+  async function handleAdd(name: string, source: ChartSource, grouping: ChartGrouping, chartType: ChartType, scopes?: ChartScope[], aggregateByHub?: boolean, categories?: string[]) {
+    try { await addChartConfig(blockId, name, source, grouping, chartType, scopes, aggregateByHub, categories) } catch { showToast('Failed to add chart') }
   }
 
-  async function handleUpdate(id: number, name: string, source: ChartSource, grouping: ChartGrouping, chartType: ChartType, scopes?: ChartScope[], aggregateByHub?: boolean, regexPatternIds?: number[], countMode?: 'date' | 'line') {
-    try { await updateChartConfig(id, { name, source, grouping, chartType, scopes, aggregateByHub, regexPatternIds, countMode }) } catch { showToast('Failed to update chart') }
+  async function handleUpdate(id: number, name: string, source: ChartSource, grouping: ChartGrouping, chartType: ChartType, scopes?: ChartScope[], aggregateByHub?: boolean, categories?: string[]) {
+    try { await updateChartConfig(id, { name, source, grouping, chartType, scopes, aggregateByHub, categories }) } catch { showToast('Failed to update chart') }
   }
 
   async function handleDelete(id: number) {
@@ -78,7 +78,7 @@ export const ConfigurableViz = memo(function ConfigurableViz({ blockId, pageId }
       ) : (
         configs.map((config) => (
           <div key={config.id} className={styles.chartSection}>
-            <ChartCard config={config} monthCount={range} entries={allEntries} pages={allPages} regexPatterns={allRegexPatterns} onEdit={setEditing} onDelete={handleDelete} isPie={config.chartType === 'pie'} palette={palette} />
+            <ChartCard config={config} monthCount={range} entries={allEntries} pages={allPages} entryTags={entryTags} onEdit={setEditing} onDelete={handleDelete} isPie={config.chartType === 'pie'} palette={palette} />
           </div>
         ))
       )}
@@ -92,6 +92,7 @@ export const ConfigurableViz = memo(function ConfigurableViz({ blockId, pageId }
         onUpdate={handleUpdate}
         pageId={pageId}
         allPages={allPages}
+        entryTags={entryTags}
       />
     </div>
   )
@@ -104,7 +105,7 @@ const ChartCard = memo(function ChartCard({
   monthCount,
   entries,
   pages,
-  regexPatterns,
+  entryTags,
   onEdit,
   onDelete,
   isPie,
@@ -114,7 +115,7 @@ const ChartCard = memo(function ChartCard({
   monthCount: 0 | 3 | 6 | 12
   entries: TimelineEntry[]
   pages: Page[]
-  regexPatterns: RegexPattern[]
+  entryTags: EntryTag[]
   onEdit: (c: ChartConfig) => void
   onDelete: (id: number) => void
   isPie?: boolean
@@ -140,7 +141,7 @@ const ChartCard = memo(function ChartCard({
         monthCount={monthCount}
         entries={entries}
         pages={pages}
-        regexPatterns={regexPatterns}
+        entryTags={entryTags}
         containerClass={isPie ? styles.chartContainerPie : styles.chartContainer}
         palette={palette}
       />

@@ -52,29 +52,25 @@ export interface TimelineEntry {
   date: Date
   text: string
   tagRefs: string[] // page IDs of mentioned pages (for cross-referencing)
+  tagSlugs?: string[] // entry tag slugs for classification (e.g. "meeting", "jira")
   isPending: boolean
   createdAt: Date
   updatedAt: Date
 }
 
-// ---- Regex Patterns (global library) ----
+// ---- Entry Tags (global classification) ----
 
-export interface RegexPattern {
+export interface EntryTag {
   id?: number
-  name: string
-  pattern: string    // regex source string
+  name: string      // display name: "Meeting", "Jira", "Positive", "Negative"
+  slug: string      // for matching/storage: "meeting", "jira", "pos", "neg"
+  category: string  // chart category label: "Meeting", "Work with Ticket", etc.
   order: number
-}
-
-export interface HubRegexAssignment {
-  id?: number
-  hubId: number
-  regexPatternId: number
 }
 
 // ---- Chart Configuration ----
 
-export type ChartSource = 'regex' | 'entries' | 'pages'
+export type ChartSource = 'classify' | 'entries' | 'pages'
 export type ChartGrouping = 'month' | 'weekday'
 export type ChartType = 'bar' | 'line' | 'area' | 'pie'
 
@@ -91,9 +87,8 @@ export interface ChartConfig {
   grouping: ChartGrouping
   chartType: ChartType
   scopes?: ChartScope[]
-  regexPatternIds?: number[]   // required when source='regex'
+  categories?: string[]
   aggregateByHub?: boolean
-  countMode?: 'date' | 'line'
   order: number
 }
 

@@ -6,13 +6,12 @@ import type {
   TimelineEntry,
   PageSetting,
   ChartConfig,
-  RegexPattern,
-  HubRegexAssignment,
+  EntryTag,
 } from '../types'
 
 // ---- Export Format ----
 
-const CURRENT_VERSION = 17
+const CURRENT_VERSION = 18
 
 interface ExportData {
   version: typeof CURRENT_VERSION
@@ -23,8 +22,7 @@ interface ExportData {
   timelineEntries: TimelineEntry[]
   pageSettings: PageSetting[]
   chartConfigs: ChartConfig[]
-  regexPatterns: RegexPattern[]
-  hubRegexAssignments: HubRegexAssignment[]
+  entryTags: EntryTag[]
 }
 
 // ---- Enum allowlists (runtime guards — TypeScript casts are erased at runtime) ----
@@ -32,7 +30,7 @@ interface ExportData {
 const VALID_PAGE_TYPES = new Set(['general', 'candidate', 'colleague', 'project', 'hub'])
 const VALID_PAGE_ROLES = new Set(['colleague-hub', 'candidate-hub', 'project-hub', 'main-timeline'])
 const VALID_BLOCK_TYPES = new Set(['text', 'timeline', 'table', 'visualization'])
-const VALID_CHART_SOURCES = new Set(['regex', 'entries', 'pages'])
+const VALID_CHART_SOURCES = new Set(['regex', 'classify', 'entries', 'pages'])
 const VALID_CHART_GROUPINGS = new Set(['month', 'weekday'])
 const VALID_CHART_TYPES = new Set(['bar', 'line', 'area', 'pie'])
 
@@ -105,12 +103,14 @@ function validateTab(raw: unknown): Tab | null {
 function validateBlock(raw: unknown): Block | null {
   if (!isObject(raw)) return null
   if (!isNumber(raw.pageId) || !isString(raw.type)) return null
-  if (!VALID_BLOCK_TYPES.has(raw.type)) return null
+  let blockType = raw.type
+  if (blockType === 'feedback') blockType = 'text'
+  if (!VALID_BLOCK_TYPES.has(blockType)) return null
   return {
     ...(isNumber(raw.id) ? { id: raw.id } : {}),
     pageId: raw.pageId,
     tabId: isNumber(raw.tabId) ? raw.tabId : undefined,
-    type: raw.type as Block['type'],
+    type: blockType as Block['type'],
     content: isString(raw.content) ? raw.content : undefined,
   }
 }
@@ -124,6 +124,7 @@ function validateTimelineEntry(raw: unknown): TimelineEntry | null {
     date: toDate(raw.date),
     text: raw.text,
     tagRefs: isArray(raw.tagRefs) ? raw.tagRefs.filter(isString) : [],
+    tagSlugs: isArray(raw.tagSlugs) ? raw.tagSlugs.filter(isString) : undefined,
     isPending: raw.isPending === true,
     createdAt: toDate(raw.createdAt),
     updatedAt: toDate(raw.updatedAt),
@@ -158,6 +159,9 @@ function validateChartConfig(raw: unknown): ChartConfig | null {
   if (!isString(source) || !VALID_CHART_SOURCES.has(source)) return null
   if (!isString(grouping) || !VALID_CHART_GROUPINGS.has(grouping)) return null
 
+  // Migrate legacy 'regex' source to 'classify'
+  if (source === 'regex') source = 'classify'
+
   // Validate scopes structure
   let scopes: ChartConfig['scopes'] | undefined
   if (isArray(raw.scopes)) {
@@ -168,14 +172,6 @@ function validateChartConfig(raw: unknown): ChartConfig | null {
     })
     scopes = validScopes.length > 0 ? validScopes as ChartConfig['scopes'] : undefined
   }
-  // Handle regexPatternIds (new array) or legacy regexPatternId (singular)
-  let regexPatternIds: number[] | undefined
-  if (isArray(raw.regexPatternIds)) {
-    const ids = (raw.regexPatternIds as unknown[]).filter(isNumber)
-    if (ids.length > 0) regexPatternIds = ids
-  } else if (isNumber(raw.regexPatternId)) {
-    regexPatternIds = [raw.regexPatternId]
-  }
 
   return {
     ...(isNumber(raw.id) ? { id: raw.id } : {}),
@@ -185,31 +181,20 @@ function validateChartConfig(raw: unknown): ChartConfig | null {
     grouping: grouping as ChartConfig['grouping'],
     chartType: raw.chartType as ChartConfig['chartType'],
     scopes,
-    regexPatternIds,
     aggregateByHub: raw.aggregateByHub === true ? true : undefined,
-    countMode: raw.countMode === 'line' ? 'line' : undefined,
     order: isNumber(raw.order) ? raw.order : 0,
   }
 }
 
-function validateRegexPattern(raw: unknown): RegexPattern | null {
+function validateEntryTag(raw: unknown): EntryTag | null {
   if (!isObject(raw)) return null
-  if (!isString(raw.name) || !isString(raw.pattern)) return null
+  if (!isString(raw.name) || !isString(raw.slug) || !isString(raw.category)) return null
   return {
     ...(isNumber(raw.id) ? { id: raw.id } : {}),
     name: raw.name,
-    pattern: raw.pattern,
+    slug: raw.slug,
+    category: raw.category,
     order: isNumber(raw.order) ? raw.order : 0,
-  }
-}
-
-function validateHubRegexAssignment(raw: unknown): HubRegexAssignment | null {
-  if (!isObject(raw)) return null
-  if (!isNumber(raw.hubId) || !isNumber(raw.regexPatternId)) return null
-  return {
-    ...(isNumber(raw.id) ? { id: raw.id } : {}),
-    hubId: raw.hubId,
-    regexPatternId: raw.regexPatternId,
   }
 }
 
@@ -248,7 +233,7 @@ function sanitizeHtml(records: { text?: string; content?: string; description?: 
 // ---- Export ----
 
 async function exportAllData(): Promise<string> {
-  const [pages, tabs, blocks, timelineEntries, pageSettings, chartConfigs, regexPatterns, hubRegexAssignments] =
+  const [pages, tabs, blocks, timelineEntries, pageSettings, chartConfigs, entryTags] =
     await Promise.all([
       db.pages.toArray(),
       db.layouts.toArray(),
@@ -256,8 +241,7 @@ async function exportAllData(): Promise<string> {
       db.timelineEntries.toArray(),
       db.pageSettings.toArray(),
       db.chartConfigs.toArray(),
-      db.regexPatterns.toArray(),
-      db.hubRegexAssignments.toArray(),
+      db.entryTags.toArray(),
     ])
 
   const data: ExportData = {
@@ -269,8 +253,7 @@ async function exportAllData(): Promise<string> {
     timelineEntries,
     pageSettings,
     chartConfigs,
-    regexPatterns,
-    hubRegexAssignments,
+    entryTags,
   }
 
   return JSON.stringify(data, null, 2)
@@ -303,7 +286,7 @@ async function importData(jsonString: string): Promise<void> {
 
   // Accept version 12+ (old format with 'layouts' key) or 13+ (new format with 'tabs' key)
   const version = raw.version
-  if (!isNumber(version) || version < 12) {
+  if (!isNumber(version) || version < 10) {
     throw new Error(`Unsupported export version: ${version}. Re-export from the app.`)
   }
 
@@ -315,38 +298,20 @@ async function importData(jsonString: string): Promise<void> {
   const timelineEntries = validateArray(raw.timelineEntries, validateTimelineEntry)
   const pageSettings = validateArray(raw.pageSettings, validatePageSetting)
   const chartConfigs = validateArray(raw.chartConfigs, validateChartConfig)
-  const regexPatterns = validateArray(raw.regexPatterns, validateRegexPattern)
-  const hubRegexAssignments = validateArray(raw.hubRegexAssignments, validateHubRegexAssignment)
+  const entryTags = validateArray(raw.entryTags, validateEntryTag)
 
   if (pages.length === 0) {
     throw new Error('Invalid export file: no valid pages found')
   }
 
-  // Compute hub set for pattern seeding
-  const hubIds = new Set(pages.filter((p) => p.type === 'hub').map((p) => p.id!))
-  const hubsWithChildren = new Set(pages.filter((p) => p.parentId && hubIds.has(p.parentId)).map((p) => p.parentId!))
-
-  // Seed regex pattern for legacy entry-count charts (pre-v21 backups have no regexPatterns)
-  const chartsNeedingPattern = chartConfigs.filter((c) => c.source === 'regex' && (!c.regexPatternIds || c.regexPatternIds.length === 0))
-  if (chartsNeedingPattern.length > 0) {
-    const existing = regexPatterns.find((p) => p.pattern === '.+')
-    let patternId: number
-    if (existing?.id) {
-      patternId = existing.id
-    } else {
-      const maxId = Math.max(0, ...regexPatterns.map((p) => p.id ?? 0))
-      const newPattern: RegexPattern = { id: maxId + 1, name: 'Entry count', pattern: '.+', order: 0 }
-      regexPatterns.push(newPattern)
-      patternId = newPattern.id!
-    }
-    for (const chart of chartsNeedingPattern) {
-      chart.regexPatternIds = [patternId]
-    }
-    for (const hubId of hubsWithChildren) {
-      if (!hubRegexAssignments.some((a) => a.hubId === hubId && a.regexPatternId === patternId)) {
-        hubRegexAssignments.push({ hubId, regexPatternId: patternId })
-      }
-    }
+  // Seed default entry tags if none present (legacy imports)
+  if (entryTags.length === 0) {
+    entryTags.push(
+      { name: 'Meeting', slug: 'meeting', category: 'Meeting', order: 0 },
+      { name: 'Jira', slug: 'jira', category: 'Work with Ticket', order: 1 },
+      { name: 'Positive', slug: 'pos', category: 'Positive Feedback', order: 2 },
+      { name: 'Negative', slug: 'neg', category: 'Negative Feedback', order: 3 },
+    )
   }
 
   // Convert legacy feedbacks to timeline entries
@@ -375,23 +340,6 @@ async function importData(jsonString: string): Promise<void> {
         updatedAt: date,
       })
     }
-
-    // Seed feedback regex patterns
-    const feedbackPatterns = [
-      { name: '[Feedback]', pattern: '\\[Feedback\\]' },
-      { name: '[Positive]', pattern: '\\[positive\\]' },
-      { name: '[Negative]', pattern: '\\[negative\\]' },
-    ]
-    let maxId = Math.max(0, ...regexPatterns.map((p) => p.id ?? 0))
-    for (const fp of feedbackPatterns) {
-      if (!regexPatterns.some((p) => p.pattern === fp.pattern)) {
-        maxId++
-        regexPatterns.push({ id: maxId, name: fp.name, pattern: fp.pattern, order: regexPatterns.length })
-        for (const hubId of hubsWithChildren) {
-          hubRegexAssignments.push({ hubId, regexPatternId: maxId })
-        }
-      }
-    }
   }
 
   // Sanitize HTML content
@@ -403,7 +351,7 @@ async function importData(jsonString: string): Promise<void> {
 
   // Run everything in a transaction so failure rolls back
   await db.transaction('rw',
-    [db.pages, db.layouts, db.blocks, db.timelineEntries, db.pageSettings, db.chartConfigs, db.regexPatterns, db.hubRegexAssignments],
+    [db.pages, db.layouts, db.blocks, db.timelineEntries, db.pageSettings, db.chartConfigs, db.entryTags],
     async () => {
       await Promise.all([
         db.pages.clear(),
@@ -412,8 +360,7 @@ async function importData(jsonString: string): Promise<void> {
         db.timelineEntries.clear(),
         db.pageSettings.clear(),
         db.chartConfigs.clear(),
-        db.regexPatterns.clear(),
-        db.hubRegexAssignments.clear(),
+        db.entryTags.clear(),
       ])
       await Promise.all([
         db.pages.bulkAdd(pages),
@@ -422,8 +369,7 @@ async function importData(jsonString: string): Promise<void> {
         db.timelineEntries.bulkAdd(timelineEntries),
         pageSettings.length > 0 ? db.pageSettings.bulkAdd(pageSettings) : Promise.resolve(),
         chartConfigs.length > 0 ? db.chartConfigs.bulkAdd(chartConfigs) : Promise.resolve(),
-        regexPatterns.length > 0 ? db.regexPatterns.bulkAdd(regexPatterns) : Promise.resolve(),
-        hubRegexAssignments.length > 0 ? db.hubRegexAssignments.bulkAdd(hubRegexAssignments) : Promise.resolve(),
+        entryTags.length > 0 ? db.entryTags.bulkAdd(entryTags) : Promise.resolve(),
       ])
     }
   )

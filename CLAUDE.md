@@ -133,7 +133,9 @@ git push         # triggers GitHub Actions deploy
 - `collapseMentions` prop scopes collapse to timeline blocks only
 - Non-collapsed mentions: `color: inherit` + always underlined
 - Read-only mentions: `tabindex="0"`, `role="link"`, keyboard-navigable (Enter/Space)
-- Mention triggers: only hub-configured triggers (no hardcoded characters)
+- Mention triggers: hub-configured triggers + `!` (hardcoded global entry tag trigger)
+- Entry tags: `!` trigger inserts `<span data-entry-tag="true" data-tag-slug="...">` spans
+- Entry tag slugs extracted per-line at chart time (not stored per-line in DB)
 
 ### Timeline / Pending
 - Pending section only on main-timeline page (full editor)
@@ -162,6 +164,10 @@ git push         # triggers GitHub Actions deploy
 - Pie charts: donut style (55%/85% inner/outer radius) with right-side labels
 - Single-series charts use `FALLBACK_COLOR` (#B8C5DB grey)
 - "Visualization" block type is labeled "Charts" in the UI
+- Entry classification: `!` trigger inserts entry tag spans; per-line
+  classification via `classifyEntryLines` (lines without a page mention skipped)
+- Chart sources: `classify` (by category), `entries`, `pages`
+- `ChartConfig.categories?: string[]` filters classify charts to selected categories
 
 ### Modal System
 - `Modal.tsx` has focus trap (Tab/Shift+Tab cycling), auto-focus on open
@@ -224,7 +230,7 @@ git push         # triggers GitHub Actions deploy
 - `src/components/DropdownPortal/DropdownPortal.tsx` — portal for modal dropdowns
 - `src/components/DropdownPortal/DropdownPortal.module.css` — backdrop + portal z-index
 - `src/constants/colors.ts` — chart color palette (source of truth)
-- `src/hooks/useRegexPatterns.ts` — regex pattern CRUD + hub assignment hooks
+- `src/hooks/useEntryTags.ts` — entry tag CRUD + `useEntryTags()` live query hook
 - `src/components/Charts/useSeriesFilter.ts` — toggle series visibility in charts
 - `src/hooks/useRadioGroupKeyboard.ts` — roving tabIndex + arrow-key nav hook
 - `src/utils/radioKeyHandler.ts` — non-hook radio key handler factory (for use in loops)

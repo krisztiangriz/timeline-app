@@ -3,11 +3,11 @@ import {
   LineChart, Line, AreaChart, Area,
 } from 'recharts'
 import { useUnifiedChartData } from '../../hooks/useChartData'
-import { getSeriesColor, TP, axisStroke, tickStyle } from './chartConstants'
+import { getSeriesColor, FALLBACK_COLOR, TP, axisStroke, tickStyle } from './chartConstants'
 import { ChartContainer, DonutWithLabels, InteractiveLegend } from './ChartContainer'
 import { useSeriesFilter } from './useSeriesFilter'
 import { getColor } from '../../constants/colors'
-import type { ChartConfig, TimelineEntry, Page, RegexPattern } from '../../types'
+import type { ChartConfig, TimelineEntry, Page, EntryTag } from '../../types'
 import styles from './Charts.module.css'
 
 export { SOURCE_LABELS, VALID_GROUPINGS, CHART_TYPES_FOR_GROUPING, GROUPING_LABELS } from './chartConstants'
@@ -17,15 +17,20 @@ export interface ChartRendererProps {
   monthCount?: 0 | 3 | 6 | 12
   entries: TimelineEntry[]
   pages: Page[]
-  regexPatterns: RegexPattern[]
+  entryTags: EntryTag[]
   containerClass?: string
   palette: string[]
 }
 
-export function ChartRenderer({ config, monthCount = 12, entries, pages, regexPatterns, containerClass, palette }: ChartRendererProps) {
-  const result = useUnifiedChartData(config, entries, pages, regexPatterns, monthCount)
+export function ChartRenderer({ config, monthCount = 12, entries, pages, entryTags, containerClass, palette }: ChartRendererProps) {
+  const result = useUnifiedChartData(config, entries, pages, entryTags, monthCount)
   const { toggle, opacity, isActive } = useSeriesFilter(result.summary ? result.summary.map(s => s.name) : result.keys)
   const cls = containerClass ?? (config.chartType === 'pie' ? styles.chartContainerPie : styles.chartContainer)
+
+  function getKeyColor(key: string, i: number, total: number): string {
+    if (config.source === 'classify' && key === 'Work') return FALLBACK_COLOR
+    return getSeriesColor(i, total, palette)
+  }
 
   // Pie/donut
   if (config.chartType === 'pie' && result.summary) {
@@ -57,16 +62,16 @@ export function ChartRenderer({ config, monthCount = 12, entries, pages, regexPa
                 <XAxis dataKey={result.xKey} tick={tickStyle} stroke={axisStroke} interval={xInterval} />
                 <Tooltip {...TP} />
                 {result.keys.map((key, i) =>
-                  chartType === 'line' ? <Line key={key} type="monotone" dataKey={key} stroke={getSeriesColor(i, total, palette)} strokeWidth={2} dot={false} strokeOpacity={opacity(key)} />
-                  : chartType === 'area' ? <Area key={key} type="monotone" dataKey={key} stackId="s" fill={getSeriesColor(i, total, palette)} stroke={getSeriesColor(i, total, palette)} fillOpacity={opacity(key) * 0.6} strokeOpacity={opacity(key)} />
-                  : <Bar key={key} dataKey={key} stackId="s" fill={getSeriesColor(i, total, palette)} fillOpacity={opacity(key)} />
+                  chartType === 'line' ? <Line key={key} type="monotone" dataKey={key} stroke={getKeyColor(key, i, total)} strokeWidth={2} dot={false} strokeOpacity={opacity(key)} />
+                  : chartType === 'area' ? <Area key={key} type="monotone" dataKey={key} stackId="s" fill={getKeyColor(key, i, total)} stroke={getKeyColor(key, i, total)} fillOpacity={opacity(key) * 0.6} strokeOpacity={opacity(key)} />
+                  : <Bar key={key} dataKey={key} stackId="s" fill={getKeyColor(key, i, total)} fillOpacity={opacity(key)} />
                 )}
               </ChartComp>
             )
           })()}
         </ResponsiveContainer>
       </ChartContainer>
-      {total > 1 && <InteractiveLegend items={result.keys.map((key, i) => ({ name: key, color: getSeriesColor(i, total, palette) }))} isActive={isActive} onToggle={toggle} />}
+      {total > 1 && <InteractiveLegend items={result.keys.map((key, i) => ({ name: key, color: getKeyColor(key, i, total) }))} isActive={isActive} onToggle={toggle} />}
     </>
   )
 }

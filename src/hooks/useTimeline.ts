@@ -2,7 +2,7 @@ import Dexie from 'dexie'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db/database'
 import type { TimelineEntry } from '../types'
-import { extractMentionPageIds } from '../utils/mentionParser'
+import { extractMentionPageIds, extractEntryTagSlugs } from '../utils/mentionParser'
 
 /**
  * Get timeline entries for a specific page, ordered by date descending.
@@ -66,11 +66,13 @@ export async function addEntry(
 ): Promise<number> {
   const now = new Date()
   const tagRefs = extractMentionPageIds(data.text)
+  const tagSlugs = extractEntryTagSlugs(data.text)
 
   const id = await db.timelineEntries.add({
     ...data,
     date: now,
     tagRefs,
+    tagSlugs,
     createdAt: now,
     updatedAt: now,
   })
@@ -90,9 +92,10 @@ export async function updateEntry(
     updatedAt: new Date(),
   }
 
-  // Re-parse mentions if text changed
+  // Re-parse mentions and tags if text changed
   if (data.text !== undefined) {
     updates.tagRefs = extractMentionPageIds(data.text)
+    updates.tagSlugs = extractEntryTagSlugs(data.text)
   }
 
   await db.timelineEntries.update(id, updates)
@@ -131,6 +134,7 @@ export async function mergePendingEntries(pageId: number): Promise<number | unde
 
     const now = new Date()
     const tagRefs = extractMentionPageIds(mergedHtml)
+    const tagSlugs = extractEntryTagSlugs(mergedHtml)
 
     // Create the merged entry
     const mergedId = await db.timelineEntries.add({
@@ -139,6 +143,7 @@ export async function mergePendingEntries(pageId: number): Promise<number | unde
       isPending: true,
       date: pendingEntries[0].date, // keep earliest date
       tagRefs,
+      tagSlugs,
       createdAt: pendingEntries[0].createdAt,
       updatedAt: now,
     })

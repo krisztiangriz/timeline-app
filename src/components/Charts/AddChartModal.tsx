@@ -3,12 +3,9 @@ import { useRadioGroupKeyboard } from '../../hooks/useRadioGroupKeyboard'
 import { Modal } from '../Modal/Modal'
 import { DropdownPortal } from '../DropdownPortal/DropdownPortal'
 import { SOURCE_LABELS, VALID_GROUPINGS, CHART_TYPES_FOR_GROUPING, GROUPING_LABELS } from './ChartRenderer'
-import { useHubAssignedPatterns } from '../../hooks/useRegexPatterns'
-import type { ChartSource, ChartGrouping, ChartType, ChartConfig, ChartScope, Page, RegexPattern } from '../../types'
+import type { ChartSource, ChartGrouping, ChartType, ChartConfig, ChartScope, Page, EntryTag } from '../../types'
 import styles from './Charts.module.css'
 import radio from '../../styles/radio.module.css'
-
-const BUILTIN_SOURCES: ChartSource[] = ['entries', 'pages']
 
 const CHART_TYPE_LABELS: Record<ChartType, string> = {
   bar: 'Bar', line: 'Line', area: 'Area', pie: 'Pie',
@@ -48,35 +45,43 @@ function isScopeSelected(scopes: ChartScope[], scope: ChartScope): boolean {
 interface AddChartModalProps {
   open: boolean
   onClose: () => void
-  onAdd: (name: string, source: ChartSource, grouping: ChartGrouping, chartType: ChartType, scopes?: ChartScope[], aggregateByHub?: boolean, regexPatternIds?: number[], countMode?: 'date' | 'line') => void
+  onAdd: (name: string, source: ChartSource, grouping: ChartGrouping, chartType: ChartType, scopes?: ChartScope[], aggregateByHub?: boolean, categories?: string[]) => void
   editing?: ChartConfig
-  onUpdate?: (id: number, name: string, source: ChartSource, grouping: ChartGrouping, chartType: ChartType, scopes?: ChartScope[], aggregateByHub?: boolean, regexPatternIds?: number[], countMode?: 'date' | 'line') => void
+  onUpdate?: (id: number, name: string, source: ChartSource, grouping: ChartGrouping, chartType: ChartType, scopes?: ChartScope[], aggregateByHub?: boolean, categories?: string[]) => void
   pageId: number
   allPages: Page[]
+  entryTags: EntryTag[]
 }
 
-export function AddChartModal({ open, onClose, onAdd, editing, onUpdate, pageId, allPages }: AddChartModalProps) {
+const ALL_SOURCES: ChartSource[] = ['classify', 'entries', 'pages']
+
+export function AddChartModal({ open, onClose, onAdd, editing, onUpdate, pageId, allPages, entryTags }: AddChartModalProps) {
   const [name, setName] = useState('')
+  const [categories, setCategories] = useState<string[]>([])
   const [scopes, setScopes] = useState<ChartScope[]>([])
-  const [source, setSource] = useState<ChartSource>(editing?.source ?? 'regex')
+  const [source, setSource] = useState<ChartSource>(editing?.source ?? 'classify')
   const [grouping, setGrouping] = useState<ChartGrouping>(editing?.grouping ?? 'month')
   const [type, setType] = useState<ChartType>(editing?.chartType ?? 'bar')
-  const [regexPatternIds, setRegexPatternIds] = useState<number[]>(editing?.regexPatternIds ?? [])
   const [aggregateByHub, setAggregateByHub] = useState(editing?.aggregateByHub ?? false)
-  const [countMode, setCountMode] = useState<'date' | 'line'>(editing?.countMode ?? 'date')
   const [scopeOpen, setScopeOpen] = useState(false)
   const [sourceOpen, setSourceOpen] = useState(false)
   const prevOpen = useRef(false)
   const userEditedName = useRef(false)
   const scopeRef = useRef<HTMLDivElement>(null)
-  const sourceRef = useRef<HTMLDivElement>(null)
   const scopeTriggerRef = useRef<HTMLButtonElement>(null)
+  const sourceRef = useRef<HTMLDivElement>(null)
   const sourceTriggerRef = useRef<HTMLButtonElement>(null)
 
-  // Determine relevant hub for regex pattern loading
   const currentPage = allPages.find((p) => p.id === pageId)
-  const relevantHubId = currentPage?.type === 'hub' ? pageId : (currentPage?.parentId ?? pageId)
-  const assignedPatterns = useHubAssignedPatterns(relevantHubId)
+
+  const categoryOptions = useMemo(() => {
+    const cats = ['Work', ...entryTags.map((t) => t.category)]
+    return [...new Set(cats)]
+  }, [entryTags])
+
+  function toggleCategory(cat: string) {
+    setCategories((prev) => prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat])
+  }
 
   // Build scope options
   const scopeOptions = useMemo<ScopeOption[]>(() => {
@@ -133,23 +138,15 @@ export function AddChartModal({ open, onClose, onAdd, editing, onUpdate, pageId,
     return `${scopes.length} selected`
   }, [scopes, scopeOptions])
 
-  // Source display text
-  const sourceDisplayText = useMemo(() => {
-    if (source === 'regex') {
-      if (regexPatternIds.length === 0) return 'Select pattern...'
-      if (regexPatternIds.length === 1) return assignedPatterns.find((p: RegexPattern) => p.id === regexPatternIds[0])?.name ?? 'Select pattern...'
-      if (regexPatternIds.length === 2) return regexPatternIds.map((id) => assignedPatterns.find((p: RegexPattern) => p.id === id)?.name).filter(Boolean).join(', ')
-      return `${regexPatternIds.length} patterns`
-    }
-    return SOURCE_LABELS[source]
-  }, [source, regexPatternIds, assignedPatterns])
-
   // Valid groupings for current source
   const validGroupings = VALID_GROUPINGS[source]
   const effectiveGrouping = validGroupings.includes(grouping) ? grouping : validGroupings[0]
 
-  // Valid chart types for current grouping
-  const validTypes = CHART_TYPES_FOR_GROUPING[effectiveGrouping]
+  // Valid chart types — classify supports pie
+  const baseValidTypes = CHART_TYPES_FOR_GROUPING[effectiveGrouping]
+  const validTypes = source === 'classify'
+    ? [...new Set([...baseValidTypes, 'pie' as ChartType])]
+    : baseValidTypes
   const effectiveType = validTypes.includes(type) ? type : validTypes[0]
   const { groupRef: chartTypeGroupRef, handleKeyDown: chartTypeKeyDown } = useRadioGroupKeyboard(validTypes, effectiveType, setType)
 
@@ -164,45 +161,35 @@ export function AddChartModal({ open, onClose, onAdd, editing, onUpdate, pageId,
         setSource(editing.source)
         setGrouping(editing.grouping)
         setType(editing.chartType)
-        setRegexPatternIds(editing.regexPatternIds ?? [])
         setAggregateByHub(editing.aggregateByHub ?? false)
-        setCountMode(editing.countMode ?? 'date')
+        setCategories(editing.categories ?? [])
         userEditedName.current = true
       } else {
-        const firstPattern = assignedPatterns[0]
-        setName(firstPattern?.name ?? '')
+        setName('')
         const defaultScope: ChartScope[] = currentPage?.type === 'hub'
           ? [{ type: 'hub', hubId: pageId }]
           : [{ type: 'page', pageId }]
         setScopes(defaultScope)
-        setSource(firstPattern ? 'regex' : 'entries')
-        setGrouping(firstPattern ? 'month' : 'weekday')
+        setSource('classify')
+        setGrouping('month')
         setType('bar')
-        setRegexPatternIds(firstPattern ? [firstPattern.id!] : [])
         setAggregateByHub(false)
-        setCountMode('date')
+        setCategories([])
         userEditedName.current = false
       }
     }
     prevOpen.current = open
-  }, [open, editing, allPages, pageId, assignedPatterns, currentPage])
+  }, [open, editing, allPages, pageId, currentPage])
 
   function handleConfirm() {
-    const chartName = name.trim() || (source === 'regex'
-      ? (regexPatternIds.length === 1
-        ? (assignedPatterns.find((p: RegexPattern) => p.id === regexPatternIds[0])?.name ?? 'Chart')
-        : regexPatternIds.length > 1
-          ? regexPatternIds.map((id) => assignedPatterns.find((p: RegexPattern) => p.id === id)?.name).filter(Boolean).join(', ')
-          : 'Chart')
-      : (SOURCE_LABELS[source] ?? 'Chart'))
+    const chartName = name.trim() || (SOURCE_LABELS[source] ?? 'Chart')
     const scopesValue = scopes.length > 0 ? scopes : undefined
-    const regIds = source === 'regex' && regexPatternIds.length > 0 ? regexPatternIds : undefined
     const hubAgg = effectiveType === 'pie' && aggregateByHub ? true : undefined
-    const cm = source !== 'pages' && countMode === 'line' ? 'line' as const : undefined
+    const cats = source === 'classify' && categories.length > 0 ? categories : undefined
     if (editing && onUpdate) {
-      onUpdate(editing.id!, chartName, source, effectiveGrouping, effectiveType, scopesValue, hubAgg, regIds, cm)
+      onUpdate(editing.id!, chartName, source, effectiveGrouping, effectiveType, scopesValue, hubAgg, cats)
     } else {
-      onAdd(chartName, source, effectiveGrouping, effectiveType, scopesValue, hubAgg, regIds, cm)
+      onAdd(chartName, source, effectiveGrouping, effectiveType, scopesValue, hubAgg, cats)
     }
     onClose()
   }
@@ -269,7 +256,7 @@ export function AddChartModal({ open, onClose, onAdd, editing, onUpdate, pageId,
           </div>
         </div>
 
-        {/* Data source — unified dropdown */}
+        {/* Data source */}
         <div className={styles.formSection}>
           <span className={styles.formLabel}>Data source</span>
           <div className={styles.scopeDropdown} ref={sourceRef}>
@@ -282,52 +269,23 @@ export function AddChartModal({ open, onClose, onAdd, editing, onUpdate, pageId,
               aria-label="Data source"
               tabIndex={0}
             >
-              <span>{sourceDisplayText}</span>
+              <span>{SOURCE_LABELS[source]}</span>
               <svg className={sourceOpen ? styles.scopeChevronOpen : styles.scopeChevron} width="16" height="16" viewBox="0 0 24 24" fill="none">
                 <path d="M12 13.0729L7.42708 8.5L5.92708 10L12 16.0729L18.0729 10L16.5729 8.5L12 13.0729Z" fill="currentColor" />
               </svg>
             </button>
             <DropdownPortal anchorRef={sourceTriggerRef} open={sourceOpen} onClose={() => setSourceOpen(false)} autoFocus>
               <div className={styles.scopePanel} data-dropdown-panel role="listbox" aria-label="Data source">
-                {assignedPatterns.map((rp: RegexPattern) => (
-                  <button
-                    key={`regex-${rp.id}`}
-                    className={styles.scopeOption}
-                    onClick={() => {
-                      setSource('regex')
-                      setRegexPatternIds((prev) => {
-                        const next = prev.includes(rp.id!) ? prev.filter((id) => id !== rp.id) : [...prev, rp.id!]
-                        if (!userEditedName.current) {
-                          if (next.length === 1) setName(assignedPatterns.find((p: RegexPattern) => p.id === next[0])?.name ?? '')
-                          else setName('')
-                        }
-                        return next
-                      })
-                    }}
-                    type="button"
-                    role="option"
-                    aria-selected={source === 'regex' && regexPatternIds.includes(rp.id!)}
-                  >
-                    <div
-                      className={styles.scopeCheckbox}
-                      data-checked={source === 'regex' && regexPatternIds.includes(rp.id!)}
-                    />
-                    {rp.name}
-                  </button>
-                ))}
-                {BUILTIN_SOURCES.map((s) => (
+                {ALL_SOURCES.map((s) => (
                   <button
                     key={s}
                     className={styles.scopeOption}
-                    onClick={() => { setSource(s); setRegexPatternIds([]); setSourceOpen(false); if (!userEditedName.current) setName(SOURCE_LABELS[s] ?? '') }}
+                    onClick={() => { setSource(s); setSourceOpen(false); if (!userEditedName.current) setName('') }}
                     type="button"
                     role="option"
                     aria-selected={source === s}
                   >
-                    <div
-                      className={styles.scopeRadio}
-                      data-checked={source === s}
-                    />
+                    <div className={styles.scopeRadio} data-checked={source === s} />
                     {SOURCE_LABELS[s]}
                   </button>
                 ))}
@@ -335,6 +293,21 @@ export function AddChartModal({ open, onClose, onAdd, editing, onUpdate, pageId,
             </DropdownPortal>
           </div>
         </div>
+
+        {/* Categories — only for classify source */}
+        {source === 'classify' && (
+          <div className={styles.formSection}>
+            <span className={styles.formLabel}>Categories</span>
+            <div className={styles.categoryList} role="group" aria-label="Categories">
+              {categoryOptions.map((cat) => (
+                <button key={cat} className={styles.scopeOption} onClick={() => toggleCategory(cat)} type="button" role="checkbox" aria-checked={categories.length === 0 || categories.includes(cat)} tabIndex={0}>
+                  <div className={styles.scopeCheckbox} data-checked={categories.length === 0 || categories.includes(cat)} />
+                  {cat}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Grouping — only show when >1 valid option */}
         {validGroupings.length > 1 && (
@@ -351,22 +324,6 @@ export function AddChartModal({ open, onClose, onAdd, editing, onUpdate, pageId,
           </div>
         )}
 
-        {/* Count mode — only for entries and regex */}
-        {source !== 'pages' && (
-          <div className={styles.formSection}>
-            <span className={styles.formLabel}>Count by</span>
-            <div className={styles.radioRow} role="radiogroup" aria-label="Count by">
-              <button className={radio.radioOption} onClick={() => setCountMode('date')} role="radio" aria-checked={countMode === 'date'} tabIndex={countMode === 'date' ? 0 : -1}>
-                <div className={radio.radioCircle} data-checked={countMode === 'date'} />
-                By date
-              </button>
-              <button className={radio.radioOption} onClick={() => setCountMode('line')} role="radio" aria-checked={countMode === 'line'} tabIndex={countMode === 'line' ? 0 : -1}>
-                <div className={radio.radioCircle} data-checked={countMode === 'line'} />
-                By line
-              </button>
-            </div>
-          </div>
-        )}
 
         {/* Chart type */}
         <div className={styles.formSection}>
@@ -381,7 +338,7 @@ export function AddChartModal({ open, onClose, onAdd, editing, onUpdate, pageId,
           </div>
         </div>
 
-        {effectiveType === 'pie' && scopes.some((s) => s.type === 'hub') && (
+        {effectiveType === 'pie' && scopes.some((s) => s.type === 'hub') && source !== 'classify' && (
           <div className={styles.formSection}>
             <button className={styles.scopeOption} onClick={() => setAggregateByHub(!aggregateByHub)} type="button" role="checkbox" aria-checked={aggregateByHub} tabIndex={0}>
               <div className={styles.scopeCheckbox} data-checked={aggregateByHub} />

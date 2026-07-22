@@ -19,11 +19,12 @@ Explore the app today!
 - Drag & Drop Page Organization — Re-parent pages into hubs or move to root level from the Home table
 - Archiving — Archive pages or entire hubs (cascades to children); toggle visibility in Settings
 
-### Regex patterns & tracking
+### Entry tags & classification
 
-- Global Pattern Library — Define named regex patterns (e.g., "Meetings", "PRs merged") in Settings
-- Hub Assignments — Assign patterns to hubs for per-child-page tracking
-- Multi-Pattern Charts — Charts can track multiple regex patterns as separate series
+- Inline Tags — Type `!` to classify timeline lines (e.g., `!meeting`, `!jira-123`, `!pos`, `!neg`)
+- Per-Line Classification — Each line is independently categorized; lines without a page mention are excluded from charts
+- Default Categories — Work (no tag), Meeting, Work with Ticket, Positive Feedback, Negative Feedback
+- Configurable Tags — Add/edit/remove entry tags in Settings; categories selectable per chart
 
 ### Daily workflow & task management
 
@@ -39,9 +40,8 @@ Explore the app today!
 - Keyboard Shortcuts — Extensive shortcut support
 
 ### Visualization & Analytics
-- Configurable Chart Block — Per-page visualization with multiple charts; 3 data sources (regex, entries, pages) × 2 groupings (month, weekday)
+- Configurable Chart Block — Per-page visualization with multiple charts; 3 data sources (category, entries, pages) × 2 groupings (month, weekday)
 - Chart Types — Bar, Line, Area, Pie (donut with labels and percentages)
-- Count Modes — Count by unique date (active days) or by line (content volume)
 - Multi-Scope Selection — Charts can scope to specific pages, hubs (per-child breakdown), or all data
 - Time Range Toggle — 3M / 6M / 12M / All (persisted per block in localStorage)
 - Customizable Chart Palette — 6-color palette editable in Settings with color picker and reset to defaults
@@ -95,7 +95,7 @@ Data Model
 | `text` | Rich text editor | Formatting, mentions, links, checkboxes |
 | `timeline` | Timeline view | Pending tasks, today editor, date-grouped history, cross-refs |
 | `table` | Child page list | Hub pages only; sortable columns, drag-to-reorder |
-| `visualization` | Charts | Multiple configurable charts per block; regex, entries, pages sources |
+| `visualization` | Charts | Multiple configurable charts per block; category, entries, pages sources |
 
 > Each tab contains exactly one block. Add blocks by adding tabs in Edit Page.
 

@@ -112,7 +112,7 @@ export function DetailPage({ routePrefix }: DetailPageProps) {
           </div>
         )}
       </div>
-      {editPageOpen && <Suspense fallback={null}><PageForm open={editPageOpen} onClose={() => setEditPageOpen(false)} onSubmit={handleEditSubmit} initial={getEditInitial()} isEdit isHub={page.type === 'hub' || undefined} hubId={page.type === 'hub' ? page.id : undefined} pageId={!page.parentId ? page.id : undefined} /></Suspense>}
+      {editPageOpen && <Suspense fallback={null}><PageForm open={editPageOpen} onClose={() => setEditPageOpen(false)} onSubmit={handleEditSubmit} initial={getEditInitial()} isEdit isHub={page.type === 'hub' || undefined} /></Suspense>}
       <ConfirmModal
         open={deleteConfirm}
         title={page.type === 'hub' ? 'Delete hub' : 'Delete page'}

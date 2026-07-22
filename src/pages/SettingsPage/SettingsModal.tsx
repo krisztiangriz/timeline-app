@@ -9,7 +9,7 @@ import { onboardingGuides } from '../../config/onboardingGuides'
 import { TrashIcon, CheckIcon, PlusIcon, CloseIcon, SearchIcon, ResetIcon } from '../../components/Icons/Icons'
 import { downloadExport, triggerImport, triggerMergeImport } from '../../utils/exportImport'
 import { useChartPalette, PALETTE_OPTIONS } from '../../hooks/useChartPalette'
-import { useRegexPatterns, addRegexPattern, updateRegexPattern, deleteRegexPattern } from '../../hooks/useRegexPatterns'
+import { useEntryTags, addEntryTag, updateEntryTag, deleteEntryTag } from '../../hooks/useEntryTags'
 import { useTheme, type Theme } from '../../hooks/useTheme'
 import { ColorPicker } from '../../components/ColorPicker/ColorPicker'
 import { DropdownPortal } from '../../components/DropdownPortal/DropdownPortal'
@@ -33,47 +33,39 @@ export function SettingsModal({ open, onClose, onToast }: SettingsModalProps) {
   const { frequency, setFrequency, lastBackup } = useBackupSettings()
   const { resetAllGuides, isGuideDismissed } = useOnboardingActions()
   const { palette, updateColor, resetPalette } = useChartPalette()
-  const regexPatterns = useRegexPatterns()
+  const entryTags = useEntryTags()
   const { theme, setTheme } = useTheme()
   const { groupRef: themeGroupRef, handleKeyDown: themeKeyDown } = useRadioGroupKeyboard(THEME_OPTIONS, theme, setTheme)
   const { groupRef: backupGroupRef, handleKeyDown: backupKeyDown } = useRadioGroupKeyboard(BACKUP_OPTIONS, frequency, setFrequency)
   const [palettePickerIndex, setPalettePickerIndex] = useState<number | null>(null)
   const paletteAnchorRef = useRef<HTMLButtonElement>(null)
 
-  // Regex pattern state
-  const [addingPattern, setAddingPattern] = useState(false)
-  const [newPatternName, setNewPatternName] = useState('')
-  const [newPatternRegex, setNewPatternRegex] = useState('')
-  const [renamingPatternId, setRenamingPatternId] = useState<number | null>(null)
-  const [renamingPatternName, setRenamingPatternName] = useState('')
+  // Entry tag state
+  const [addingTag, setAddingTag] = useState(false)
+  const [newTagName, setNewTagName] = useState('')
+  const [newTagSlug, setNewTagSlug] = useState('')
+  const [newTagCategory, setNewTagCategory] = useState('')
+  const [renamingTagId, setRenamingTagId] = useState<number | null>(null)
+  const [renamingTagName, setRenamingTagName] = useState('')
 
-  function isValidRegex(pattern: string): boolean {
-    try { new RegExp(pattern); return true } catch { return false }
+  async function handleAddTag() {
+    if (!newTagName.trim() || !newTagSlug.trim() || !newTagCategory.trim()) return
+    try {
+      await addEntryTag(newTagName.trim(), newTagSlug.trim(), newTagCategory.trim())
+      setNewTagName('')
+      setNewTagSlug('')
+      setNewTagCategory('')
+      setAddingTag(false)
+    } catch { onToast('Failed to add tag') }
   }
 
-  async function handleAddPattern() {
-    if (!newPatternName.trim() || !newPatternRegex.trim()) return
+  async function handleRenameTag(id: number) {
+    if (!renamingTagName.trim()) { setRenamingTagId(null); return }
     try {
-      await addRegexPattern(newPatternName.trim(), newPatternRegex.trim())
-      setNewPatternName('')
-      setNewPatternRegex('')
-      setAddingPattern(false)
-    } catch { onToast('Failed to add pattern') }
-  }
-
-  async function handleRenamePattern(id: number) {
-    if (!renamingPatternName.trim()) { setRenamingPatternId(null); return }
-    try {
-      await updateRegexPattern(id, { name: renamingPatternName.trim() })
-      setRenamingPatternId(null)
-      setRenamingPatternName('')
-    } catch { onToast('Failed to rename pattern') }
-  }
-
-  async function handleUpdatePatternRegex(id: number, pattern: string) {
-    try {
-      await updateRegexPattern(id, { pattern })
-    } catch { onToast('Failed to update pattern') }
+      await updateEntryTag(id, { name: renamingTagName.trim() })
+      setRenamingTagId(null)
+      setRenamingTagName('')
+    } catch { onToast('Failed to rename tag') }
   }
 
   // Merge import state
@@ -324,77 +316,80 @@ export function SettingsModal({ open, onClose, onToast }: SettingsModalProps) {
         </div>
       </div>
 
-      {/* Regex Patterns */}
+      {/* Entry Tags */}
       <div className={styles.section}>
         <div className={styles.listHeader}>
-          <span className={styles.sectionTitle}>Regex Patterns</span>
-          <button className={styles.iconButton} onClick={() => setAddingPattern(true)} aria-label="Add regex pattern" tabIndex={0}>
+          <span className={styles.sectionTitle}>Entry Tags</span>
+          <button className={styles.iconButton} onClick={() => setAddingTag(true)} aria-label="Add entry tag" tabIndex={0}>
             <PlusIcon size={14} />
             Add
           </button>
         </div>
+        <span className={styles.sectionDescription}>
+          Tags classify timeline entries (type ! in the editor). Each tag maps to a chart category.
+        </span>
         <div className={styles.patternList}>
-          {regexPatterns.map((rp) => (
-            <div key={rp.id} className={styles.patternRow}>
-              {renamingPatternId === rp.id ? (
+          {entryTags.map((tag) => (
+            <div key={tag.id} className={styles.patternRow}>
+              {renamingTagId === tag.id ? (
                 <>
                   <input
                     className={styles.patternInlineInput}
                     type="text"
-                    value={renamingPatternName}
-                    onChange={(e) => setRenamingPatternName(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === 'Enter') handleRenamePattern(rp.id!); if (e.key === 'Escape') setRenamingPatternId(null) }}
+                    value={renamingTagName}
+                    onChange={(e) => setRenamingTagName(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') handleRenameTag(tag.id!); if (e.key === 'Escape') setRenamingTagId(null) }}
                     autoFocus
                   />
-                  <button className={styles.confirmButton} onClick={() => handleRenamePattern(rp.id!)} tabIndex={0}><CheckIcon /></button>
+                  <button className={styles.confirmButton} onClick={() => handleRenameTag(tag.id!)} tabIndex={0}><CheckIcon /></button>
                 </>
               ) : (
                 <span
                   className={styles.patternName}
-                  onClick={() => { setRenamingPatternId(rp.id!); setRenamingPatternName(rp.name) }}
-                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setRenamingPatternId(rp.id!); setRenamingPatternName(rp.name) } }}
+                  onClick={() => { setRenamingTagId(tag.id!); setRenamingTagName(tag.name) }}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setRenamingTagId(tag.id!); setRenamingTagName(tag.name) } }}
                   role="button"
                   tabIndex={0}
                 >
-                  {rp.name}
+                  !{tag.slug}
                 </span>
               )}
-              <input
-                className={isValidRegex(rp.pattern) ? styles.patternInput : styles.patternInputInvalid}
-                type="text"
-                defaultValue={rp.pattern}
-                onBlur={(e) => { if (e.target.value !== rp.pattern) handleUpdatePatternRegex(rp.id!, e.target.value) }}
-                onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
-                aria-label={`Pattern for ${rp.name}`}
-              />
-              <button className={styles.deleteButton} onClick={() => deleteRegexPattern(rp.id!).catch(() => onToast('Failed to delete pattern'))} aria-label={`Delete ${rp.name}`} tabIndex={0}>
+              <span className={styles.patternLabel}>{tag.category}</span>
+              <button className={styles.deleteButton} onClick={() => deleteEntryTag(tag.id!).catch(() => onToast('Failed to delete tag'))} aria-label={`Delete ${tag.name}`} tabIndex={0}>
                 <TrashIcon />
               </button>
             </div>
           ))}
-          {addingPattern && (
+          {addingTag && (
             <div className={styles.patternRow}>
               <input
                 className={styles.patternInlineInput}
                 type="text"
-                value={newPatternName}
-                onChange={(e) => setNewPatternName(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter' && newPatternName.trim()) { ((e.target as HTMLElement).parentElement?.querySelector('[data-regex-input]') as HTMLInputElement)?.focus() } if (e.key === 'Escape') { setAddingPattern(false); setNewPatternName(''); setNewPatternRegex('') } }}
-                placeholder="Name"
+                value={newTagName}
+                onChange={(e) => setNewTagName(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter' && newTagName.trim()) { ((e.target as HTMLElement).nextElementSibling as HTMLInputElement)?.focus() } if (e.key === 'Escape') { setAddingTag(false); setNewTagName(''); setNewTagSlug(''); setNewTagCategory('') } }}
+                placeholder="Name (e.g. Meeting)"
                 autoFocus
               />
               <input
-                className={newPatternRegex && !isValidRegex(newPatternRegex) ? styles.patternInputInvalid : styles.patternInput}
+                className={styles.patternInlineInput}
                 type="text"
-                data-regex-input
-                value={newPatternRegex}
-                onChange={(e) => setNewPatternRegex(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') handleAddPattern(); if (e.key === 'Escape') { setAddingPattern(false); setNewPatternName(''); setNewPatternRegex('') } }}
-                placeholder="Regex pattern"
+                value={newTagSlug}
+                onChange={(e) => setNewTagSlug(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter' && newTagSlug.trim()) { ((e.target as HTMLElement).nextElementSibling as HTMLInputElement)?.focus() } if (e.key === 'Escape') { setAddingTag(false); setNewTagName(''); setNewTagSlug(''); setNewTagCategory('') } }}
+                placeholder="Slug (e.g. meeting)"
               />
-              <button className={styles.confirmButton} onClick={handleAddPattern} tabIndex={0}
-                style={{ opacity: newPatternName.trim() && newPatternRegex.trim() ? 1 : 0.4 }}><CheckIcon /></button>
-              <button className={styles.deleteButton} onClick={() => { setAddingPattern(false); setNewPatternName(''); setNewPatternRegex('') }} aria-label="Cancel" tabIndex={0}>
+              <input
+                className={styles.patternInlineInput}
+                type="text"
+                value={newTagCategory}
+                onChange={(e) => setNewTagCategory(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleAddTag(); if (e.key === 'Escape') { setAddingTag(false); setNewTagName(''); setNewTagSlug(''); setNewTagCategory('') } }}
+                placeholder="Category (e.g. Meeting)"
+              />
+              <button className={styles.confirmButton} onClick={handleAddTag} tabIndex={0}
+                style={{ opacity: newTagName.trim() && newTagSlug.trim() && newTagCategory.trim() ? 1 : 0.4 }}><CheckIcon /></button>
+              <button className={styles.deleteButton} onClick={() => { setAddingTag(false); setNewTagName(''); setNewTagSlug(''); setNewTagCategory('') }} aria-label="Cancel" tabIndex={0}>
                 <TrashIcon />
               </button>
             </div>

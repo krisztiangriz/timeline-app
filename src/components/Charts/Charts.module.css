@@ -288,6 +288,12 @@
   padding-left: 24px;
 }
 
+.categoryList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
 .scopeRadio {
   width: 16px;
   height: 16px;

@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { Modal } from '../Modal/Modal'
 import { ConfirmModal } from '../ConfirmModal/ConfirmModal'
-import { RegexPatternAssignment } from '../PropertyEditor/PropertyEditor'
 import { DragHandleIcon, TrashIcon, CheckIcon, PlusIcon, CloseIcon } from '../Icons/Icons'
 import { DropdownPortal } from '../DropdownPortal/DropdownPortal'
 import { db } from '../../db/database'
@@ -38,8 +37,6 @@ interface PageFormProps {
   isEdit?: boolean
   isHub?: boolean
   hubs?: HubInfo[]
-  hubId?: number  // when editing a hub
-  pageId?: number // page being edited — shows regex pattern assignment for hubs and standalone pages
 }
 
 function RadioOption({ selected, onChange, label, description, disabled, tabIdx }: {
@@ -68,7 +65,7 @@ const BLOCK_TYPE_LABELS: Partial<Record<BlockType, string>> = {
   visualization: 'Charts',
 }
 
-export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHubProp, hubs = EMPTY_HUBS, hubId, pageId }: PageFormProps) {
+export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHubProp, hubs = EMPTY_HUBS }: PageFormProps) {
   const { show: showToast } = useToast()
   const [name, setName] = useState('')
   const [tabs, setTabs] = useState<{ name: string; type: BlockType; key: number }[]>([])
@@ -255,8 +252,6 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
     })
   }
 
-  // Effective hubId for property editor (either from prop or from just-created hub)
-  const effectiveHubId = hubId ?? createdHubId ?? undefined
 
   return (
     <>
@@ -472,10 +467,6 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
         )}
       </div>}
 
-      {/* Regex pattern assignment (hubs and standalone pages) */}
-      {(effectiveHubId || pageId) && (
-        <RegexPatternAssignment pageId={(effectiveHubId || pageId)!} />
-      )}
     </Modal>
     <ConfirmModal
       open={tabDeleteConfirm !== null}
