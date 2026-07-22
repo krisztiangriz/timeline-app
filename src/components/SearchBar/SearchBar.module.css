@@ -25,11 +25,6 @@
   outline: none;
 }
 
-.icon {
-  flex-shrink: 0;
-  color: var(--color-text-primary);
-}
-
 .input {
   flex: 1;
   font-size: var(--font-size-base);

@@ -5,7 +5,7 @@ import { DragHandleIcon, TrashIcon, CheckIcon, PlusIcon, CloseIcon } from '../Ic
 import { DropdownPortal } from '../DropdownPortal/DropdownPortal'
 import { db } from '../../db/database'
 import { useToast } from '../../hooks/useToast'
-import { makeRadioKeyHandler } from '../../utils/radioKeyHandler'
+import { useRadioGroupKeyboard } from '../../hooks/useRadioGroupKeyboard'
 import type { BlockType } from '../../types'
 import styles from './PageForm.module.css'
 import radio from '../../styles/radio.module.css'
@@ -87,6 +87,8 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
   const blockTypeBtnRef = useRef<HTMLButtonElement>(null)
   const [tabDeleteConfirm, setTabDeleteConfirm] = useState<number | null>(null)
   const tabKeyCounter = useRef(0)
+  const HUB_TYPE_OPTIONS = [false, true] as const
+  const { groupRef: typeGroupRef, handleKeyDown: typeKeyDown } = useRadioGroupKeyboard([...HUB_TYPE_OPTIONS], isHubType, setIsHubType)
 
   useEffect(() => {
     if (addingTab) blockTypeBtnRef.current?.focus()
@@ -321,10 +323,11 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
         <div className={styles.section}>
           <span className={styles.label}>Type</span>
           <div
+            ref={typeGroupRef}
             className={styles.radioCol}
             role="radiogroup"
             aria-label="Page type"
-            onKeyDown={makeRadioKeyHandler([false, true], isHubType, setIsHubType)}
+            onKeyDown={typeKeyDown}
           >
             <RadioOption selected={!isHubType} onChange={() => setIsHubType(false)} label="Page" />
             <RadioOption selected={isHubType} onChange={() => setIsHubType(true)} label="Hub" />

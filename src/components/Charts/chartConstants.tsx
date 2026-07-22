@@ -1,15 +1,13 @@
 import { getColor } from '../../constants/colors'
-import type { ChartScope, ChartSource, ChartGrouping, ChartType } from '../../types'
+import type { ChartSource, ChartGrouping, ChartType } from '../../types'
 
 // ---- Shared constants ----
 
-export const EMPTY_SCOPES: ChartScope[] = []
-
-export const tooltipStyle: React.CSSProperties = {
+const tooltipStyle: React.CSSProperties = {
   background: 'var(--color-surface)', borderRadius: 12, boxShadow: '0px 2px 8px var(--color-shadow)',
   border: 'none', padding: '8px 12px', fontSize: 12, lineHeight: '20px',
 }
-export const tooltipLabelStyle: React.CSSProperties = { color: 'var(--color-text-primary)', fontWeight: 600, fontSize: 12 }
+const tooltipLabelStyle: React.CSSProperties = { color: 'var(--color-text-primary)', fontWeight: 600, fontSize: 12 }
 export const FALLBACK_COLOR = 'var(--color-text-placeholder)'
 
 /** Use grey for single-series charts, color palette for 2+ series */
@@ -17,7 +15,7 @@ export function getSeriesColor(index: number, total: number, palette: string[]) 
   return total < 2 ? FALLBACK_COLOR : getColor(index, palette)
 }
 
-export const cursorStyle = { fill: 'var(--color-border-light)', stroke: 'var(--color-border-light)' }
+const cursorStyle = { fill: 'var(--color-border-light)', stroke: 'var(--color-border-light)' }
 export const TP = {
   contentStyle: tooltipStyle,
   labelStyle: tooltipLabelStyle,

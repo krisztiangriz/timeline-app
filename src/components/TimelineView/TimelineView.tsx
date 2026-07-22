@@ -3,7 +3,7 @@ import { stripHtml, stripCheckboxHtml } from '../../utils/stripHtml'
 import { filterHtmlToMentionLines, extractMentionPageIds } from '../../utils/mentionParser'
 
 import Dexie from 'dexie'
-import { useTimelineEntries, useCrossRefEntries, usePendingEntry, addEntry, updateEntry, deleteEntry, mergePendingEntries } from '../../hooks/useTimeline'
+import { useTimelineEntries, useCrossRefEntries, usePendingEntry, addEntry, updateEntry, deleteEntry } from '../../hooks/useTimeline'
 import { usePageByRole, useChildPages } from '../../hooks/usePages'
 import { db } from '../../db/database'
 import { useNavigateToPage } from '../../hooks/useNavigateToPage'
@@ -174,17 +174,6 @@ export function TimelineView({ pageId, title, readOnly = false, page }: Timeline
     }
     return map
   }, [historyGroups, directIds, pageId, crossRefEntries.length])
-
-  // ---- Migration: merge multiple pending entries into one ----
-  const migrationDone = useRef(false)
-  useEffect(() => {
-    if (migrationDone.current) return
-    migrationDone.current = true
-    const pendingCount = allEntries.filter((e) => e.isPending).length
-    if (pendingCount > 1) {
-      mergePendingEntries(pageId).catch(() => { /* merge failure non-critical — entries still display individually */ })
-    }
-  }, [pageId]) // eslint-disable-line react-hooks/exhaustive-deps — guarded by migrationDone ref, only needs to run once per mount
 
   // ---- Pending section state (single editor, mirrors Today pattern) ----
   const [pendingHtml, setPendingHtml] = useState('')

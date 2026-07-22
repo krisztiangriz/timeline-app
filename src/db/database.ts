@@ -10,7 +10,6 @@ import type {
 } from '../types'
 
 class TimelineDB extends Dexie {
-  tags!: Table              // Legacy: kept for migration/import compatibility
   pages!: Table<Page>
   layouts!: Table<Tab>
   blocks!: Table<Block>

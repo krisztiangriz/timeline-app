@@ -17,13 +17,3 @@
 .emptyTabsAction:hover {
   color: var(--color-text-primary);
 }
-
-/* ---- Hub property row (compact metadata) ---- */
-
-.propertyRow {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: var(--space-xs);
-  padding-bottom: var(--space-sm);
-}

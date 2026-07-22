@@ -30,19 +30,9 @@ interface ExportData {
 const VALID_PAGE_TYPES = new Set(['general', 'candidate', 'colleague', 'project', 'hub'])
 const VALID_PAGE_ROLES = new Set(['colleague-hub', 'candidate-hub', 'project-hub', 'main-timeline'])
 const VALID_BLOCK_TYPES = new Set(['text', 'timeline', 'table', 'visualization'])
-const VALID_CHART_SOURCES = new Set(['regex', 'classify', 'entries', 'pages'])
+const VALID_CHART_SOURCES = new Set(['classify', 'entries', 'pages'])
 const VALID_CHART_GROUPINGS = new Set(['month', 'weekday'])
 const VALID_CHART_TYPES = new Set(['bar', 'line', 'area', 'pie'])
-
-function convertLegacyDataSource(dataSource: string): { source: string; grouping: string } | null {
-  switch (dataSource) {
-    case 'entry-count':
-    case 'regex-count': return { source: 'regex', grouping: 'month' }
-    case 'entry-by-weekday': return { source: 'entries', grouping: 'weekday' }
-    case 'page-count': return { source: 'pages', grouping: 'month' }
-    default: return null
-  }
-}
 
 // ---- Validation ----
 
@@ -103,14 +93,12 @@ function validateTab(raw: unknown): Tab | null {
 function validateBlock(raw: unknown): Block | null {
   if (!isObject(raw)) return null
   if (!isNumber(raw.pageId) || !isString(raw.type)) return null
-  let blockType = raw.type
-  if (blockType === 'feedback') blockType = 'text'
-  if (!VALID_BLOCK_TYPES.has(blockType)) return null
+  if (!VALID_BLOCK_TYPES.has(raw.type)) return null
   return {
     ...(isNumber(raw.id) ? { id: raw.id } : {}),
     pageId: raw.pageId,
     tabId: isNumber(raw.tabId) ? raw.tabId : undefined,
-    type: blockType as Block['type'],
+    type: raw.type as Block['type'],
     content: isString(raw.content) ? raw.content : undefined,
   }
 }
@@ -147,22 +135,11 @@ function validateChartConfig(raw: unknown): ChartConfig | null {
   if (!isNumber(raw.blockId) || !isString(raw.chartType)) return null
   if (!VALID_CHART_TYPES.has(raw.chartType)) return null
 
-  // Support legacy format: convert dataSource to source+grouping
-  let source = raw.source as string | undefined
-  let grouping = raw.grouping as string | undefined
-  if (!source && isString(raw.dataSource)) {
-    const converted = convertLegacyDataSource(raw.dataSource)
-    if (!converted) return null
-    source = converted.source
-    grouping = converted.grouping
-  }
+  const source = raw.source as string | undefined
+  const grouping = raw.grouping as string | undefined
   if (!isString(source) || !VALID_CHART_SOURCES.has(source)) return null
   if (!isString(grouping) || !VALID_CHART_GROUPINGS.has(grouping)) return null
 
-  // Migrate legacy 'regex' source to 'classify'
-  if (source === 'regex') source = 'classify'
-
-  // Validate scopes structure
   let scopes: ChartConfig['scopes'] | undefined
   if (isArray(raw.scopes)) {
     const validScopes = (raw.scopes as unknown[]).filter((s) => {
@@ -284,16 +261,13 @@ async function importData(jsonString: string): Promise<void> {
   const raw: unknown = JSON.parse(jsonString)
   if (!isObject(raw)) throw new Error('Invalid export file: expected JSON object')
 
-  // Accept version 12+ (old format with 'layouts' key) or 13+ (new format with 'tabs' key)
   const version = raw.version
-  if (!isNumber(version) || version < 10) {
+  if (!isNumber(version) || version < 18) {
     throw new Error(`Unsupported export version: ${version}. Re-export from the app.`)
   }
 
-  // Parse and validate all tables — old format uses 'layouts', new uses 'tabs'
-  const tabsRaw = raw.tabs ?? raw.layouts
   const pages = validateArray(raw.pages, validatePage)
-  const tabs = validateArray(tabsRaw, validateTab)
+  const tabs = validateArray(raw.tabs, validateTab)
   const blocks = validateArray(raw.blocks, validateBlock)
   const timelineEntries = validateArray(raw.timelineEntries, validateTimelineEntry)
   const pageSettings = validateArray(raw.pageSettings, validatePageSetting)
@@ -302,44 +276,6 @@ async function importData(jsonString: string): Promise<void> {
 
   if (pages.length === 0) {
     throw new Error('Invalid export file: no valid pages found')
-  }
-
-  // Seed default entry tags if none present (legacy imports)
-  if (entryTags.length === 0) {
-    entryTags.push(
-      { name: 'Meeting', slug: 'meeting', category: 'Meeting', order: 0 },
-      { name: 'Jira', slug: 'jira', category: 'Work with Ticket', order: 1 },
-      { name: 'Positive', slug: 'pos', category: 'Positive Feedback', order: 2 },
-      { name: 'Negative', slug: 'neg', category: 'Negative Feedback', order: 3 },
-    )
-  }
-
-  // Convert legacy feedbacks to timeline entries
-  const rawFeedbacks = isArray(raw.feedbacks) ? raw.feedbacks as Record<string, unknown>[] : []
-  const rawDimensions = isArray(raw.dimensions) ? raw.dimensions as Record<string, unknown>[] : []
-
-  if (rawFeedbacks.length > 0) {
-    const dimensionMap = new Map<number, string>()
-    for (const d of rawDimensions) {
-      if (isNumber(d.id) && isString(d.name)) dimensionMap.set(d.id, d.name)
-    }
-
-    for (const fb of rawFeedbacks) {
-      if (!isNumber(fb.subjectId) || !isString(fb.description)) continue
-      const type = isString(fb.type) ? fb.type : 'neutral'
-      const dimension = isNumber(fb.dimensionId) ? dimensionMap.get(fb.dimensionId) : undefined
-      const prefix = dimension ? `[Feedback] [${type}] [${dimension}]` : `[Feedback] [${type}]`
-      const date = toDate(fb.createdAt)
-      timelineEntries.push({
-        pageId: fb.subjectId,
-        date,
-        text: `${prefix} ${fb.description}`,
-        tagRefs: [],
-        isPending: false,
-        createdAt: date,
-        updatedAt: date,
-      })
-    }
   }
 
   // Sanitize HTML content

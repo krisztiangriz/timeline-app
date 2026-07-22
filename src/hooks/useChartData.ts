@@ -40,7 +40,7 @@ function buildMonthKeys(monthCount: number, entries?: { date: Date | string }[])
   return months
 }
 
-export function getCutoff(monthCount: number): Date {
+function getCutoff(monthCount: number): Date {
   if (monthCount === 0) return new Date(0)
   const now = new Date()
   return new Date(now.getFullYear(), now.getMonth() - (monthCount - 1), 1)
@@ -67,7 +67,7 @@ function filterEntriesByScope(entries: TimelineEntry[], scope: ChartScope, allPa
   return entries
 }
 
-export function filterEntriesByScopes(entries: TimelineEntry[], scopes: ChartScope[], allPages: Page[]): TimelineEntry[] {
+function filterEntriesByScopes(entries: TimelineEntry[], scopes: ChartScope[], allPages: Page[]): TimelineEntry[] {
   if (scopes.length === 0) return entries
   if (scopes.length === 1) return filterEntriesByScope(entries, scopes[0], allPages)
   const seen = new Set<number>()
@@ -101,9 +101,6 @@ export interface UnifiedChartData {
   xKey: string
   summary?: { name: string; value: number; color?: string }[]
 }
-
-// ---- Line-counting helpers ----
-
 
 // ---- Hub breakdown helpers ----
 
