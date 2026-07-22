@@ -178,7 +178,7 @@ function aggregateRegexByMonth(
         const m = formatMonthKey(new Date(e.date))
         const idx = monthToIdx.get(m)
         if (idx === undefined) continue
-        const counted = new Set<number>()
+        // Each entry attributed to one child: direct page gets regex counts, tagRef gets 1
         if (childIdSet.has(e.pageId)) {
           const bucket = childToName.get(e.pageId)
           if (bucket) {
@@ -186,20 +186,17 @@ function aggregateRegexByMonth(
             for (const { pattern } of regexes) count += countRegexMatches(e.text, new RegExp(pattern, 'g'))
             data[idx][bucket] = (Number(data[idx][bucket]) || 0) + count
             summaryTotals.set(bucket, (summaryTotals.get(bucket) ?? 0) + count)
-            counted.add(e.pageId)
           }
-        }
-        if (e.tagRefs) {
+        } else if (e.tagRefs) {
           for (const ref of e.tagRefs) {
             const refId = Number(ref)
-            if (counted.has(refId)) continue
             if (childIdSet.has(refId)) {
               const bucket = childToName.get(refId)
               if (bucket) {
                 data[idx][bucket] = (Number(data[idx][bucket]) || 0) + 1
                 summaryTotals.set(bucket, (summaryTotals.get(bucket) ?? 0) + 1)
-                counted.add(refId)
               }
+              break
             }
           }
         }
@@ -278,28 +275,23 @@ function aggregateRegexByMonth(
       const idx = monthToIdx.get(m)
       if (idx === undefined) continue
       regex.lastIndex = 0
-      const counted = new Set<number>()
       if (childIdSet.has(e.pageId)) {
         const bucket = getBucket(e.pageId)
         if (bucket) {
           const count = countRegexMatches(e.text, new RegExp(pat.pattern, 'g'))
           data[idx][bucket] = (Number(data[idx][bucket]) || 0) + count
           summaryTotals.set(bucket, (summaryTotals.get(bucket) ?? 0) + count)
-          counted.add(e.pageId)
         }
-      }
-      if (e.tagRefs) {
+      } else if (e.tagRefs) {
         for (const ref of e.tagRefs) {
           const refId = Number(ref)
-          if (counted.has(refId)) continue
           if (childIdSet.has(refId)) {
             const bucket = getBucket(refId)
             if (bucket) {
-              const count = countRegexMentionMatches(e.text, refId, new RegExp(pat.pattern, 'g'))
-              data[idx][bucket] = (Number(data[idx][bucket]) || 0) + count
-              summaryTotals.set(bucket, (summaryTotals.get(bucket) ?? 0) + count)
-              counted.add(refId)
+              data[idx][bucket] = (Number(data[idx][bucket]) || 0) + 1
+              summaryTotals.set(bucket, (summaryTotals.get(bucket) ?? 0) + 1)
             }
+            break
           }
         }
       }
@@ -375,26 +367,20 @@ function aggregateRegexByWeekday(
         if (new Date(e.date) < cutoff) continue
         const jsDay = new Date(e.date).getDay()
         const idx = jsDay === 0 ? 6 : jsDay - 1
-        const counted = new Set<number>()
         if (childIdSet.has(e.pageId)) {
           const bucket = childToName.get(e.pageId)
           if (bucket) {
             let count = 0
             for (const { pattern } of regexes) count += countRegexMatches(e.text, new RegExp(pattern, 'g'))
             data[idx][bucket] = (Number(data[idx][bucket]) || 0) + count
-            counted.add(e.pageId)
           }
-        }
-        if (e.tagRefs) {
+        } else if (e.tagRefs) {
           for (const ref of e.tagRefs) {
             const refId = Number(ref)
-            if (counted.has(refId)) continue
             if (childIdSet.has(refId)) {
               const bucket = childToName.get(refId)
-              if (bucket) {
-                data[idx][bucket] = (Number(data[idx][bucket]) || 0) + 1
-                counted.add(refId)
-              }
+              if (bucket) data[idx][bucket] = (Number(data[idx][bucket]) || 0) + 1
+              break
             }
           }
         }
@@ -451,25 +437,19 @@ function aggregateRegexByWeekday(
       if (new Date(e.date) < cutoff) continue
       const jsDay = new Date(e.date).getDay()
       const idx = jsDay === 0 ? 6 : jsDay - 1
-      const counted = new Set<number>()
       if (childIdSet.has(e.pageId)) {
         const bucket = childToName.get(e.pageId)
         if (bucket) {
           const count = countRegexMatches(e.text, new RegExp(pat.pattern, 'g'))
           data[idx][bucket] = (Number(data[idx][bucket]) || 0) + count
-          counted.add(e.pageId)
         }
-      }
-      if (e.tagRefs) {
+      } else if (e.tagRefs) {
         for (const ref of e.tagRefs) {
           const refId = Number(ref)
-          if (counted.has(refId)) continue
           if (childIdSet.has(refId)) {
             const bucket = childToName.get(refId)
-            if (bucket) {
-              data[idx][bucket] = (Number(data[idx][bucket]) || 0) + 1
-              counted.add(refId)
-            }
+            if (bucket) data[idx][bucket] = (Number(data[idx][bucket]) || 0) + 1
+            break
           }
         }
       }
@@ -524,24 +504,17 @@ function aggregateEntriesByMonth(
       const m = formatMonthKey(new Date(e.date))
       const idx = monthToIdx.get(m)
       if (idx === undefined) continue
-      const counted = new Set<number>()
+      // Each entry counts once — attributed to pageId if direct child, else first tagRef match
       if (childIdSet.has(e.pageId)) {
         const bucket = childToName.get(e.pageId)
-        if (bucket) {
-          data[idx][bucket] = (Number(data[idx][bucket]) || 0) + 1
-          counted.add(e.pageId)
-        }
-      }
-      if (e.tagRefs) {
+        if (bucket) data[idx][bucket] = (Number(data[idx][bucket]) || 0) + 1
+      } else if (e.tagRefs) {
         for (const ref of e.tagRefs) {
           const refId = Number(ref)
-          if (counted.has(refId)) continue
           if (childIdSet.has(refId)) {
             const bucket = childToName.get(refId)
-            if (bucket) {
-              data[idx][bucket] = (Number(data[idx][bucket]) || 0) + 1
-              counted.add(refId)
-            }
+            if (bucket) data[idx][bucket] = (Number(data[idx][bucket]) || 0) + 1
+            break
           }
         }
       }
@@ -592,24 +565,16 @@ function aggregateEntriesByWeekday(
       if (new Date(e.date) < cutoff) continue
       const jsDay = new Date(e.date).getDay()
       const idx = jsDay === 0 ? 6 : jsDay - 1
-      const counted = new Set<number>()
       if (childIdSet.has(e.pageId)) {
         const bucket = childToName.get(e.pageId)
-        if (bucket) {
-          data[idx][bucket] = (Number(data[idx][bucket]) || 0) + 1
-          counted.add(e.pageId)
-        }
-      }
-      if (e.tagRefs) {
+        if (bucket) data[idx][bucket] = (Number(data[idx][bucket]) || 0) + 1
+      } else if (e.tagRefs) {
         for (const ref of e.tagRefs) {
           const refId = Number(ref)
-          if (counted.has(refId)) continue
           if (childIdSet.has(refId)) {
             const bucket = childToName.get(refId)
-            if (bucket) {
-              data[idx][bucket] = (Number(data[idx][bucket]) || 0) + 1
-              counted.add(refId)
-            }
+            if (bucket) data[idx][bucket] = (Number(data[idx][bucket]) || 0) + 1
+            break
           }
         }
       }
