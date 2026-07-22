@@ -21,7 +21,7 @@ git push         # triggers GitHub Actions deploy
 ## Key Architecture Decisions
 
 ### Data Model
-- DB schema version: **20** (Dexie, IndexedDB)
+- DB schema version: **25** (Dexie, IndexedDB)
 - All data is local — no server, no auth
 - Pages have `role` field for special pages: `main-timeline`, `colleague-hub`,
   `candidate-hub`, `project-hub`
@@ -32,7 +32,7 @@ git push         # triggers GitHub Actions deploy
 
 ### Block Model — One Block Per Tab
 - **Each tab contains exactly one block** — enforced at DB level
-- Block types: `text`, `timeline`, `feedback`, `visualization` (user-facing: "Charts")
+- Block types: `text`, `timeline`, `visualization` (user-facing: "Charts")
 - `table` blocks are hub-only (page-level, no tabs)
 - Hub pages are hardcoded to `visualization` + `table` — no tabs, no Layout editing
 - Main timeline page is special — page-level `timeline` block, no tabs
@@ -56,8 +56,7 @@ git push         # triggers GitHub Actions deploy
 
 ### Component Patterns
 - Route-level lazy loading (RootPage, HubPage, DetailPage)
-- Modal lazy loading (PageForm, FeedbackModal, SettingsModal, HelpModal,
-  OnboardingModal)
+- Modal lazy loading (PageForm, SettingsModal, HelpModal, OnboardingModal)
 - `RichTextEditor` uses `contentEditable` with `lastSetValue` ref to prevent
   DOM resets on re-render (critical for mention detection)
 - `RichTextDisplay` uses `useSyncExternalStore` for lazy DOMPurify loading
@@ -155,12 +154,11 @@ git push         # triggers GitHub Actions deploy
 
 ### Charts
 - Recharts lazy-loaded via `ConfigurableViz` (separate vendor chunk: ~110KB gz)
-- ChartRenderer split into 6 modules: `chartConstants`, `chartHooks`,
-  `ChartContainer`, `EntryCharts`, `FeedbackCharts`, `PropertyChart`
+- Chart modules: `ChartRenderer`, `ChartContainer`, `chartConstants`,
+  `useSeriesFilter`
 - `palette` passed as prop from `ConfigurableViz` (single `useChartPalette` call)
 - `AddChartModal` uses shared `DropdownPortal` (no local reimplementation)
 - `useAllEntries(monthCount)` scoped by date range — not full table scan
-- Feedbacks scoped by date range in `ConfigurableViz`
 - Pie charts: donut style (55%/85% inner/outer radius) with right-side labels
 - Single-series charts use `FALLBACK_COLOR` (#B8C5DB grey)
 - "Visualization" block type is labeled "Charts" in the UI
@@ -199,7 +197,6 @@ git push         # triggers GitHub Actions deploy
 - Search dropdowns: use `DropdownPortal` + tracks scroll via capture listener
 - ContextMenu: uses `cloneElement` to inject ARIA props onto trigger (no
   wrapper div); full keyboard nav (ArrowUp/Down, Enter, Escape), `role="menu"`
-- PropertyRow: full keyboard nav (ArrowUp/Down, Enter, Escape), `role="listbox"`
 - ColorPicker: arrow grid nav + Enter/Escape, `role="listbox"`
 - Custom radio/checkbox buttons: `role="radio"`/`role="checkbox"` + `aria-checked`
 - Radio groups: roving tabIndex (selected=0, others=-1) + arrow-key nav
@@ -227,6 +224,8 @@ git push         # triggers GitHub Actions deploy
 - `src/components/DropdownPortal/DropdownPortal.tsx` — portal for modal dropdowns
 - `src/components/DropdownPortal/DropdownPortal.module.css` — backdrop + portal z-index
 - `src/constants/colors.ts` — chart color palette (source of truth)
+- `src/hooks/useRegexPatterns.ts` — regex pattern CRUD + hub assignment hooks
+- `src/components/Charts/useSeriesFilter.ts` — toggle series visibility in charts
 - `src/hooks/useRadioGroupKeyboard.ts` — roving tabIndex + arrow-key nav hook
 - `src/utils/radioKeyHandler.ts` — non-hook radio key handler factory (for use in loops)
 - `scripts/generate-sw.mjs` — post-build SW manifest generator

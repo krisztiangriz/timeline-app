@@ -19,12 +19,11 @@ Explore the app today!
 - Drag & Drop Page Organization — Re-parent pages into hubs or move to root level from the Home table
 - Archiving — Archive pages or entire hubs (cascades to children); toggle visibility in Settings
 
-### Hub-level configurable properties
+### Regex patterns & tracking
 
-- Page-Scoped Properties — Dropdown properties shown on child page headers (e.g., Status, Role, Level) with named, colored options
-- Feedback-Scoped Properties — Properties used in the feedback form (e.g., Sentiment, Dimension) with radio-button selection
-- Property Editor — Full CRUD for properties and their options, including color picker per option
-- Auto-Seeding — New child pages automatically get the first option of each page-scoped property
+- Global Pattern Library — Define named regex patterns (e.g., "Meetings", "PRs merged") in Settings
+- Hub Assignments — Assign patterns to hubs for per-child-page tracking
+- Multi-Pattern Charts — Charts can track multiple regex patterns as separate series
 
 ### Daily workflow & task management
 
@@ -39,16 +38,10 @@ Explore the app today!
 - "Add Page" from Mentions — If no matches found, option to create a new page and auto-insert the mention
 - Keyboard Shortcuts — Extensive shortcut support
 
-### Feedback system
-
-- Global Feedback Modal — Multi-subject feedback form accessible via Ctrl+Shift+F; searchable page lookup with chip selection
-- Inline Feedback List — Per-page view with add/edit/delete and click-to-edit descriptions
-- Hub-Aware Properties — Feedback type and dimension driven by hub-level feedback-scoped properties (with colored radio options)
-- Time Range Filter — 3M / 6M / 12M / All toggle on the feedback list to filter by date
-
 ### Visualization & Analytics
-- Configurable Chart Block — Per-page visualization with multiple charts; data sources include entry count, page count, property distribution, feedback by type/dimension/time/per-page
+- Configurable Chart Block — Per-page visualization with multiple charts; 3 data sources (regex, entries, pages) × 2 groupings (month, weekday)
 - Chart Types — Bar, Line, Area, Pie (donut with labels and percentages)
+- Count Modes — Count by unique date (active days) or by line (content volume)
 - Multi-Scope Selection — Charts can scope to specific pages, hubs (per-child breakdown), or all data
 - Time Range Toggle — 3M / 6M / 12M / All (persisted per block in localStorage)
 - Customizable Chart Palette — 6-color palette editable in Settings with color picker and reset to defaults
