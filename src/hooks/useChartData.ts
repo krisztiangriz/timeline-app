@@ -582,18 +582,23 @@ function aggregateEntriesByMonth(
     return { data, keys, xKey: 'month' }
   }
 
-  // Single series — only count direct page entries (skip tagRef-included entries)
   const scopePageId = scopes.length === 1 && scopes[0].type === 'page' ? scopes[0].pageId : undefined
   const monthToIdx = new Map(months.map((m, i) => [m, i]))
   const data = months.map((m) => ({ month: formatMonthLabel(m), Entries: 0 } as Record<string, string | number>))
 
   for (const e of entries) {
     if (e.isPending) continue
-    if (scopePageId && e.pageId !== scopePageId) continue
     const m = formatMonthKey(new Date(e.date))
     const idx = monthToIdx.get(m)
     if (idx === undefined) continue
-    const inc = countMode === 'line' ? countNonEmptyLines(e.text) : 1
+    let inc: number
+    if (countMode === 'line') {
+      inc = scopePageId && e.pageId !== scopePageId
+        ? filterHtmlToMentionLines(e.text, scopePageId).length
+        : countNonEmptyLines(e.text)
+    } else {
+      inc = 1
+    }
     data[idx].Entries = (Number(data[idx].Entries) || 0) + inc
   }
 
@@ -646,16 +651,22 @@ function aggregateEntriesByWeekday(
     return { data, keys, xKey: 'name' }
   }
 
-  // Single series — only count direct page entries (skip tagRef-included entries)
   const scopePageId = scopes.length === 1 && scopes[0].type === 'page' ? scopes[0].pageId : undefined
   const counts = [0, 0, 0, 0, 0, 0, 0]
   for (const e of entries) {
     if (e.isPending) continue
-    if (scopePageId && e.pageId !== scopePageId) continue
     if (new Date(e.date) < cutoff) continue
     const jsDay = new Date(e.date).getDay()
     const idx = jsDay === 0 ? 6 : jsDay - 1
-    counts[idx] += countMode === 'line' ? countNonEmptyLines(e.text) : 1
+    let inc: number
+    if (countMode === 'line') {
+      inc = scopePageId && e.pageId !== scopePageId
+        ? filterHtmlToMentionLines(e.text, scopePageId).length
+        : countNonEmptyLines(e.text)
+    } else {
+      inc = 1
+    }
+    counts[idx] += inc
   }
 
   const data = WEEKDAY_LABELS.map((label, i) => ({ name: label, Entries: counts[i] } as Record<string, string | number>))
