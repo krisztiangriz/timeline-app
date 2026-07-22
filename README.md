@@ -15,7 +15,7 @@ Explore the app today!
 
 ### Content structure & organization
 - Pages & Hubs — Pages typed as general, colleague, candidate, or project; hubs group related child pages with configurable properties
-- Block-Based Document Model — Each tab contains exactly one block (text, timeline, feedback, or visualization); hub pages are hardcoded to visualization + table blocks; add and configure tabs via the Layout section in Edit Page
+- Block-Based Document Model — Each tab contains exactly one block (text, timeline, or visualization); hub pages are hardcoded to visualization + table blocks; add and configure tabs via the Layout section in Edit Page
 - Drag & Drop Page Organization — Re-parent pages into hubs or move to root level from the Home table
 - Archiving — Archive pages or entire hubs (cascades to children); toggle visibility in Settings
 
@@ -94,9 +94,8 @@ Data Model
 |-------|---------|---------------|
 | `text` | Rich text editor | Formatting, mentions, links, checkboxes |
 | `timeline` | Timeline view | Pending tasks, today editor, date-grouped history, cross-refs |
-| `feedback` | Feedback list | Add/edit/delete, property-based categorization, time filtering |
-| `table` | Child page list | Hub pages only; sortable columns, drag-to-reorder, property badges |
-| `visualization` | Charts | Multiple configurable charts per block, 7 data sources |
+| `table` | Child page list | Hub pages only; sortable columns, drag-to-reorder |
+| `visualization` | Charts | Multiple configurable charts per block; regex, entries, pages sources |
 
 > Each tab contains exactly one block. Add blocks by adding tabs in Edit Page.
 
