@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { useRadioGroupKeyboard } from '../../hooks/useRadioGroupKeyboard'
 import { Modal } from '../Modal/Modal'
 import { DropdownPortal } from '../DropdownPortal/DropdownPortal'
@@ -67,9 +67,7 @@ export function AddChartModal({ open, onClose, onAdd, editing, onUpdate, pageId,
   const [sourceOpen, setSourceOpen] = useState(false)
   const prevOpen = useRef(false)
   const userEditedName = useRef(false)
-  const scopeRef = useRef<HTMLDivElement>(null)
   const scopeTriggerRef = useRef<HTMLButtonElement>(null)
-  const sourceRef = useRef<HTMLDivElement>(null)
   const sourceTriggerRef = useRef<HTMLButtonElement>(null)
 
   const currentPage = allPages.find((p) => p.id === pageId)
@@ -108,25 +106,6 @@ export function AddChartModal({ open, onClose, onAdd, editing, onUpdate, pageId,
     }
     return opts
   }, [allPages, pageId])
-
-  // Close dropdowns on click outside
-  const handleClickOutside = useCallback((e: MouseEvent) => {
-    const target = e.target as HTMLElement
-    if (target.closest?.('[data-dropdown-panel]')) return
-    if (scopeRef.current && !scopeRef.current.contains(target)) {
-      setScopeOpen(false)
-    }
-    if (sourceRef.current && !sourceRef.current.contains(target)) {
-      setSourceOpen(false)
-    }
-  }, [])
-
-  useEffect(() => {
-    if (scopeOpen || sourceOpen) {
-      document.addEventListener('mousedown', handleClickOutside)
-      return () => document.removeEventListener('mousedown', handleClickOutside)
-    }
-  }, [scopeOpen, sourceOpen, handleClickOutside])
 
   // Scope summary text
   const scopeSummary = useMemo(() => {
@@ -218,7 +197,7 @@ export function AddChartModal({ open, onClose, onAdd, editing, onUpdate, pageId,
         {/* Scope — multi-select dropdown */}
         <div className={styles.formSection}>
           <span className={styles.formLabel}>Scope</span>
-          <div className={styles.scopeDropdown} ref={scopeRef}>
+          <div className={styles.scopeDropdown}>
             <button
               className={styles.scopeTrigger}
               onClick={() => setScopeOpen((v) => !v)}
@@ -259,7 +238,7 @@ export function AddChartModal({ open, onClose, onAdd, editing, onUpdate, pageId,
         {/* Data source */}
         <div className={styles.formSection}>
           <span className={styles.formLabel}>Data source</span>
-          <div className={styles.scopeDropdown} ref={sourceRef}>
+          <div className={styles.scopeDropdown}>
             <button
               className={styles.scopeTrigger}
               onClick={() => setSourceOpen((v) => !v)}

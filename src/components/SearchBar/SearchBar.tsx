@@ -1,6 +1,5 @@
-import { useState, useRef, useEffect, useCallback, memo } from 'react'
+import { useState, useRef, useEffect, useCallback, useMemo, memo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useSearch } from '../../hooks/useSearch'
 import { getPagePath } from '../../hooks/usePages'
 import { useAutocomplete } from '../../hooks/useAutocomplete'
 import { SearchIcon, PlusIcon } from '../Icons/Icons'
@@ -19,8 +18,20 @@ export const SearchBar = memo(function SearchBar({ open, onClose, onAddPage }: S
   const inputRef = useRef<HTMLInputElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
   const navigate = useNavigate()
-  const results = useSearch(query)
   const { allPages } = useAutocomplete()
+
+  const results = useMemo(() => {
+    if (!query.trim()) return []
+    const q = query.trim().toLowerCase()
+    return allPages
+      .filter((p) => p.name.toLowerCase().includes(q))
+      .sort((a, b) => {
+        const aStarts = a.name.toLowerCase().startsWith(q) ? 0 : 1
+        const bStarts = b.name.toLowerCase().startsWith(q) ? 0 : 1
+        if (aStarts !== bStarts) return aStarts - bStarts
+        return a.name.localeCompare(b.name)
+      })
+  }, [query, allPages])
 
   // Total selectable items: results + "Add new page"
   const totalItems = results.length + 1

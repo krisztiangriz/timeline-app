@@ -71,7 +71,6 @@ function validatePage(raw: unknown): Page | null {
     mentionCollapsed: raw.mentionCollapsed === true ? true : undefined,
     parentId: isNumber(raw.parentId) ? raw.parentId : undefined,
     archived: raw.archived === true ? true : undefined,
-    description: isString(raw.description) ? raw.description : '',
     createdAt: toDate(raw.createdAt),
     updatedAt: toDate(raw.updatedAt),
     editCount: isNumber(raw.editCount) ? raw.editCount : 0,
@@ -198,12 +197,11 @@ async function loadPurify() {
   return purify
 }
 
-function sanitizeHtml(records: { text?: string; content?: string; description?: string }[]): void {
+function sanitizeHtml(records: { text?: string; content?: string }[]): void {
   if (!purify) return
   for (const r of records) {
     if (typeof r.text === 'string') r.text = purify.sanitize(r.text)
     if (typeof r.content === 'string') r.content = purify.sanitize(r.content)
-    if (typeof r.description === 'string') r.description = purify.sanitize(r.description)
   }
 }
 

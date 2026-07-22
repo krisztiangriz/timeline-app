@@ -15,7 +15,6 @@ export interface Page {
   parentId?: number        // hub grouping
   archived?: boolean       // hidden from views unless "Show archived" is on
   isDraft?: boolean        // true for placeholder hubs being configured — excluded from queries
-  description: string
   createdAt: Date
   updatedAt: Date
   editCount: number

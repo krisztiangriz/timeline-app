@@ -1,4 +1,4 @@
-import { useSyncExternalStore, useCallback } from 'react'
+import { useSyncExternalStore } from 'react'
 import { safeGetItem, safeSetItem } from '../utils/safeStorage'
 
 export type Theme = 'light' | 'dark'
@@ -44,12 +44,7 @@ function setTheme(theme: Theme) {
  */
 export function useTheme() {
   const theme = useSyncExternalStore(subscribe, getSnapshot)
-
-  const toggleTheme = useCallback(() => {
-    setTheme(currentTheme === 'light' ? 'dark' : 'light')
-  }, [])
-
-  return { theme, setTheme, toggleTheme }
+  return { theme, setTheme }
 }
 
 /**

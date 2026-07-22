@@ -91,14 +91,10 @@ function splitPendingLines(html: string): string[] {
 
 interface TimelineViewProps {
   pageId: number
-  title?: string
-  /** If true, only show cross-ref entries — hide pending section and today editor */
-  readOnly?: boolean
-  /** Page object for determining pending filter behavior */
   page?: Page
 }
 
-export function TimelineView({ pageId, title, readOnly = false, page }: TimelineViewProps) {
+export function TimelineView({ pageId, page }: TimelineViewProps) {
   const directEntries = useTimelineEntries(pageId)
   const crossRefEntries = useCrossRefEntries(pageId)
   const { show: showToast } = useToast()
@@ -405,15 +401,15 @@ export function TimelineView({ pageId, title, readOnly = false, page }: Timeline
   // Build ordered list of navigable section keys
   const sectionKeys = useMemo(() => {
     const keys: string[] = []
-    if (!readOnly && isMainTimeline) keys.push('pending')
-    if (!readOnly) keys.push('today')
+    if (isMainTimeline) keys.push('pending')
+    keys.push('today')
     for (const [dateKey, entries] of historyGroups) {
       if (entries.some((e) => directIds.has(e.id!))) {
         keys.push(`history-${dateKey}`)
       }
     }
     return keys
-  }, [readOnly, isMainTimeline, historyGroups, directIds])
+  }, [isMainTimeline, historyGroups, directIds])
 
   const focusSection = useCallback((key: string) => {
     const el = sectionRefsMap.current.get(key)
@@ -595,10 +591,8 @@ export function TimelineView({ pageId, title, readOnly = false, page }: Timeline
 
   return (
     <div className={styles.timeline}>
-      {title && <span className={styles.sectionTitle}>{title}</span>}
-
       {/* Pending section */}
-      {!readOnly && isMainTimeline && (
+      {isMainTimeline && (
         <div
           className={editingSection === 'pending' ? styles.section : styles.sectionFocusable}
           ref={(el) => { pendingSectionRef.current = el; setSectionRef('pending')(el) }}
@@ -637,10 +631,10 @@ export function TimelineView({ pageId, title, readOnly = false, page }: Timeline
           </div>
         </div>
       )}
-      {!readOnly && isMainTimeline && <OnboardingGuide guideId="pending-tasks" anchorRef={pendingSectionRef} position="bottom-left" />}
+      {isMainTimeline && <OnboardingGuide guideId="pending-tasks" anchorRef={pendingSectionRef} position="bottom-left" />}
 
       {/* Filtered pending section (non-main-timeline pages) */}
-      {!readOnly && !isMainTimeline && filteredLines.length > 0 && (
+      {!isMainTimeline && filteredLines.length > 0 && (
         <FilteredPendingSection
           filteredLines={filteredLines}
           filteredOriginalIndices={filteredOriginalIndices}
@@ -652,14 +646,14 @@ export function TimelineView({ pageId, title, readOnly = false, page }: Timeline
       <div
         className={editingSection === 'today' ? styles.section : styles.sectionFocusable}
         ref={setSectionRef('today')}
-        tabIndex={!readOnly && editingSection !== 'today' ? 0 : undefined}
+        tabIndex={editingSection !== 'today' ? 0 : undefined}
         role="region"
         aria-label="Today"
         onKeyDown={(e) => handleSectionKeyDown('today', e)}
         onClick={(e) => handleSectionClick('today', e)}
       >
         <div className={styles.sectionContent}>
-          {!readOnly && editingSection === 'today' ? (
+          {editingSection === 'today' ? (
             <div onFocus={() => { todayFocusedRef.current = true }}>
               <RichTextEditor
                 value={todayHtml}
@@ -673,11 +667,11 @@ export function TimelineView({ pageId, title, readOnly = false, page }: Timeline
                 collapseMentions
               />
             </div>
-          ) : !readOnly && todayHtml ? (
+          ) : todayHtml ? (
             <RichTextDisplay html={todayHtml} collapseMentions />
-          ) : !readOnly ? (
+          ) : (
             <span className={styles.placeholderText}>Type here…</span>
-          ) : null}
+          )}
           {todayCrossRefLines.flatMap(({ entry, lines }) =>
             lines.map((lineHtml, li) => (
               <CrossRefRow

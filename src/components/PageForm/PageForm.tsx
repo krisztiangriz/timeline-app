@@ -107,7 +107,6 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
             name: 'Untitled',
             type: 'hub' as const,
             isDraft: true,
-            description: '',
             createdAt: new Date(),
             updatedAt: new Date(),
             editCount: 0,

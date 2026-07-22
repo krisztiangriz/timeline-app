@@ -1,4 +1,4 @@
-import { Fragment, useRef, useCallback } from 'react'
+import { Fragment, useRef } from 'react'
 import styles from './RangeToggle.module.css'
 
 export type RangeMonths = 0 | 3 | 6 | 12
@@ -14,7 +14,7 @@ interface RangeToggleProps {
 export function RangeToggle({ value, onChange }: RangeToggleProps) {
   const groupRef = useRef<HTMLDivElement>(null)
 
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+  function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight' &&
         e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return
     e.preventDefault()
@@ -25,7 +25,7 @@ export function RangeToggle({ value, onChange }: RangeToggleProps) {
     onChange(RANGE_OPTIONS[next])
     const buttons = groupRef.current?.querySelectorAll<HTMLElement>('[role="radio"]')
     buttons?.[next]?.focus()
-  }, [value, onChange])
+  }
 
   return (
     <div ref={groupRef} className={styles.rangeToggle} role="radiogroup" aria-label="Time range" onKeyDown={handleKeyDown}>

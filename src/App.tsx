@@ -87,7 +87,7 @@ function GlobalOverlays() {
         pageType = ROLE_TO_PAGE_TYPE[hub.role]
       }
 
-      const pageId = await addPage({ name: data.name, type: pageType, parentId, description: '', mentionTrigger: data.mentionTrigger, mentionCollapsed: data.mentionCollapsed })
+      const pageId = await addPage({ name: data.name, type: pageType, parentId, mentionTrigger: data.mentionTrigger, mentionCollapsed: data.mentionCollapsed })
 
       // Create tabs + blocks from the form data
       for (let i = 0; i < data.tabs.length; i++) {
@@ -172,7 +172,7 @@ function useEnsureDefaults() {
         if (pages.length > 0) return
 
         const now = new Date()
-        const base = { description: '', createdAt: now, updatedAt: now, editCount: 0 }
+        const base = { createdAt: now, updatedAt: now, editCount: 0 }
 
         async function createHub(name: string, role?: PageRole, trigger?: string) {
           const pageId = await db.pages.add({

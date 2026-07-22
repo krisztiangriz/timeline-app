@@ -146,7 +146,6 @@ class TimelineDB extends Dexie {
         name: 'Candidate hub',
         type: 'hub',
         role: 'candidate-hub',
-        description: '',
         createdAt: now,
         updatedAt: now,
         editCount: 0,
@@ -542,6 +541,9 @@ class TimelineDB extends Dexie {
           delete config.countMode
         }
       })
+    })
+    this.version(27).stores({
+      tags: null,
     })
   }
 }

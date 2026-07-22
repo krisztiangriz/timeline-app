@@ -62,16 +62,13 @@ const BlockList = memo(function BlockList({ pageId, page, blocks, tabId }: {
   const defaultPlaceholder = 'Type here...'
   const firstTextIdx = blocks.findIndex((b) => b.type === 'text')
 
-  // Stable callback for empty-block creation — guards against duplicate adds
-  const handleEmptyBlockUpdate = useMemo(() => {
-    return async (content: string) => {
-      if (addingRef.current) return
-      addingRef.current = true
-      try {
-        await db.blocks.add({ pageId, tabId, type: 'text', content })
-      } finally {
-        addingRef.current = false
-      }
+  const handleEmptyBlockUpdate = useCallback(async (content: string) => {
+    if (addingRef.current) return
+    addingRef.current = true
+    try {
+      await db.blocks.add({ pageId, tabId, type: 'text', content })
+    } finally {
+      addingRef.current = false
     }
   }, [pageId, tabId])
 

@@ -13,15 +13,9 @@ interface TimelineEntryRowProps {
   entry: TimelineEntry
   onUpdate: (id: number, data: { text?: string }) => void
   onDelete: (id: number) => void
-  /** If true, entry is a cross-reference (read-only, muted style) */
-  crossRef?: boolean
-  /** Controlled editing state from parent */
   editing?: boolean
-  /** Called when the user wants to start editing (click or Enter) */
   onStartEditing?: (clickPos?: { x: number; y: number }) => void
-  /** Called when user presses Escape to exit editing */
   onEscape?: () => void
-  /** Called when user clicks a mention link */
   onMentionClick?: (pageId: number) => void
 }
 
@@ -29,7 +23,6 @@ export const TimelineEntryRow = memo(function TimelineEntryRow({
   entry,
   onUpdate,
   onDelete,
-  crossRef,
   editing: controlledEditing,
   onStartEditing,
   onEscape,
@@ -103,10 +96,10 @@ export const TimelineEntryRow = memo(function TimelineEntryRow({
   return (
     <div
       data-entry-row
-      className={crossRef ? styles.entryRowTextDisabled : styles.entryRowText}
-      style={{ position: 'relative', cursor: editing || crossRef ? 'auto' : 'text' }}
+      className={styles.entryRowText}
+      style={{ position: 'relative', cursor: editing ? 'auto' : 'text' }}
     >
-      {!editing && !crossRef && (
+      {!editing && (
         <button
           className={styles.entryEditOverlay}
           onClick={handleStartEditing}

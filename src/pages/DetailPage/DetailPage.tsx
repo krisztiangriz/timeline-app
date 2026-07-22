@@ -12,7 +12,7 @@ import { usePageMenus } from '../../hooks/usePageMenus'
 import { useAutocomplete } from '../../hooks/useAutocomplete'
 import { useToast } from '../../hooks/useToast'
 import layout from '../../styles/layout.module.css'
-import pd from '../../components/PageDetail/PageDetail.module.css'
+import pd from './PageDetail.module.css'
 
 const PageForm = lazy(() => import('../../components/PageForm/PageForm').then((m) => ({ default: m.PageForm })))
 

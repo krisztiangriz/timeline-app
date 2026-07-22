@@ -71,5 +71,5 @@ export function useTableSort(pageKey: string, defaultKey: SortKey = 'name', defa
     return sortDir === 'asc' ? '↑' : '↓'
   }, [sortKey, sortDir])
 
-  return { sortKey, sortDir, toggleSort, sortPages, arrow }
+  return { toggleSort, sortPages, arrow }
 }

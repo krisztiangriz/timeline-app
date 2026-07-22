@@ -24,23 +24,13 @@ interface RichTextEditorProps {
   onChange: (html: string) => void
   placeholder?: string
   onBlur?: () => void
-  onFocus?: () => void
   autoFocus?: boolean
-  /** Place cursor at this screen coordinate on initial focus (click-to-edit) */
   initialClickPosition?: { x: number; y: number }
-  /** When true, mentions with collapsed hubs show only the trigger character */
   collapseMentions?: boolean
-  className?: string
-  onEnter?: () => void
-  /** Called when user clicks a mention span with a page ID */
   onMentionClick?: (pageId: number) => void
-  /** When true, new lines automatically get a checkbox prepended */
   autoCheckbox?: boolean
-  /** Called when a checkbox is toggled to checked. Receives the text content of that line (HTML stripped of the checkbox span) and the remaining editor HTML after removal. */
   onCheckboxComplete?: (lineHtml: string, remainingHtml: string) => void
-  /** Debounced auto-save callback — fires 500ms after last input. Only persists data, no UI state changes. */
   onAutoSave?: (html: string) => void
-  /** Called when Escape is pressed (and mention dropdown is not open). Used for exiting edit mode. */
   onEscape?: () => void
 }
 
@@ -49,12 +39,9 @@ export function RichTextEditor({
   onChange,
   placeholder = '',
   onBlur,
-  onFocus,
   autoFocus,
   initialClickPosition,
   collapseMentions,
-  className,
-  onEnter,
   onMentionClick,
   autoCheckbox,
   onCheckboxComplete,
@@ -200,7 +187,6 @@ export function RichTextEditor({
     if (!el) return
     isFocusedRef.current = true
     el.removeAttribute('data-empty')
-    onFocus?.()
 
     // Position cursor at the beginning only on programmatic/keyboard focus.
     // If the browser already placed the cursor inside the editor (via mouse click), don't override.
@@ -520,12 +506,6 @@ export function RichTextEditor({
       }
     }
 
-    if (e.key === 'Enter' && !e.shiftKey && onEnter) {
-      e.preventDefault()
-      onEnter()
-      return
-    }
-
   }
 
   function handleClick(e: React.MouseEvent) {
@@ -611,13 +591,11 @@ export function RichTextEditor({
     }
   }
 
-  const editorClassName = [styles.editor, className].filter(Boolean).join(' ')
-
   return (
     <div style={{ position: 'relative' }}>
       <div
         ref={editorRef}
-        className={editorClassName}
+        className={styles.editor}
         contentEditable
         suppressContentEditableWarning
         role="textbox"
