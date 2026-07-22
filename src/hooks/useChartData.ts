@@ -553,21 +553,37 @@ function aggregateEntriesByMonth(
       return row
     })
 
+    const seenDates = new Map<string, Set<string>>(bucketKeys.map((k) => [k, new Set()]))
+
     for (const e of entries) {
       if (e.isPending) continue
       const m = formatMonthKey(new Date(e.date))
       const idx = monthToIdx.get(m)
       if (idx === undefined) continue
-      const inc = countMode === 'line' ? countNonEmptyLines(e.text) : 1
+      const dateKey = new Date(e.date).toISOString().slice(0, 10)
       if (childIdSet.has(e.pageId)) {
         const bucket = childToName.get(e.pageId)
-        if (bucket) data[idx][bucket] = (Number(data[idx][bucket]) || 0) + inc
+        if (bucket) {
+          if (countMode === 'line') {
+            data[idx][bucket] = (Number(data[idx][bucket]) || 0) + countNonEmptyLines(e.text)
+          } else if (!seenDates.get(bucket)!.has(dateKey)) {
+            seenDates.get(bucket)!.add(dateKey)
+            data[idx][bucket] = (Number(data[idx][bucket]) || 0) + 1
+          }
+        }
       } else if (e.tagRefs) {
         for (const ref of e.tagRefs) {
           const refId = Number(ref)
           if (childIdSet.has(refId)) {
             const bucket = childToName.get(refId)
-            if (bucket) data[idx][bucket] = (Number(data[idx][bucket]) || 0) + inc
+            if (bucket) {
+              if (countMode === 'line') {
+                data[idx][bucket] = (Number(data[idx][bucket]) || 0) + filterHtmlToMentionLines(e.text, refId).length
+              } else if (!seenDates.get(bucket)!.has(dateKey)) {
+                seenDates.get(bucket)!.add(dateKey)
+                data[idx][bucket] = (Number(data[idx][bucket]) || 0) + 1
+              }
+            }
           }
         }
       }
@@ -580,21 +596,25 @@ function aggregateEntriesByMonth(
   const scopePageId = scopes.length === 1 && scopes[0].type === 'page' ? scopes[0].pageId : undefined
   const monthToIdx = new Map(months.map((m, i) => [m, i]))
   const data = months.map((m) => ({ month: formatMonthLabel(m), Entries: 0 } as Record<string, string | number>))
+  const seenDates = new Set<string>()
 
   for (const e of entries) {
     if (e.isPending) continue
     const m = formatMonthKey(new Date(e.date))
     const idx = monthToIdx.get(m)
     if (idx === undefined) continue
-    let inc: number
     if (countMode === 'line') {
-      inc = scopePageId && e.pageId !== scopePageId
+      const inc = scopePageId && e.pageId !== scopePageId
         ? filterHtmlToMentionLines(e.text, scopePageId).length
         : countNonEmptyLines(e.text)
+      data[idx].Entries = (Number(data[idx].Entries) || 0) + inc
     } else {
-      inc = 1
+      const dateKey = new Date(e.date).toISOString().slice(0, 10)
+      if (!seenDates.has(dateKey)) {
+        seenDates.add(dateKey)
+        data[idx].Entries = (Number(data[idx].Entries) || 0) + 1
+      }
     }
-    data[idx].Entries = (Number(data[idx].Entries) || 0) + inc
   }
 
   return { data, keys: ['Entries'], xKey: 'month' }
@@ -621,21 +641,37 @@ function aggregateEntriesByWeekday(
       return row
     })
 
+    const seenDates = new Map<string, Set<string>>(bucketKeys.map((k) => [k, new Set()]))
+
     for (const e of entries) {
       if (e.isPending) continue
       if (new Date(e.date) < cutoff) continue
       const jsDay = new Date(e.date).getDay()
       const idx = jsDay === 0 ? 6 : jsDay - 1
-      const inc = countMode === 'line' ? countNonEmptyLines(e.text) : 1
+      const dateKey = new Date(e.date).toISOString().slice(0, 10)
       if (childIdSet.has(e.pageId)) {
         const bucket = childToName.get(e.pageId)
-        if (bucket) data[idx][bucket] = (Number(data[idx][bucket]) || 0) + inc
+        if (bucket) {
+          if (countMode === 'line') {
+            data[idx][bucket] = (Number(data[idx][bucket]) || 0) + countNonEmptyLines(e.text)
+          } else if (!seenDates.get(bucket)!.has(dateKey)) {
+            seenDates.get(bucket)!.add(dateKey)
+            data[idx][bucket] = (Number(data[idx][bucket]) || 0) + 1
+          }
+        }
       } else if (e.tagRefs) {
         for (const ref of e.tagRefs) {
           const refId = Number(ref)
           if (childIdSet.has(refId)) {
             const bucket = childToName.get(refId)
-            if (bucket) data[idx][bucket] = (Number(data[idx][bucket]) || 0) + inc
+            if (bucket) {
+              if (countMode === 'line') {
+                data[idx][bucket] = (Number(data[idx][bucket]) || 0) + filterHtmlToMentionLines(e.text, refId).length
+              } else if (!seenDates.get(bucket)!.has(dateKey)) {
+                seenDates.get(bucket)!.add(dateKey)
+                data[idx][bucket] = (Number(data[idx][bucket]) || 0) + 1
+              }
+            }
           }
         }
       }
@@ -647,20 +683,24 @@ function aggregateEntriesByWeekday(
 
   const scopePageId = scopes.length === 1 && scopes[0].type === 'page' ? scopes[0].pageId : undefined
   const counts = [0, 0, 0, 0, 0, 0, 0]
+  const seenDates = [new Set<string>(), new Set<string>(), new Set<string>(), new Set<string>(), new Set<string>(), new Set<string>(), new Set<string>()]
   for (const e of entries) {
     if (e.isPending) continue
     if (new Date(e.date) < cutoff) continue
     const jsDay = new Date(e.date).getDay()
     const idx = jsDay === 0 ? 6 : jsDay - 1
-    let inc: number
     if (countMode === 'line') {
-      inc = scopePageId && e.pageId !== scopePageId
+      const inc = scopePageId && e.pageId !== scopePageId
         ? filterHtmlToMentionLines(e.text, scopePageId).length
         : countNonEmptyLines(e.text)
+      counts[idx] += inc
     } else {
-      inc = 1
+      const dateKey = new Date(e.date).toISOString().slice(0, 10)
+      if (!seenDates[idx].has(dateKey)) {
+        seenDates[idx].add(dateKey)
+        counts[idx] += 1
+      }
     }
-    counts[idx] += inc
   }
 
   const data = WEEKDAY_LABELS.map((label, i) => ({ name: label, Entries: counts[i] } as Record<string, string | number>))
