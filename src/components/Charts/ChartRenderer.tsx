@@ -49,14 +49,16 @@ export interface ChartRendererProps {
   entryTags: EntryTag[]
   containerClass?: string
   palette: string[]
+  onSeriesColorChange?: (key: string, color: string) => void
 }
 
-export function ChartRenderer({ config, monthCount = 12, entries, pages, entryTags, containerClass, palette }: ChartRendererProps) {
+export function ChartRenderer({ config, monthCount = 12, entries, pages, entryTags, containerClass, palette, onSeriesColorChange }: ChartRendererProps) {
   const result = useUnifiedChartData(config, entries, pages, entryTags, monthCount)
   const { toggle, opacity, isActive } = useSeriesFilter(result.summary ? result.summary.map(s => s.name) : result.keys)
   const cls = containerClass ?? (config.chartType === 'pie' ? styles.chartContainerPie : styles.chartContainer)
 
   function getKeyColor(key: string, i: number, total: number): string {
+    if (config.seriesColors?.[key]) return config.seriesColors[key]
     if (config.source === 'classify' && key === 'Work') return FALLBACK_COLOR
     return getSeriesColor(i, total, palette)
   }
@@ -66,11 +68,17 @@ export function ChartRenderer({ config, monthCount = 12, entries, pages, entryTa
     return (
       <DonutWithLabels
         data={result.summary}
-        colorFn={(i) => result.summary![i]?.color ?? getColor(i, palette)}
+        colorFn={(i) => {
+          const key = result.summary![i]?.name
+          if (key && config.seriesColors?.[key]) return config.seriesColors[key]
+          return result.summary![i]?.color ?? getColor(i, palette)
+        }}
         containerClass={cls}
         tooltipProps={TP}
         isActive={result.summary.length > 1 ? isActive : undefined}
         onToggle={result.summary.length > 1 ? toggle : undefined}
+        onColorChange={result.summary.length > 1 ? onSeriesColorChange : undefined}
+        items={result.summary}
       />
     )
   }
@@ -100,7 +108,7 @@ export function ChartRenderer({ config, monthCount = 12, entries, pages, entryTa
           })()}
         </ResponsiveContainer>
       </ChartContainer>
-      {total > 1 && <InteractiveLegend items={result.keys.map((key, i) => ({ name: key, color: getKeyColor(key, i, total) }))} isActive={isActive} onToggle={toggle} />}
+      {total > 1 && <InteractiveLegend items={result.keys.map((key, i) => ({ name: key, color: getKeyColor(key, i, total) }))} isActive={isActive} onToggle={toggle} onColorChange={onSeriesColorChange} />}
     </>
   )
 }

@@ -337,6 +337,17 @@
   flex-shrink: 0;
 }
 
+.legendDot[role="button"],
+.pieLabelDot[role="button"] {
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+
+.legendDot[role="button"]:hover,
+.pieLabelDot[role="button"]:hover {
+  transform: scale(1.5);
+}
+
 .pieLabelClickable {
   cursor: pointer;
   user-select: none;

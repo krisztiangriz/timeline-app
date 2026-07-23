@@ -59,6 +59,11 @@ export const ConfigurableViz = memo(function ConfigurableViz({ blockId, pageId }
     try { await deleteChartConfig(id) } catch { showToast('Failed to delete chart') }
   }
 
+  async function handleSeriesColor(configId: number, key: string, color: string) {
+    const config = configs.find(c => c.id === configId)
+    try { await updateChartConfig(configId, { seriesColors: { ...config?.seriesColors, [key]: color } }) } catch { showToast('Failed to update color') }
+  }
+
 
   return (
     <div className={styles.vizPage}>
@@ -78,7 +83,7 @@ export const ConfigurableViz = memo(function ConfigurableViz({ blockId, pageId }
       ) : (
         configs.map((config) => (
           <div key={config.id} className={styles.chartSection}>
-            <ChartCard config={config} monthCount={range} entries={allEntries} pages={allPages} entryTags={entryTags} onEdit={setEditing} onDelete={handleDelete} isPie={config.chartType === 'pie'} palette={palette} />
+            <ChartCard config={config} monthCount={range} entries={allEntries} pages={allPages} entryTags={entryTags} onEdit={setEditing} onDelete={handleDelete} isPie={config.chartType === 'pie'} palette={palette} onSeriesColorChange={(key, color) => handleSeriesColor(config.id!, key, color)} />
           </div>
         ))
       )}
@@ -110,6 +115,7 @@ const ChartCard = memo(function ChartCard({
   onDelete,
   isPie,
   palette,
+  onSeriesColorChange,
 }: {
   config: ChartConfig
   monthCount: 0 | 3 | 6 | 12
@@ -120,6 +126,7 @@ const ChartCard = memo(function ChartCard({
   onDelete: (id: number) => void
   isPie?: boolean
   palette: string[]
+  onSeriesColorChange?: (key: string, color: string) => void
 }) {
   return (
     <div className={styles.chartCard}>
@@ -144,6 +151,7 @@ const ChartCard = memo(function ChartCard({
         entryTags={entryTags}
         containerClass={isPie ? styles.chartContainerPie : styles.chartContainer}
         palette={palette}
+        onSeriesColorChange={onSeriesColorChange}
       />
     </div>
   )
