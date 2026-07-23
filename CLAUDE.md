@@ -166,6 +166,9 @@ git push         # triggers GitHub Actions deploy
 - "Visualization" block type is labeled "Charts" in the UI
 - Entry classification: `!` trigger inserts entry tag spans; per-line
   classification via `classifyEntryLines` (lines without a page mention skipped)
+- **Line-scoped classification:** for page-scoped charts, cross-ref entries only
+  count lines that mention the scoped page(s); direct entries count all lines.
+  `scopeLines()` + `resolveScopePageIds()` handle this filtering in `useChartData.ts`
 - Chart sources: `classify` (by category), `entries`, `pages`
 - `ChartConfig.categories?: string[]` filters classify charts to selected categories
 

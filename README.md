@@ -23,6 +23,7 @@ Explore the app today!
 
 - Inline Tags — Type `!` to classify timeline lines (e.g., `!meeting`, `!jira-123`, `!pos`, `!neg`)
 - Per-Line Classification — Each line is independently categorized; lines without a page mention are excluded from charts
+- Line-Scoped Classification — For page-scoped charts, only lines that mention the scoped page are counted from cross-referenced entries; tags on unrelated lines don't leak into other pages' charts
 - Default Categories — Work (no tag), Meeting, Work with Ticket, Positive Feedback, Negative Feedback
 - Configurable Tags — Add/edit/remove entry tags in Settings; categories selectable per chart
 
