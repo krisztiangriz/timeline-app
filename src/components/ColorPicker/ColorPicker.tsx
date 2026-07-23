@@ -8,9 +8,10 @@ interface ColorPickerProps {
   onChange: (color: string) => void
   onClose: () => void
   anchorRef?: React.RefObject<HTMLElement | null>
+  position?: 'below' | 'above'
 }
 
-export function ColorPicker({ colors, value, onChange, onClose, anchorRef }: ColorPickerProps) {
+export function ColorPicker({ colors, value, onChange, onClose, anchorRef, position = 'below' }: ColorPickerProps) {
   const ref = useRef<HTMLDivElement>(null)
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null)
   const [activeIndex, setActiveIndex] = useState(() => {
@@ -24,16 +25,24 @@ export function ColorPicker({ colors, value, onChange, onClose, anchorRef }: Col
       const el = anchorRef?.current
       if (!el) return
       const rect = el.getBoundingClientRect()
-      setPos({ top: rect.bottom + 4, left: rect.left })
+      const pickerEl = ref.current
+      if (position === 'above' && pickerEl) {
+        setPos({ top: rect.top - pickerEl.offsetHeight - 4, left: rect.left })
+      } else if (position === 'above') {
+        setPos({ top: rect.top - 4, left: rect.left })
+      } else {
+        setPos({ top: rect.bottom + 4, left: rect.left })
+      }
     }
     update()
+    requestAnimationFrame(update)
     window.addEventListener('scroll', update, true)
     window.addEventListener('resize', update)
     return () => {
       window.removeEventListener('scroll', update, true)
       window.removeEventListener('resize', update)
     }
-  }, [anchorRef])
+  }, [anchorRef, position])
 
   // Close on click outside
   useEffect(() => {

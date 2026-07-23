@@ -62,6 +62,7 @@ export function InteractiveLegend({ items, isActive, onToggle, onColorChange }: 
           onChange={(color) => { onColorChange(pickerKey, color); setPickerKey(null) }}
           onClose={handleClose}
           anchorRef={dotRef as React.RefObject<HTMLElement>}
+          position="above"
         />
       )}
     </div>
@@ -120,6 +121,7 @@ export function DonutWithLabels({ data, colorFn, containerClass, tooltipProps, i
           onChange={(color) => { onColorChange(pickerKey, color); setPickerKey(null) }}
           onClose={handleClose}
           anchorRef={dotRef as React.RefObject<HTMLElement>}
+          position="above"
         />
       )}
     </div>
