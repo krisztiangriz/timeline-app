@@ -368,7 +368,7 @@ export function SettingsModal({ open, onClose, onToast }: SettingsModalProps) {
                 value={newTagName}
                 onChange={(e) => setNewTagName(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter' && newTagName.trim()) { ((e.target as HTMLElement).nextElementSibling as HTMLInputElement)?.focus() } if (e.key === 'Escape') { setAddingTag(false); setNewTagName(''); setNewTagSlug(''); setNewTagCategory('') } }}
-                placeholder="Name (e.g. Meeting)"
+                placeholder="Name"
                 autoFocus
               />
               <input
@@ -377,7 +377,7 @@ export function SettingsModal({ open, onClose, onToast }: SettingsModalProps) {
                 value={newTagSlug}
                 onChange={(e) => setNewTagSlug(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter' && newTagSlug.trim()) { ((e.target as HTMLElement).nextElementSibling as HTMLInputElement)?.focus() } if (e.key === 'Escape') { setAddingTag(false); setNewTagName(''); setNewTagSlug(''); setNewTagCategory('') } }}
-                placeholder="Slug (e.g. meeting)"
+                placeholder="Slug"
               />
               <input
                 className={styles.patternInlineInput}
@@ -385,7 +385,7 @@ export function SettingsModal({ open, onClose, onToast }: SettingsModalProps) {
                 value={newTagCategory}
                 onChange={(e) => setNewTagCategory(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') handleAddTag(); if (e.key === 'Escape') { setAddingTag(false); setNewTagName(''); setNewTagSlug(''); setNewTagCategory('') } }}
-                placeholder="Category (e.g. Meeting)"
+                placeholder="Category"
               />
               <button className={styles.confirmButton} onClick={handleAddTag} tabIndex={0}
                 style={{ opacity: newTagName.trim() && newTagSlug.trim() && newTagCategory.trim() ? 1 : 0.4 }}><CheckIcon /></button>

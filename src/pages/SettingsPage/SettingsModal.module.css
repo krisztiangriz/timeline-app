@@ -279,6 +279,7 @@
 .patternRow {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: var(--space-sm);
 }
 
@@ -290,6 +291,14 @@
   cursor: pointer;
   min-width: 80px;
   flex-shrink: 0;
+}
+
+.patternLabel {
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-sm);
+  color: var(--color-text-secondary);
+  margin-left: var(--space-lg);
+  margin-right: auto;
 }
 
 .patternName:hover {
