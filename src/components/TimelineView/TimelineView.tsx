@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef, useCallback, memo } from 'react'
+import { useState, useMemo, useRef, useCallback, memo } from 'react'
 import { stripHtml, stripCheckboxHtml } from '../../utils/stripHtml'
 import { filterHtmlToMentionLines } from '../../utils/mentionParser'
 
@@ -9,6 +9,7 @@ import { db } from '../../db/database'
 import { useNavigateToPage } from '../../hooks/useNavigateToPage'
 import { useToast } from '../../hooks/useToast'
 import { useEntrySave, useEntryDelete } from '../../hooks/useEntryPersist'
+import { useEditorSync } from '../../hooks/useEditorSync'
 import { formatEntryDate, startOfDay } from '../../utils/dateUtils'
 import { TimelineEntryRow } from './TimelineEntryRow'
 import { RichTextEditor } from '../RichTextEditor/RichTextEditor'
@@ -172,49 +173,15 @@ export function TimelineView({ pageId, page }: TimelineViewProps) {
     return map
   }, [historyGroups, directIds, pageId, crossRefEntries.length])
 
-  // ---- Pending section state (single editor, mirrors Today pattern) ----
-  const [pendingHtml, setPendingHtml] = useState('')
-  const pendingEntryId = useRef<number | undefined>(undefined)
-  const pendingFocusedRef = useRef(false)
+  // ---- Pending section state ----
+  const { html: pendingHtml, setHtml: setPendingHtml, entryIdRef: pendingEntryId, focusedRef: pendingFocusedRef } = useEditorSync(pendingEntry)
   const pendingSectionRef = useRef<HTMLDivElement>(null)
 
   // Onboarding: trigger pending-tasks guide on first focus
   const { triggerGuide } = useOnboardingActions()
 
-  // Sync pending entry from DB → local state (only when editor is not focused)
-  useEffect(() => {
-    if (pendingEntry) {
-      pendingEntryId.current = pendingEntry.id
-      if (!pendingFocusedRef.current) {
-        setPendingHtml(pendingEntry.text)
-      }
-    } else {
-      pendingEntryId.current = undefined
-      if (!pendingFocusedRef.current) {
-        setPendingHtml('')
-      }
-    }
-  }, [pendingEntry])
-
   // ---- Today's content as a single editable block ----
-  const [todayHtml, setTodayHtml] = useState('')
-  const todayEntryId = useRef<number | undefined>(undefined)
-  const todayFocusedRef = useRef(false)
-
-  // Sync today entry from DB → local state (only when editor is not focused)
-  useEffect(() => {
-    if (todayEntry) {
-      todayEntryId.current = todayEntry.id
-      if (!todayFocusedRef.current) {
-        setTodayHtml(todayEntry.text)
-      }
-    } else {
-      todayEntryId.current = undefined
-      if (!todayFocusedRef.current) {
-        setTodayHtml('')
-      }
-    }
-  }, [todayEntry])
+  const { html: todayHtml, setHtml: setTodayHtml, entryIdRef: todayEntryId, focusedRef: todayFocusedRef } = useEditorSync(todayEntry)
 
   // ---- History cross-ref editor state (for adding context to cross-ref-only sections) ----
   const [historyEditHtml, setHistoryEditHtml] = useState('')

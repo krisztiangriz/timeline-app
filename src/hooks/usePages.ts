@@ -176,25 +176,18 @@ export async function updateTabs(pageId: number, tabs: { id?: number; name: stri
   })
 }
 
-export async function archivePage(id: number) {
+async function setPageArchived(id: number, archived: boolean) {
   const page = await db.pages.get(id)
-  if (!page || page.role === 'main-timeline') return
-  await db.pages.update(id, { archived: true })
-  // If hub, archive all children in one batch
+  if (!page) return
+  if (archived && page.role === 'main-timeline') return
+  await db.pages.update(id, { archived })
   if (page.type === 'hub') {
-    await db.pages.where('parentId').equals(id).modify({ archived: true })
+    await db.pages.where('parentId').equals(id).modify({ archived })
   }
 }
 
-export async function unarchivePage(id: number) {
-  const page = await db.pages.get(id)
-  if (!page) return
-  await db.pages.update(id, { archived: false })
-  // If hub, unarchive all children in one batch
-  if (page.type === 'hub') {
-    await db.pages.where('parentId').equals(id).modify({ archived: false })
-  }
-}
+export async function archivePage(id: number) { return setPageArchived(id, true) }
+export async function unarchivePage(id: number) { return setPageArchived(id, false) }
 
 /**
  * Build a flat list of pages for the root index,

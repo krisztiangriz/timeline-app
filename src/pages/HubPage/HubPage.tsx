@@ -1,14 +1,14 @@
 import { useStickyScroll } from '../../hooks/useStickyScroll'
-import { useState, useMemo, useCallback, lazy, Suspense } from 'react'
+import { useState, useMemo, lazy, Suspense } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { BreadcrumbNav } from '../../components/Breadcrumb/Breadcrumb'
 import { PageHeader } from '../../components/PageHeader/PageHeader'
-import type { PageFormData } from '../../components/PageForm/PageForm'
 import { ConfirmModal } from '../../components/ConfirmModal/ConfirmModal'
 import { BlockRenderer } from '../../components/BlockRenderer/BlockRenderer'
-import { usePageByRole, updatePage, deletePage, updateTabs, archivePage, unarchivePage, usePageTabs, getPagePath } from '../../hooks/usePages'
+import { usePageByRole, updatePage, deletePage, usePageTabs, getPagePath } from '../../hooks/usePages'
 import { useBlocks } from '../../hooks/useBlocks'
 import { usePageMenus } from '../../hooks/usePageMenus'
+import { usePageActions } from '../../hooks/usePageActions'
 import { useAutocomplete } from '../../hooks/useAutocomplete'
 import { useToast } from '../../hooks/useToast'
 import type { PageRole } from '../../types'
@@ -27,22 +27,11 @@ export function HubPage({ role }: HubPageProps) {
   const { allPages } = useAutocomplete()
   const { show: showToast } = useToast()
   const { sentinelRef, isScrolled } = useStickyScroll()
-  const [editPageOpen, setEditPageOpen] = useState(false)
+  const { handleArchive, handleEditSubmit, editPageOpen, setEditPageOpen } = usePageActions(hub, showToast)
   const [deleteConfirm, setDeleteConfirm] = useState(false)
   const allBlocks = useBlocks(hub?.id)
 
   const hubPath = hub ? getPagePath(hub, allPages) : '/'
-
-  const handleArchive = useCallback(async () => {
-    if (!hub?.id) return
-    if (hub.archived) {
-      await unarchivePage(hub.id)
-      showToast('Unarchived')
-    } else {
-      await archivePage(hub.id)
-      showToast('Archived')
-    }
-  }, [hub, showToast]) // archivePage/unarchivePage are stable module-level imports
 
   const { moreMenuItems } = usePageMenus({
     onEditPage: () => setEditPageOpen(true),
@@ -60,17 +49,6 @@ export function HubPage({ role }: HubPageProps) {
     mentionTrigger: hub?.mentionTrigger,
     mentionCollapsed: hub?.mentionCollapsed,
   }), [hub, tabs, allBlocks])
-
-  async function handleEditSubmit(data: PageFormData) {
-    if (!hub?.id) return
-    try {
-      await updatePage(hub.id, { name: data.name, mentionTrigger: data.mentionTrigger, mentionCollapsed: data.mentionCollapsed })
-      await updateTabs(hub.id, data.tabs)
-      setEditPageOpen(false); showToast('Page updated')
-    } catch {
-      showToast('Failed to update page')
-    }
-  }
 
   if (!hub) return null
 

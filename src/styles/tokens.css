@@ -16,14 +16,7 @@
   --color-focus: var(--color-text-primary);
 
   /* Semantic — used in visualizations & feedback only */
-  --color-accent-blue: #6699FF;        /* Primary */
-  --color-accent-green: #45C9A1;       /* Success */
-  --color-positive: #34D399;           /* Success (alt) */
   --color-negative: #E53E3E;           /* Error — meets 4.5:1 on white */
-  --color-neutral: #5E6E8C;           /* N600 — feedback neutral */
-  --color-primary-soft: #E8F0FF;       /* Primary background */
-  --color-success-soft: #E6F7F2;       /* Success background */
-  --color-error-soft: #FFECEC;         /* Error background */
 
   /* Overlays & shadows */
   --color-shadow: #5E6E8C33;
@@ -35,14 +28,11 @@
   --font-size-xs: 10px;
   --font-size-sm: 12px;
   --font-size-base: 14px;
-  --font-size-lg: 16px;
-  --font-size-xl: 18px;
   --font-size-h1: 18px;
 
   --line-height-xs: 16px;
   --line-height-sm: 20px;
   --line-height-base: 24px;
-  --line-height-lg: 20px;
   --line-height-xl: 40px;
 
   --font-weight-regular: 400;
@@ -57,7 +47,6 @@
   --space-md: 12px;
   --space-lg: 16px;
   --space-xl: 24px;
-  --space-2xl: 32px;
   --space-3xl: 40px;
 
   /* Radius */
@@ -66,13 +55,6 @@
   --radius-lg: 12px;
 
   /* Z-index scale */
-  --z-sticky: 10;
-  --z-dropdown: 50;
-  --z-backdrop: 99;
-  --z-menu: 100;
-  --z-modal: 200;
-  --z-toast: 1000;
-  --z-guide: 9000;
   --z-popover: 9999;
 
   /* Shadows */
@@ -104,14 +86,7 @@
   --color-focus: var(--color-text-primary);
 
   /* Semantic */
-  --color-accent-blue: #7AABFF;
-  --color-accent-green: #5ED4B0;
-  --color-positive: #4DE8AD;
   --color-negative: #FF7A7A;
-  --color-neutral: #8B9BB5;
-  --color-primary-soft: #1E2A3E;
-  --color-success-soft: #1A2E2A;
-  --color-error-soft: #3A2020;
 
   /* Overlays & shadows */
   --color-shadow: rgba(0, 0, 0, 0.4);

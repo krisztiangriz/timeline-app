@@ -3,12 +3,12 @@ import { useState, useEffect, useCallback, lazy, Suspense } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { BreadcrumbNav } from '../../components/Breadcrumb/Breadcrumb'
 import { PageHeader } from '../../components/PageHeader/PageHeader'
-import type { PageFormData } from '../../components/PageForm/PageForm'
 import { ConfirmModal } from '../../components/ConfirmModal/ConfirmModal'
 import { BlockRenderer } from '../../components/BlockRenderer/BlockRenderer'
-import { usePage, updatePage, deletePage, updateTabs, archivePage, unarchivePage, usePageTabs, getPagePath } from '../../hooks/usePages'
+import { usePage, updatePage, deletePage, usePageTabs, getPagePath } from '../../hooks/usePages'
 import { useBlocks } from '../../hooks/useBlocks'
 import { usePageMenus } from '../../hooks/usePageMenus'
+import { usePageActions } from '../../hooks/usePageActions'
 import { useAutocomplete } from '../../hooks/useAutocomplete'
 import { useToast } from '../../hooks/useToast'
 import layout from '../../styles/layout.module.css'
@@ -30,7 +30,7 @@ export function DetailPage({ routePrefix }: DetailPageProps) {
   const { allPages } = useAutocomplete()
   const { show: showToast } = useToast()
   const { sentinelRef, isScrolled } = useStickyScroll()
-  const [editPageOpen, setEditPageOpen] = useState(false)
+  const { handleArchive, handleEditSubmit, editPageOpen, setEditPageOpen } = usePageActions(page, showToast)
   const [deleteConfirm, setDeleteConfirm] = useState(false)
   const [activeTabId, setActiveTabId] = useState<number | null>(null)
   const allBlocks = useBlocks(pageId)
@@ -49,17 +49,6 @@ export function DetailPage({ routePrefix }: DetailPageProps) {
   const canDelete = !page?.role
   const isMainTimeline = page?.role === 'main-timeline'
   const canArchive = !isMainTimeline
-
-  const handleArchive = useCallback(async () => {
-    if (!pageId || !page) return
-    if (page.archived) {
-      await unarchivePage(pageId)
-      showToast('Unarchived')
-    } else {
-      await archivePage(pageId)
-      showToast('Archived')
-    }
-  }, [pageId, page, showToast]) // archivePage/unarchivePage are stable module-level imports
 
   const { moreMenuItems } = usePageMenus({
     canDelete, canArchive, isArchived: !!page?.archived,
@@ -80,17 +69,6 @@ export function DetailPage({ routePrefix }: DetailPageProps) {
       mentionCollapsed: page?.mentionCollapsed,
       inheritedTrigger: parentHub?.mentionTrigger,
       inheritedFrom: parentHub?.name,
-    }
-  }
-
-  async function handleEditSubmit(data: PageFormData) {
-    if (!pageId) return
-    try {
-      await updatePage(pageId, { name: data.name, mentionTrigger: data.mentionTrigger, mentionCollapsed: data.mentionCollapsed })
-      await updateTabs(pageId, data.tabs)
-      setEditPageOpen(false); showToast('Page updated')
-    } catch {
-      showToast('Failed to update page')
     }
   }
 

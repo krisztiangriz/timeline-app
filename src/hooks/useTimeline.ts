@@ -62,7 +62,7 @@ export function usePendingEntry(pageId?: number) {
 // Standalone async functions — stable references, no hook overhead
 
 export async function addEntry(
-  data: Pick<TimelineEntry, 'pageId' | 'text' | 'isPending'> & { date?: Date }
+  data: Pick<TimelineEntry, 'pageId' | 'text' | 'isPending'> & { date?: Date; createdAt?: Date }
 ): Promise<number> {
   const now = new Date()
   const tagRefs = extractMentionPageIds(data.text)
@@ -75,7 +75,7 @@ export async function addEntry(
     date: data.date ?? now,
     tagRefs,
     tagSlugs,
-    createdAt: now,
+    createdAt: data.createdAt ?? now,
     updatedAt: now,
   })
 

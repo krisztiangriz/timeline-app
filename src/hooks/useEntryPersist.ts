@@ -1,7 +1,5 @@
 import { useCallback } from 'react'
-import { db } from '../db/database'
 import { stripHtml } from '../utils/stripHtml'
-import { extractMentionPageIds, extractEntryTagSlugs } from '../utils/mentionParser'
 import { addEntry, updateEntry, deleteEntry } from './useTimeline'
 import type { ToastAction } from './useToast'
 
@@ -13,48 +11,41 @@ interface EntryPersistOptions {
   wrapOnCreate?: (html: string) => string
 }
 
+async function persistEntry(
+  html: string,
+  entryIdRef: React.MutableRefObject<number | undefined>,
+  options: EntryPersistOptions,
+) {
+  const { pageId, isPending, date, textTransform, wrapOnCreate } = options
+  const stripped = textTransform ? textTransform(html) : stripHtml(html).trim()
+  if (entryIdRef.current) {
+    if (!stripped) {
+      await deleteEntry(entryIdRef.current)
+      entryIdRef.current = undefined
+    } else {
+      await updateEntry(entryIdRef.current, { text: html })
+    }
+  } else if (stripped) {
+    const finalHtml = wrapOnCreate ? (wrapOnCreate(html) || html) : html
+    const id = await addEntry({ pageId, text: finalHtml, isPending, date })
+    entryIdRef.current = id
+  }
+}
+
 export function useEntrySave(
   entryIdRef: React.MutableRefObject<number | undefined>,
   options: EntryPersistOptions,
   showToast: (msg: string) => void,
 ) {
-  const { pageId, isPending, date, textTransform, wrapOnCreate } = options
-
   const save = useCallback(async (html: string) => {
-    try {
-      const stripped = textTransform ? textTransform(html) : stripHtml(html).trim()
-      if (entryIdRef.current) {
-        if (!stripped) {
-          await deleteEntry(entryIdRef.current)
-          entryIdRef.current = undefined
-        } else {
-          await updateEntry(entryIdRef.current, { text: html })
-        }
-      } else if (stripped) {
-        const finalHtml = wrapOnCreate ? (wrapOnCreate(html) || html) : html
-        const id = await addEntry({ pageId, text: finalHtml, isPending, date })
-        entryIdRef.current = id
-      }
-    } catch { showToast('Failed to save') }
-  }, [pageId, isPending, date, textTransform, wrapOnCreate, showToast, entryIdRef])
+    try { await persistEntry(html, entryIdRef, options) }
+    catch { showToast('Failed to save') }
+  }, [options.pageId, options.isPending, options.date, options.textTransform, options.wrapOnCreate, showToast, entryIdRef])
 
   const autoSave = useCallback(async (html: string) => {
-    try {
-      const stripped = textTransform ? textTransform(html) : stripHtml(html).trim()
-      if (entryIdRef.current) {
-        if (!stripped) {
-          await deleteEntry(entryIdRef.current)
-          entryIdRef.current = undefined
-        } else {
-          await updateEntry(entryIdRef.current, { text: html })
-        }
-      } else if (stripped) {
-        const finalHtml = wrapOnCreate ? (wrapOnCreate(html) || html) : html
-        const id = await addEntry({ pageId, text: finalHtml, isPending, date })
-        entryIdRef.current = id
-      }
-    } catch { /* auto-save failure — non-critical */ }
-  }, [pageId, isPending, date, textTransform, wrapOnCreate, entryIdRef])
+    try { await persistEntry(html, entryIdRef, options) }
+    catch { /* auto-save failure — non-critical */ }
+  }, [options.pageId, options.isPending, options.date, options.textTransform, options.wrapOnCreate, entryIdRef])
 
   return { save, autoSave }
 }
@@ -82,16 +73,12 @@ export function useEntryDelete(
       label: 'Undo',
       onClick: async () => {
         if (guardRestore?.()) return
-        const tagRefs = extractMentionPageIds(savedHtml)
-        const tagSlugs = extractEntryTagSlugs(savedHtml)
-        const id = await db.timelineEntries.add({
+        const id = await addEntry({
           pageId, text: savedHtml, isPending,
           date: savedDate ?? new Date(),
-          tagRefs, tagSlugs,
           createdAt: savedCreatedAt ?? new Date(),
-          updatedAt: new Date(),
         })
-        entryIdRef.current = id as number
+        entryIdRef.current = id
       },
     })
   }, [pageId, isPending, showToast])

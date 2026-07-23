@@ -39,7 +39,6 @@ function useSeriesFilter(keys: string[]) {
   return { toggle, opacity, isActive }
 }
 
-export { SOURCE_LABELS, VALID_GROUPINGS, CHART_TYPES_FOR_GROUPING, GROUPING_LABELS } from './chartConstants'
 
 export interface ChartRendererProps {
   config: ChartConfig
