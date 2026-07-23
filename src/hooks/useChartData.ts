@@ -116,12 +116,34 @@ function getHubIds(scopes: ChartScope[], pages: Page[]): number[] {
   return hubIds
 }
 
+// ---- Scope resolution for line-level filtering ----
+
+function resolveScopePageIds(scopes: ChartScope[], allPages: Page[]): Set<number> | null {
+  if (scopes.length === 0) return null
+  const ids = new Set<number>()
+  for (const scope of scopes) {
+    if (scope.type === 'global') return null
+    if (scope.type === 'page') {
+      const page = allPages.find((p) => p.id === scope.pageId)
+      if (page?.type === 'hub') {
+        ids.add(scope.pageId)
+        for (const p of allPages) { if (p.parentId === scope.pageId) ids.add(p.id!) }
+      } else {
+        ids.add(scope.pageId)
+      }
+    }
+    if (scope.type === 'hub') {
+      for (const p of allPages) { if (p.parentId === scope.hubId) ids.add(p.id!) }
+    }
+  }
+  return ids.size > 0 ? ids : null
+}
+
 // ---- Classification helper ----
 
 const WORK_CATEGORY = 'Work'
 
-function classifyEntryLines(html: string, entryTags: EntryTag[]): Map<string, number> {
-  const lines = splitHtmlLines(html)
+function classifyEntryLines(lines: string[], entryTags: EntryTag[]): Map<string, number> {
   const counts = new Map<string, number>()
   for (const line of lines) {
     if (!line.includes('data-page-id=')) continue
@@ -135,10 +157,22 @@ function classifyEntryLines(html: string, entryTags: EntryTag[]): Map<string, nu
   return counts
 }
 
+function scopeLines(html: string, pageId: number, scopePageIds: Set<number> | null): string[] {
+  const lines = splitHtmlLines(html)
+  if (!scopePageIds || scopePageIds.has(pageId)) return lines
+  return lines.filter((line) => {
+    for (const m of line.matchAll(/data-page-id="(\d+)"/g)) {
+      if (scopePageIds.has(Number(m[1]))) return true
+    }
+    return false
+  })
+}
+
 // ---- Aggregation: classify by month ----
 
 function classifyEntriesByMonth(
-  entries: TimelineEntry[], entryTags: EntryTag[], monthCount: number, categories?: string[],
+  entries: TimelineEntry[], entryTags: EntryTag[], monthCount: number,
+  categories?: string[], scopePageIds?: Set<number> | null,
 ): UnifiedChartData {
   const months = buildMonthKeys(monthCount, entries)
   const monthToIdx = new Map(months.map((m, i) => [m, i]))
@@ -157,7 +191,8 @@ function classifyEntriesByMonth(
     const idx = monthToIdx.get(m)
     if (idx === undefined) continue
 
-    const lineCounts = classifyEntryLines(e.text, entryTags)
+    const lines = scopeLines(e.text, e.pageId, scopePageIds ?? null)
+    const lineCounts = classifyEntryLines(lines, entryTags)
     for (const [category, count] of lineCounts) {
       data[idx][category] = (Number(data[idx][category]) || 0) + count
       totals.set(category, (totals.get(category) ?? 0) + count)
@@ -180,7 +215,8 @@ function classifyEntriesByMonth(
 const WEEKDAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
 function classifyEntriesByWeekday(
-  entries: TimelineEntry[], entryTags: EntryTag[], monthCount: number, categories?: string[],
+  entries: TimelineEntry[], entryTags: EntryTag[], monthCount: number,
+  categories?: string[], scopePageIds?: Set<number> | null,
 ): UnifiedChartData {
   const cutoff = getCutoff(monthCount)
   const keys = [WORK_CATEGORY, ...entryTags.map((t) => t.category)]
@@ -198,7 +234,8 @@ function classifyEntriesByWeekday(
     const jsDay = new Date(e.date).getDay()
     const idx = jsDay === 0 ? 6 : jsDay - 1
 
-    const lineCounts = classifyEntryLines(e.text, entryTags)
+    const lines = scopeLines(e.text, e.pageId, scopePageIds ?? null)
+    const lineCounts = classifyEntryLines(lines, entryTags)
     for (const [category, count] of lineCounts) {
       data[idx][category] = (Number(data[idx][category]) || 0) + count
       totals.set(category, (totals.get(category) ?? 0) + count)
@@ -419,12 +456,13 @@ export function useUnifiedChartData(
 
   return useMemo(() => {
     const { source, grouping } = config
+    const scopePageIds = resolveScopePageIds(scopes, pages)
 
     if (source === 'classify' && grouping === 'month') {
-      return classifyEntriesByMonth(scopedEntries, entryTags, monthCount, config.categories)
+      return classifyEntriesByMonth(scopedEntries, entryTags, monthCount, config.categories, scopePageIds)
     }
     if (source === 'classify' && grouping === 'weekday') {
-      return classifyEntriesByWeekday(scopedEntries, entryTags, monthCount, config.categories)
+      return classifyEntriesByWeekday(scopedEntries, entryTags, monthCount, config.categories, scopePageIds)
     }
     if (source === 'entries' && grouping === 'month') {
       return aggregateEntriesByMonth(scopedEntries, pages, scopes, monthCount)
