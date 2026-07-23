@@ -215,6 +215,11 @@ export function TimelineView({ pageId, page }: TimelineViewProps) {
     }
   }, [todayEntry])
 
+  // ---- History cross-ref editor state (for adding context to cross-ref-only sections) ----
+  const [historyEditHtml, setHistoryEditHtml] = useState('')
+  const historyEntryIdRef = useRef<number | undefined>(undefined)
+  const historyEditDateRef = useRef<Date | undefined>(undefined)
+
   // ---- Handlers ----
 
   async function handlePendingSave() {
@@ -380,6 +385,40 @@ export function TimelineView({ pageId, page }: TimelineViewProps) {
     } catch { /* auto-save failure — non-critical */ }
   }, [pageId])
 
+  const handleHistorySave = useCallback(async () => {
+    try {
+      const plain = stripHtml(historyEditHtml).trim()
+      if (historyEntryIdRef.current) {
+        if (!plain) {
+          await deleteEntry(historyEntryIdRef.current)
+          historyEntryIdRef.current = undefined
+        } else {
+          await updateEntry(historyEntryIdRef.current, { text: historyEditHtml })
+        }
+      } else if (plain && historyEditDateRef.current) {
+        const id = await addEntry({ pageId, text: historyEditHtml, isPending: false, date: historyEditDateRef.current })
+        historyEntryIdRef.current = id
+      }
+    } catch { showToast('Failed to save') }
+  }, [historyEditHtml, pageId, showToast])
+
+  const autoSaveHistory = useCallback(async (html: string) => {
+    try {
+      const plain = stripHtml(html).trim()
+      if (historyEntryIdRef.current) {
+        if (!plain) {
+          await deleteEntry(historyEntryIdRef.current)
+          historyEntryIdRef.current = undefined
+        } else {
+          await updateEntry(historyEntryIdRef.current, { text: html })
+        }
+      } else if (plain && historyEditDateRef.current) {
+        const id = await addEntry({ pageId, text: html, isPending: false, date: historyEditDateRef.current })
+        historyEntryIdRef.current = id
+      }
+    } catch { /* auto-save failure — non-critical */ }
+  }, [pageId])
+
   const handleMentionClick = useNavigateToPage()
 
   // ---- Page type determination (needed before section nav and filtered pending) ----
@@ -403,13 +442,11 @@ export function TimelineView({ pageId, page }: TimelineViewProps) {
     const keys: string[] = []
     if (isMainTimeline) keys.push('pending')
     keys.push('today')
-    for (const [dateKey, entries] of historyGroups) {
-      if (entries.some((e) => directIds.has(e.id!))) {
-        keys.push(`history-${dateKey}`)
-      }
+    for (const [dateKey] of historyGroups) {
+      keys.push(`history-${dateKey}`)
     }
     return keys
-  }, [isMainTimeline, historyGroups, directIds])
+  }, [isMainTimeline, historyGroups])
 
   const focusSection = useCallback((key: string) => {
     const el = sectionRefsMap.current.get(key)
@@ -470,6 +507,16 @@ export function TimelineView({ pageId, page }: TimelineViewProps) {
 
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault()
+      if (sectionKey.startsWith('history-')) {
+        const dateKey = sectionKey.replace('history-', '')
+        const group = historyGroups.find(([k]) => k === dateKey)
+        const hasDirect = group?.[1].some((ent) => directIds.has(ent.id!))
+        if (!hasDirect) {
+          historyEditDateRef.current = new Date(dateKey)
+          historyEntryIdRef.current = undefined
+          setHistoryEditHtml('')
+        }
+      }
       setEditingSection(sectionKey)
       return
     }
@@ -696,37 +743,55 @@ export function TimelineView({ pageId, page }: TimelineViewProps) {
           <div
             key={dateKey}
             className={isEditing ? styles.section : styles.sectionFocusable}
-            ref={directEntry ? setSectionRef(sectionKey) : undefined}
-            tabIndex={directEntry && !isEditing ? 0 : undefined}
+            ref={setSectionRef(sectionKey)}
+            tabIndex={!isEditing ? 0 : undefined}
             role="region"
             aria-label={formatEntryDate(new Date(dateKey))}
-            onKeyDown={directEntry ? (e) => handleSectionKeyDown(sectionKey, e) : undefined}
-            onClick={directEntry ? (e) => handleSectionClick(sectionKey, e) : undefined}
+            onKeyDown={(e) => handleSectionKeyDown(sectionKey, e)}
+            onClick={(e) => {
+              handleSectionClick(sectionKey, e)
+              if (!directEntry) {
+                historyEditDateRef.current = new Date(dateKey)
+                historyEntryIdRef.current = undefined
+                setHistoryEditHtml('')
+              }
+            }}
           >
             <div className={styles.sectionContent}>
+              {directEntry && (
+                <TimelineEntryRow
+                  key={directEntry.id}
+                  entry={directEntry}
+                  onUpdate={updateEntry}
+                  onDelete={deleteEntry}
+                  editing={isEditing}
+                  onStartEditing={() => setEditingSection(sectionKey)}
+                  onEscape={() => handleSectionEscape(sectionKey)}
+                  onMentionClick={handleMentionClick}
+                />
+              )}
+              {isEditing && !directEntry && (
+                <RichTextEditor
+                  value={historyEditHtml}
+                  onChange={setHistoryEditHtml}
+                  onBlur={handleHistorySave}
+                  onAutoSave={autoSaveHistory}
+                  onMentionClick={handleMentionClick}
+                  onEscape={() => handleSectionEscape(sectionKey)}
+                  placeholder="Add context…"
+                  autoFocus
+                  collapseMentions
+                />
+              )}
               {entries.flatMap((entry) => {
-                const isCrossRef = !directIds.has(entry.id!)
-                if (isCrossRef) {
-                  const lines = historyCrossRefLines.get(entry.id!) ?? []
-                  return lines.map((lineHtml, li) => (
-                    <CrossRefRow
-                      key={`${entry.id}-${li}`}
-                      html={lineHtml}
-                    />
-                  ))
-                }
-                return [(
-                  <TimelineEntryRow
-                    key={entry.id}
-                    entry={entry}
-                    onUpdate={updateEntry}
-                    onDelete={deleteEntry}
-                    editing={isEditing}
-                    onStartEditing={() => setEditingSection(sectionKey)}
-                    onEscape={() => handleSectionEscape(sectionKey)}
-                    onMentionClick={handleMentionClick}
+                if (directIds.has(entry.id!)) return []
+                const lines = historyCrossRefLines.get(entry.id!) ?? []
+                return lines.map((lineHtml, li) => (
+                  <CrossRefRow
+                    key={`${entry.id}-${li}`}
+                    html={lineHtml}
                   />
-                )]
+                ))
               })}
             </div>
             <div className={styles.sectionDateContainer}>

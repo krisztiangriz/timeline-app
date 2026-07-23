@@ -62,22 +62,23 @@ export function usePendingEntry(pageId?: number) {
 // Standalone async functions — stable references, no hook overhead
 
 export async function addEntry(
-  data: Pick<TimelineEntry, 'pageId' | 'text' | 'isPending'>
+  data: Pick<TimelineEntry, 'pageId' | 'text' | 'isPending'> & { date?: Date }
 ): Promise<number> {
   const now = new Date()
   const tagRefs = extractMentionPageIds(data.text)
   const tagSlugs = extractEntryTagSlugs(data.text)
 
   const id = await db.timelineEntries.add({
-    ...data,
-    date: now,
+    pageId: data.pageId,
+    text: data.text,
+    isPending: data.isPending,
+    date: data.date ?? now,
     tagRefs,
     tagSlugs,
     createdAt: now,
     updatedAt: now,
   })
 
-  // Update parent page's updatedAt
   await db.pages.update(data.pageId, { updatedAt: now })
 
   return id as number
