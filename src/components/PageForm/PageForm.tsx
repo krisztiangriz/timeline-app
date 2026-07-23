@@ -68,7 +68,7 @@ const BLOCK_TYPE_LABELS: Partial<Record<BlockType, string>> = {
 export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHubProp, hubs = EMPTY_HUBS }: PageFormProps) {
   const { show: showToast } = useToast()
   const [name, setName] = useState('')
-  const [tabs, setTabs] = useState<{ name: string; type: BlockType; key: number }[]>([])
+  const [tabs, setTabs] = useState<{ id?: number; name: string; type: BlockType; key: number }[]>([])
   const [addingTab, setAddingTab] = useState(false)
   const [newTabName, setNewTabName] = useState('')
   const [newTabType, setNewTabType] = useState<BlockType>('text')
@@ -213,7 +213,7 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
 
   async function handleConfirm() {
     // Strip internal key from tabs before submitting
-    const submitTabs = tabs.map(({ name, type }) => ({ name, type }))
+    const submitTabs = tabs.map(({ id, name, type }) => ({ id, name, type }))
 
     // Hub creation: hub already exists as placeholder, finalize it
     if (isCreatingHub && createdHubId) {

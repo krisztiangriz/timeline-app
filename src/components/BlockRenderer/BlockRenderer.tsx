@@ -119,15 +119,19 @@ const TextBlock = memo(function TextBlock({ block, onUpdate, onMentionClick, pla
   placeholder?: string
   onEditorFocus?: () => void
 }) {
+  const focusedRef = useRef(false)
   const [html, setHtml] = useState(block.content ?? '')
-  useEffect(() => { setHtml(block.content ?? '') }, [block.content])
+  useEffect(() => { if (!focusedRef.current) setHtml(block.content ?? '') }, [block.content])
   function save() { if (html !== (block.content ?? '')) onUpdate(html) }
   const blockContentRef = useRef(block.content)
   blockContentRef.current = block.content
   const autoSave = useCallback((h: string) => { if (h !== (blockContentRef.current ?? '')) onUpdate(h) }, [onUpdate])
 
+  function handleFocus() { focusedRef.current = true; onEditorFocus?.() }
+  function handleBlur() { focusedRef.current = false }
+
   return (
-    <div onFocus={onEditorFocus}>
+    <div onFocus={handleFocus} onBlur={handleBlur}>
       <RichTextEditor value={html} onChange={setHtml} onBlur={save} onAutoSave={autoSave} placeholder={placeholder ?? ''} onMentionClick={onMentionClick} />
     </div>
   )

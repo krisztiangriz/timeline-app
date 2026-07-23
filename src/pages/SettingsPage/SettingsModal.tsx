@@ -104,8 +104,7 @@ export function SettingsModal({ open, onClose, onToast }: SettingsModalProps) {
   async function handleImport() {
     try {
       await triggerImport()
-      onToast('Data imported')
-      onClose()
+      window.location.reload()
     } catch {
       onToast('Import failed')
     }
