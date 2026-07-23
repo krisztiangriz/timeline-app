@@ -7,8 +7,9 @@ import { useBackupSettings, type BackupFrequency } from '../../hooks/useAutoBack
 import { useOnboardingActions } from '../../hooks/useOnboardingGuides'
 import { onboardingGuides } from '../../config/onboardingGuides'
 import { TrashIcon, CheckIcon, PlusIcon, CloseIcon, SearchIcon, ResetIcon } from '../../components/Icons/Icons'
-import { downloadExport, triggerImport, triggerMergeImport } from '../../utils/exportImport'
-import { useChartPalette, PALETTE_OPTIONS } from '../../hooks/useChartPalette'
+import { downloadJson, triggerImport, triggerMergeImport } from '../../utils/exportImport'
+import { useChartPalette } from '../../hooks/useChartPalette'
+import { PALETTE_OPTIONS } from '../../constants/colors'
 import { useEntryTags, addEntryTag, updateEntryTag, deleteEntryTag } from '../../hooks/useEntryTags'
 import { useTheme, type Theme } from '../../hooks/useTheme'
 import { ColorPicker } from '../../components/ColorPicker/ColorPicker'
@@ -97,7 +98,7 @@ export function SettingsModal({ open, onClose, onToast }: SettingsModalProps) {
   }, [mergeActiveIndex])
 
   async function handleExport() {
-    await downloadExport()
+    await downloadJson('timeline-export')
     onToast('Data exported')
   }
 

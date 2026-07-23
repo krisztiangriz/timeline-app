@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useCallback } from 'react'
+import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db/database'
 import type { Page } from '../types'
 
@@ -6,52 +7,20 @@ type SortKey = 'name' | 'createdAt' | 'updatedAt' | 'editCount'
 type SortDir = 'asc' | 'desc'
 
 export function useTableSort(pageKey: string, defaultKey: SortKey = 'name', defaultDir: SortDir = 'asc') {
-  const [sortKey, setSortKey] = useState<SortKey>(defaultKey)
-  const [sortDir, setSortDir] = useState<SortDir>(defaultDir)
-  const [loaded, setLoaded] = useState(false)
-  const skipNextSave = useRef(true)
+  const stored = useLiveQuery(
+    () => db.pageSettings.where('pageKey').equals(pageKey).first(),
+    [pageKey],
+  )
 
-  // Load saved sort from DB
-  useEffect(() => {
-    let cancelled = false
-    skipNextSave.current = true
-    setLoaded(false)
-
-    db.pageSettings.where('pageKey').equals(pageKey).first().then((setting) => {
-      if (cancelled) return
-      if (setting) {
-        setSortKey(setting.sortKey as SortKey)
-        setSortDir(setting.sortDir as SortDir)
-      }
-      setLoaded(true)
-    }).catch(() => {
-      if (!cancelled) setLoaded(true)
-    })
-
-    return () => { cancelled = true }
-  }, [pageKey])
-
-  // Save to DB on change (upsert via modify-or-add)
-  useEffect(() => {
-    if (!loaded) return
-    // Skip the first save triggered by loading from DB
-    if (skipNextSave.current) {
-      skipNextSave.current = false
-      return
-    }
-    db.pageSettings.where('pageKey').equals(pageKey).modify({ sortKey, sortDir }).then((updated) => {
-      if (updated === 0) return db.pageSettings.add({ pageKey, sortKey, sortDir })
-    }).catch(() => { /* storage error — non-critical */ })
-  }, [pageKey, sortKey, sortDir, loaded])
+  const sortKey = (stored?.sortKey as SortKey) ?? defaultKey
+  const sortDir = (stored?.sortDir as SortDir) ?? defaultDir
 
   const toggleSort = useCallback((key: SortKey) => {
-    if (sortKey === key) {
-      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
-    } else {
-      setSortKey(key)
-      setSortDir('asc')
-    }
-  }, [sortKey])
+    const newDir = sortKey === key ? (sortDir === 'asc' ? 'desc' : 'asc') : 'asc'
+    db.pageSettings.where('pageKey').equals(pageKey).modify({ sortKey: key, sortDir: newDir }).then((updated) => {
+      if (updated === 0) return db.pageSettings.add({ pageKey, sortKey: key, sortDir: newDir })
+    }).catch(() => { /* storage error — non-critical */ })
+  }, [pageKey, sortKey, sortDir])
 
   const sortPages = useCallback((pages: Page[]): Page[] => {
     return [...pages].sort((a, b) => {

@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
-import { downloadBackup } from '../utils/exportImport'
+import { downloadJson } from '../utils/exportImport'
 import { safeGetItem, safeSetItem } from '../utils/safeStorage'
 
 export type BackupFrequency = 'daily' | 'weekly' | 'monthly' | 'off'
@@ -43,7 +43,7 @@ export function useAutoBackup() {
     const run = async () => {
       if (!isDue(getFrequency())) return
       try {
-        await downloadBackup()
+        await downloadJson('timeline-backup')
         safeSetItem(LS_LAST, new Date().toISOString())
         window.dispatchEvent(new CustomEvent('backup-success'))
       } catch {

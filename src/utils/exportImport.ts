@@ -1,4 +1,5 @@
 import { db } from '../db/database'
+import { awaitPurify } from './domPurify'
 import type {
   Page,
   Tab,
@@ -185,20 +186,12 @@ function validateArray<T>(arr: unknown, validator: (raw: unknown) => T | null): 
   return results
 }
 
-// ---- Sanitization (lazy-loaded DOMPurify) ----
+// ---- Sanitization (uses shared DOMPurify singleton) ----
 
-let purify: { sanitize: (html: string) => string } | null = null
-
-async function loadPurify() {
-  if (!purify) {
-    const mod = await import('dompurify')
-    purify = mod.default
-  }
-  return purify
-}
-
-function sanitizeHtml(records: { text?: string; content?: string }[]): void {
-  if (!purify) return
+function sanitizeHtml(
+  records: { text?: string; content?: string }[],
+  purify: { sanitize: (html: string) => string },
+): void {
   for (const r of records) {
     if (typeof r.text === 'string') r.text = purify.sanitize(r.text)
     if (typeof r.content === 'string') r.content = purify.sanitize(r.content)
@@ -234,7 +227,7 @@ async function exportAllData(): Promise<string> {
   return JSON.stringify(data, null, 2)
 }
 
-async function downloadJson(prefix: string) {
+export async function downloadJson(prefix: 'timeline-export' | 'timeline-backup') {
   const json = await exportAllData()
   const blob = new Blob([json], { type: 'application/json' })
   const url = URL.createObjectURL(blob)
@@ -243,14 +236,6 @@ async function downloadJson(prefix: string) {
   a.download = `${prefix}-${new Date().toISOString().slice(0, 10)}.json`
   a.click()
   URL.revokeObjectURL(url)
-}
-
-export async function downloadExport() {
-  await downloadJson('timeline-export')
-}
-
-export async function downloadBackup() {
-  await downloadJson('timeline-backup')
 }
 
 // ---- Import ----
@@ -277,11 +262,9 @@ async function importData(jsonString: string): Promise<void> {
   }
 
   // Sanitize HTML content
-  const DOMPurify = await loadPurify()
-  if (DOMPurify) {
-    sanitizeHtml(timelineEntries)
-    sanitizeHtml(blocks)
-  }
+  const purify = await awaitPurify()
+  sanitizeHtml(timelineEntries, purify)
+  sanitizeHtml(blocks, purify)
 
   // Run everything in a transaction so failure rolls back
   await db.transaction('rw',
@@ -327,10 +310,8 @@ async function mergeImportData(jsonString: string, targetPageId: number): Promis
   }
 
   // Sanitize HTML content
-  const DOMPurify = await loadPurify()
-  if (DOMPurify) {
-    sanitizeHtml(timelineEntries)
-  }
+  const purify = await awaitPurify()
+  sanitizeHtml(timelineEntries, purify)
 
   const now = new Date()
 

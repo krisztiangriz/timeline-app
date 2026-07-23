@@ -168,61 +168,64 @@ function scopeLines(html: string, pageId: number, scopePageIds: Set<number> | nu
   })
 }
 
-// ---- Aggregation: classify by month ----
+// ---- Bucket strategy pattern ----
 
-function classifyEntriesByMonth(
-  entries: TimelineEntry[], entryTags: EntryTag[], monthCount: number,
-  categories?: string[], scopePageIds?: Set<number> | null,
-): UnifiedChartData {
-  const months = buildMonthKeys(monthCount, entries)
-  const monthToIdx = new Map(months.map((m, i) => [m, i]))
-  const keys = [WORK_CATEGORY, ...entryTags.map((t) => t.category)]
-
-  const data = months.map((m) => {
-    const row: Record<string, string | number> = { month: formatMonthLabel(m) }
-    for (const k of keys) row[k] = 0
-    return row
-  })
-  const totals = new Map<string, number>(keys.map((k) => [k, 0]))
-
-  for (const e of entries) {
-    if (e.isPending) continue
-    const m = formatMonthKey(new Date(e.date))
-    const idx = monthToIdx.get(m)
-    if (idx === undefined) continue
-
-    const lines = scopeLines(e.text, e.pageId, scopePageIds ?? null)
-    const lineCounts = classifyEntryLines(lines, entryTags)
-    for (const [category, count] of lineCounts) {
-      data[idx][category] = (Number(data[idx][category]) || 0) + count
-      totals.set(category, (totals.get(category) ?? 0) + count)
-    }
-  }
-
-  const activeKeys = keys.filter((k) => (totals.get(k) ?? 0) > 0)
-  const finalKeys = categories && categories.length > 0
-    ? activeKeys.filter((k) => categories.includes(k))
-    : activeKeys
-  const summary = keys
-    .map((k) => ({ name: k, value: totals.get(k) ?? 0 }))
-    .filter((s) => s.value > 0 && (!categories || categories.length === 0 || categories.includes(s.name)))
-
-  return { data, keys: finalKeys, xKey: 'month', summary }
+interface BucketStrategy {
+  xKey: string
+  initBuckets(entries: TimelineEntry[], monthCount: number): string[]
+  bucketIndex(date: Date, bucketLookup: Map<string, number>): number | undefined
+  formatLabel(key: string): string
+  shouldSkip(date: Date, cutoff: Date): boolean
 }
-
-// ---- Aggregation: classify by weekday ----
 
 const WEEKDAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
-function classifyEntriesByWeekday(
-  entries: TimelineEntry[], entryTags: EntryTag[], monthCount: number,
-  categories?: string[], scopePageIds?: Set<number> | null,
+const monthStrategy: BucketStrategy = {
+  xKey: 'month',
+  initBuckets(entries, monthCount) {
+    return buildMonthKeys(monthCount, entries)
+  },
+  bucketIndex(date, lookup) {
+    return lookup.get(formatMonthKey(date))
+  },
+  formatLabel(key) {
+    return formatMonthLabel(key)
+  },
+  shouldSkip() { return false },
+}
+
+const weekdayStrategy: BucketStrategy = {
+  xKey: 'name',
+  initBuckets() {
+    return WEEKDAY_LABELS
+  },
+  bucketIndex(date) {
+    const jsDay = date.getDay()
+    return jsDay === 0 ? 6 : jsDay - 1
+  },
+  formatLabel(key) {
+    return key
+  },
+  shouldSkip(date, cutoff) { return date < cutoff },
+}
+
+// ---- Unified classify aggregation ----
+
+function classifyByStrategy(
+  entries: TimelineEntry[],
+  entryTags: EntryTag[],
+  monthCount: number,
+  strategy: BucketStrategy,
+  categories?: string[],
+  scopePageIds?: Set<number> | null,
 ): UnifiedChartData {
   const cutoff = getCutoff(monthCount)
+  const buckets = strategy.initBuckets(entries, monthCount)
+  const bucketLookup = new Map(buckets.map((b, i) => [b, i]))
   const keys = [WORK_CATEGORY, ...entryTags.map((t) => t.category)]
 
-  const data = WEEKDAY_LABELS.map((label) => {
-    const row: Record<string, string | number> = { name: label }
+  const data = buckets.map((b) => {
+    const row: Record<string, string | number> = { [strategy.xKey]: strategy.formatLabel(b) }
     for (const k of keys) row[k] = 0
     return row
   })
@@ -230,9 +233,10 @@ function classifyEntriesByWeekday(
 
   for (const e of entries) {
     if (e.isPending) continue
-    if (new Date(e.date) < cutoff) continue
-    const jsDay = new Date(e.date).getDay()
-    const idx = jsDay === 0 ? 6 : jsDay - 1
+    const date = new Date(e.date)
+    if (strategy.shouldSkip(date, cutoff)) continue
+    const idx = strategy.bucketIndex(date, bucketLookup)
+    if (idx === undefined) continue
 
     const lines = scopeLines(e.text, e.pageId, scopePageIds ?? null)
     const lineCounts = classifyEntryLines(lines, entryTags)
@@ -250,151 +254,112 @@ function classifyEntriesByWeekday(
     .map((k) => ({ name: k, value: totals.get(k) ?? 0 }))
     .filter((s) => s.value > 0 && (!categories || categories.length === 0 || categories.includes(s.name)))
 
-  return { data, keys: finalKeys, xKey: 'name', summary }
+  return { data, keys: finalKeys, xKey: strategy.xKey, summary }
 }
 
-// ---- Aggregation: entries by month ----
+// ---- Unified hub breakdown aggregation ----
 
-function aggregateEntriesByMonth(
-  entries: TimelineEntry[], pages: Page[], scopes: ChartScope[], monthCount: number,
-): UnifiedChartData {
-  const months = buildMonthKeys(monthCount, entries)
-  const hubIds = getHubIds(scopes, pages)
-
-  if (hubIds.length > 0) {
-    const hubIdSet = new Set(hubIds)
-    const children = pages.filter((p) => p.parentId && hubIdSet.has(p.parentId))
-    const childIdSet = new Set(children.map((p) => p.id!))
-    const childToName = new Map(children.map((c) => [c.id!, c.name]))
-
-    const monthToIdx = new Map(months.map((m, i) => [m, i]))
-    const bucketKeys = children.map((c) => c.name)
-    const data = months.map((m) => {
-      const row: Record<string, string | number> = { month: formatMonthLabel(m) }
-      for (const k of bucketKeys) row[k] = 0
-      return row
-    })
-
-    const seenDates = new Map<string, Set<string>>(bucketKeys.map((k) => [k, new Set()]))
-
-    for (const e of entries) {
-      if (e.isPending) continue
-      const m = formatMonthKey(new Date(e.date))
-      const idx = monthToIdx.get(m)
-      if (idx === undefined) continue
-      const dateKey = new Date(e.date).toISOString().slice(0, 10)
-      if (childIdSet.has(e.pageId)) {
-        const bucket = childToName.get(e.pageId)
-        if (bucket && !seenDates.get(bucket)!.has(dateKey)) {
-          seenDates.get(bucket)!.add(dateKey)
-          data[idx][bucket] = (Number(data[idx][bucket]) || 0) + 1
-        }
-      } else if (e.tagRefs) {
-        for (const ref of e.tagRefs) {
-          const refId = Number(ref)
-          if (childIdSet.has(refId)) {
-            const bucket = childToName.get(refId)
-            if (bucket && !seenDates.get(bucket)!.has(dateKey)) {
-              seenDates.get(bucket)!.add(dateKey)
-              data[idx][bucket] = (Number(data[idx][bucket]) || 0) + 1
-            }
-          }
-        }
-      }
-    }
-
-    const keys = bucketKeys.filter((k) => data.some((d) => Number(d[k]) > 0))
-    return { data, keys, xKey: 'month' }
-  }
-
-  const monthToIdx = new Map(months.map((m, i) => [m, i]))
-  const data = months.map((m) => ({ month: formatMonthLabel(m), Entries: 0 } as Record<string, string | number>))
-  const seenDates = new Set<string>()
-
-  for (const e of entries) {
-    if (e.isPending) continue
-    const m = formatMonthKey(new Date(e.date))
-    const idx = monthToIdx.get(m)
-    if (idx === undefined) continue
-    const dateKey = new Date(e.date).toISOString().slice(0, 10)
-    if (!seenDates.has(dateKey)) {
-      seenDates.add(dateKey)
-      data[idx].Entries = (Number(data[idx].Entries) || 0) + 1
-    }
-  }
-
-  return { data, keys: ['Entries'], xKey: 'month' }
-}
-
-// ---- Aggregation: entries by weekday ----
-
-function aggregateEntriesByWeekday(
-  entries: TimelineEntry[], pages: Page[], scopes: ChartScope[], monthCount: number,
+function aggregateHubBreakdown(
+  entries: TimelineEntry[],
+  pages: Page[],
+  hubIds: number[],
+  strategy: BucketStrategy,
+  monthCount: number,
 ): UnifiedChartData {
   const cutoff = getCutoff(monthCount)
-  const hubIds = getHubIds(scopes, pages)
+  const hubIdSet = new Set(hubIds)
+  const children = pages.filter((p) => p.parentId && hubIdSet.has(p.parentId))
+  const childIdSet = new Set(children.map((p) => p.id!))
+  const childToName = new Map(children.map((c) => [c.id!, c.name]))
 
-  if (hubIds.length > 0) {
-    const hubIdSet = new Set(hubIds)
-    const children = pages.filter((p) => p.parentId && hubIdSet.has(p.parentId))
-    const childIdSet = new Set(children.map((p) => p.id!))
-    const childToName = new Map(children.map((c) => [c.id!, c.name]))
+  const buckets = strategy.initBuckets(entries, monthCount)
+  const bucketLookup = new Map(buckets.map((b, i) => [b, i]))
+  const bucketKeys = children.map((c) => c.name)
 
-    const bucketKeys = children.map((c) => c.name)
-    const data = WEEKDAY_LABELS.map((label) => {
-      const row: Record<string, string | number> = { name: label }
-      for (const k of bucketKeys) row[k] = 0
-      return row
-    })
+  const data = buckets.map((b) => {
+    const row: Record<string, string | number> = { [strategy.xKey]: strategy.formatLabel(b) }
+    for (const k of bucketKeys) row[k] = 0
+    return row
+  })
+  const seenDates = new Map<string, Set<string>>(bucketKeys.map((k) => [k, new Set()]))
 
-    const seenDates = new Map<string, Set<string>>(bucketKeys.map((k) => [k, new Set()]))
+  for (const e of entries) {
+    if (e.isPending) continue
+    const date = new Date(e.date)
+    if (strategy.shouldSkip(date, cutoff)) continue
+    const idx = strategy.bucketIndex(date, bucketLookup)
+    if (idx === undefined) continue
+    const dateKey = date.toISOString().slice(0, 10)
 
-    for (const e of entries) {
-      if (e.isPending) continue
-      if (new Date(e.date) < cutoff) continue
-      const jsDay = new Date(e.date).getDay()
-      const idx = jsDay === 0 ? 6 : jsDay - 1
-      const dateKey = new Date(e.date).toISOString().slice(0, 10)
-      if (childIdSet.has(e.pageId)) {
-        const bucket = childToName.get(e.pageId)
-        if (bucket && !seenDates.get(bucket)!.has(dateKey)) {
-          seenDates.get(bucket)!.add(dateKey)
-          data[idx][bucket] = (Number(data[idx][bucket]) || 0) + 1
-        }
-      } else if (e.tagRefs) {
-        for (const ref of e.tagRefs) {
-          const refId = Number(ref)
-          if (childIdSet.has(refId)) {
-            const bucket = childToName.get(refId)
-            if (bucket && !seenDates.get(bucket)!.has(dateKey)) {
-              seenDates.get(bucket)!.add(dateKey)
-              data[idx][bucket] = (Number(data[idx][bucket]) || 0) + 1
-            }
+    if (childIdSet.has(e.pageId)) {
+      const bucket = childToName.get(e.pageId)
+      if (bucket && !seenDates.get(bucket)!.has(dateKey)) {
+        seenDates.get(bucket)!.add(dateKey)
+        data[idx][bucket] = (Number(data[idx][bucket]) || 0) + 1
+      }
+    } else if (e.tagRefs) {
+      for (const ref of e.tagRefs) {
+        const refId = Number(ref)
+        if (childIdSet.has(refId)) {
+          const bucket = childToName.get(refId)
+          if (bucket && !seenDates.get(bucket)!.has(dateKey)) {
+            seenDates.get(bucket)!.add(dateKey)
+            data[idx][bucket] = (Number(data[idx][bucket]) || 0) + 1
           }
         }
       }
     }
-
-    const keys = bucketKeys.filter((k) => data.some((d) => Number(d[k]) > 0))
-    return { data, keys, xKey: 'name' }
   }
 
-  const counts = [0, 0, 0, 0, 0, 0, 0]
-  const seenDates = [new Set<string>(), new Set<string>(), new Set<string>(), new Set<string>(), new Set<string>(), new Set<string>(), new Set<string>()]
+  const keys = bucketKeys.filter((k) => data.some((d) => Number(d[k]) > 0))
+  return { data, keys, xKey: strategy.xKey }
+}
+
+// ---- Unified simple entries aggregation ----
+
+function aggregateEntriesSimple(
+  entries: TimelineEntry[],
+  strategy: BucketStrategy,
+  monthCount: number,
+): UnifiedChartData {
+  const cutoff = getCutoff(monthCount)
+  const buckets = strategy.initBuckets(entries, monthCount)
+  const bucketLookup = new Map(buckets.map((b, i) => [b, i]))
+
+  const counts = new Array<number>(buckets.length).fill(0)
+  const seenDates = buckets.map(() => new Set<string>())
+
   for (const e of entries) {
     if (e.isPending) continue
-    if (new Date(e.date) < cutoff) continue
-    const jsDay = new Date(e.date).getDay()
-    const idx = jsDay === 0 ? 6 : jsDay - 1
-    const dateKey = new Date(e.date).toISOString().slice(0, 10)
+    const date = new Date(e.date)
+    if (strategy.shouldSkip(date, cutoff)) continue
+    const idx = strategy.bucketIndex(date, bucketLookup)
+    if (idx === undefined) continue
+    const dateKey = date.toISOString().slice(0, 10)
     if (!seenDates[idx].has(dateKey)) {
       seenDates[idx].add(dateKey)
       counts[idx] += 1
     }
   }
 
-  const data = WEEKDAY_LABELS.map((label, i) => ({ name: label, Entries: counts[i] } as Record<string, string | number>))
-  return { data, keys: ['Entries'], xKey: 'name' }
+  const data = buckets.map((b, i) => ({
+    [strategy.xKey]: strategy.formatLabel(b),
+    Entries: counts[i],
+  } as Record<string, string | number>))
+  return { data, keys: ['Entries'], xKey: strategy.xKey }
+}
+
+// ---- Unified entries aggregation (hub or simple) ----
+
+function aggregateEntriesByStrategy(
+  entries: TimelineEntry[], pages: Page[], scopes: ChartScope[],
+  strategy: BucketStrategy, monthCount: number,
+): UnifiedChartData {
+  const hubIds = getHubIds(scopes, pages)
+  if (hubIds.length > 0) {
+    return aggregateHubBreakdown(entries, pages, hubIds, strategy, monthCount)
+  }
+  return aggregateEntriesSimple(entries, strategy, monthCount)
 }
 
 // ---- Aggregation: pages by month ----
@@ -441,6 +406,8 @@ function aggregatePagesByMonth(
 
 // ---- Unified dispatcher hook ----
 
+const EMPTY_SCOPES: ChartScope[] = []
+
 export function useUnifiedChartData(
   config: ChartConfig,
   entries: TimelineEntry[],
@@ -448,7 +415,7 @@ export function useUnifiedChartData(
   entryTags: EntryTag[],
   monthCount: number,
 ): UnifiedChartData {
-  const scopes = config.scopes ?? []
+  const scopes = config.scopes ?? EMPTY_SCOPES
   const scopedEntries = useMemo(
     () => filterEntriesByScopes(entries, scopes, pages),
     [entries, scopes, pages],
@@ -459,16 +426,16 @@ export function useUnifiedChartData(
     const scopePageIds = resolveScopePageIds(scopes, pages)
 
     if (source === 'classify' && grouping === 'month') {
-      return classifyEntriesByMonth(scopedEntries, entryTags, monthCount, config.categories, scopePageIds)
+      return classifyByStrategy(scopedEntries, entryTags, monthCount, monthStrategy, config.categories, scopePageIds)
     }
     if (source === 'classify' && grouping === 'weekday') {
-      return classifyEntriesByWeekday(scopedEntries, entryTags, monthCount, config.categories, scopePageIds)
+      return classifyByStrategy(scopedEntries, entryTags, monthCount, weekdayStrategy, config.categories, scopePageIds)
     }
     if (source === 'entries' && grouping === 'month') {
-      return aggregateEntriesByMonth(scopedEntries, pages, scopes, monthCount)
+      return aggregateEntriesByStrategy(scopedEntries, pages, scopes, monthStrategy, monthCount)
     }
     if (source === 'entries' && grouping === 'weekday') {
-      return aggregateEntriesByWeekday(scopedEntries, pages, scopes, monthCount)
+      return aggregateEntriesByStrategy(scopedEntries, pages, scopes, weekdayStrategy, monthCount)
     }
     if (source === 'pages' && grouping === 'month') {
       return aggregatePagesByMonth(pages, scopes, monthCount)

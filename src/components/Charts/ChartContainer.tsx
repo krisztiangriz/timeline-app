@@ -1,8 +1,9 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { PieChart, Pie, Cell, Tooltip } from 'recharts'
 import { TP } from './chartConstants'
 import { ColorPicker } from '../ColorPicker/ColorPicker'
-import { PALETTE_OPTIONS } from '../../hooks/useChartPalette'
+import { PALETTE_OPTIONS } from '../../constants/colors'
+import { useColorPicker } from './useColorPicker'
 import styles from './Charts.module.css'
 
 export function ChartContainer({ className, children }: { className: string; children: React.ReactNode }) {
@@ -30,10 +31,7 @@ export function InteractiveLegend({ items, isActive, onToggle, onColorChange }: 
   onToggle: (key: string) => void
   onColorChange?: (key: string, color: string) => void
 }) {
-  const [pickerKey, setPickerKey] = useState<string | null>(null)
-  const dotRef = useRef<HTMLElement | null>(null)
-
-  const handleClose = useCallback(() => setPickerKey(null), [])
+  const { pickerKey, dotRef, handleClose, openPicker, selectAndClose } = useColorPicker()
 
   return (
     <div className={styles.legendContainer}>
@@ -46,11 +44,11 @@ export function InteractiveLegend({ items, isActive, onToggle, onColorChange }: 
           <span
             className={styles.legendDot}
             style={{ background: item.color }}
-            onClick={(e) => { if (onColorChange) { e.stopPropagation(); dotRef.current = e.currentTarget; setPickerKey(item.name) } }}
+            onClick={(e) => { if (onColorChange) { e.stopPropagation(); openPicker(item.name, e.currentTarget) } }}
             role={onColorChange ? 'button' : undefined}
             aria-label={onColorChange ? `Change color for ${item.name}` : undefined}
             tabIndex={onColorChange ? 0 : undefined}
-            onKeyDown={onColorChange ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); dotRef.current = e.currentTarget; setPickerKey(item.name) } } : undefined}
+            onKeyDown={onColorChange ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); openPicker(item.name, e.currentTarget) } } : undefined}
           />
           {item.name}
         </span>
@@ -59,7 +57,7 @@ export function InteractiveLegend({ items, isActive, onToggle, onColorChange }: 
         <ColorPicker
           colors={PALETTE_OPTIONS}
           value={items.find(i => i.name === pickerKey)?.color}
-          onChange={(color) => { onColorChange(pickerKey, color); setPickerKey(null) }}
+          onChange={(color) => selectAndClose(onColorChange, color)}
           onClose={handleClose}
           anchorRef={dotRef as React.RefObject<HTMLElement>}
           position="above"
@@ -79,9 +77,7 @@ export function DonutWithLabels({ data, colorFn, containerClass, tooltipProps, i
   onColorChange?: (key: string, color: string) => void
   items?: { name: string; value: number; color?: string }[]
 }) {
-  const [pickerKey, setPickerKey] = useState<string | null>(null)
-  const dotRef = useRef<HTMLElement | null>(null)
-  const handleClose = useCallback(() => setPickerKey(null), [])
+  const { pickerKey, dotRef, handleClose, openPicker, selectAndClose } = useColorPicker()
 
   const total = data.reduce((s, d) => s + d.value, 0)
   return (
@@ -103,11 +99,11 @@ export function DonutWithLabels({ data, colorFn, containerClass, tooltipProps, i
               <span
                 className={styles.pieLabelDot}
                 style={{ background: colorFn(i) }}
-                onClick={onColorChange ? (e) => { e.stopPropagation(); dotRef.current = e.currentTarget; setPickerKey(item.name) } : undefined}
+                onClick={onColorChange ? (e) => { e.stopPropagation(); openPicker(item.name, e.currentTarget) } : undefined}
                 role={onColorChange ? 'button' : undefined}
                 aria-label={onColorChange ? `Change color for ${item.name}` : undefined}
                 tabIndex={onColorChange ? 0 : undefined}
-                onKeyDown={onColorChange ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); dotRef.current = e.currentTarget; setPickerKey(item.name) } } : undefined}
+                onKeyDown={onColorChange ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); openPicker(item.name, e.currentTarget) } } : undefined}
               />
               {item.name} {total > 0 ? Math.round(item.value / total * 100) : 0}%
             </span>
@@ -118,7 +114,7 @@ export function DonutWithLabels({ data, colorFn, containerClass, tooltipProps, i
         <ColorPicker
           colors={PALETTE_OPTIONS}
           value={items?.find(i => i.name === pickerKey)?.color ?? colorFn(data.findIndex(d => d.name === pickerKey))}
-          onChange={(color) => { onColorChange(pickerKey, color); setPickerKey(null) }}
+          onChange={(color) => selectAndClose(onColorChange, color)}
           onClose={handleClose}
           anchorRef={dotRef as React.RefObject<HTMLElement>}
           position="above"

@@ -45,3 +45,12 @@ export function sanitizeForPaste(html: string): string {
     ALLOWED_ATTR: PASTE_ALLOWED_ATTR,
   })
 }
+
+export function awaitPurify(): Promise<PurifyInstance> {
+  if (purifyInstance) return Promise.resolve(purifyInstance)
+  return new Promise((resolve) => {
+    const unsub = subscribePurify(() => {
+      if (purifyInstance) { unsub(); resolve(purifyInstance) }
+    })
+  })
+}

@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef, useCallback, memo } from 'react'
 import { stripHtml, stripCheckboxHtml } from '../../utils/stripHtml'
-import { filterHtmlToMentionLines, extractMentionPageIds } from '../../utils/mentionParser'
+import { filterHtmlToMentionLines } from '../../utils/mentionParser'
 
 import Dexie from 'dexie'
 import { useTimelineEntries, useCrossRefEntries, usePendingEntry, addEntry, updateEntry, deleteEntry } from '../../hooks/useTimeline'
@@ -8,6 +8,7 @@ import { usePageByRole, useChildPages } from '../../hooks/usePages'
 import { db } from '../../db/database'
 import { useNavigateToPage } from '../../hooks/useNavigateToPage'
 import { useToast } from '../../hooks/useToast'
+import { useEntrySave, useEntryDelete } from '../../hooks/useEntryPersist'
 import { formatEntryDate, startOfDay } from '../../utils/dateUtils'
 import { TimelineEntryRow } from './TimelineEntryRow'
 import { RichTextEditor } from '../RichTextEditor/RichTextEditor'
@@ -220,31 +221,68 @@ export function TimelineView({ pageId, page }: TimelineViewProps) {
   const historyEntryIdRef = useRef<number | undefined>(undefined)
   const historyEditDateRef = useRef<Date | undefined>(undefined)
 
-  // ---- Handlers ----
+
+  // ---- Save/auto-save hooks ----
+
+  const pendingTextTransform = useCallback((html: string) => stripHtml(html).replace(/ /g, '').trim(), [])
+  const { save: pendingSave, autoSave: autoSavePending } = useEntrySave(
+    pendingEntryId,
+    { pageId, isPending: true, textTransform: pendingTextTransform, wrapOnCreate: ensureCheckboxes },
+    showToast,
+  )
+  const { save: todaySave, autoSave: autoSaveToday } = useEntrySave(
+    todayEntryId,
+    { pageId, isPending: false },
+    showToast,
+  )
+  const { save: historySave, autoSave: autoSaveHistory } = useEntrySave(
+    historyEntryIdRef,
+    { pageId, isPending: false, date: historyEditDateRef.current },
+    showToast,
+  )
 
   async function handlePendingSave() {
     pendingFocusedRef.current = false
-    try {
-      const plain = stripHtml(pendingHtml).replace(/\u00A0/g, '').trim()
-
-      if (pendingEntryId.current) {
-        if (!plain) {
-          await deleteEntry(pendingEntryId.current)
-          pendingEntryId.current = undefined
-        } else if (pendingHtml !== (pendingEntry?.text ?? '')) {
-          await updateEntry(pendingEntryId.current, { text: pendingHtml })
-        }
-      } else if (plain) {
-        const htmlWithCheckboxes = ensureCheckboxes(pendingHtml)
-        const id = await addEntry({ pageId, text: htmlWithCheckboxes || pendingHtml, isPending: true })
-        pendingEntryId.current = id
-      }
-    } catch { showToast('Failed to save') }
+    await pendingSave(pendingHtml)
   }
+
+  async function handleTodaySave() {
+    todayFocusedRef.current = false
+    await todaySave(todayHtml)
+  }
+
+  const handleHistorySave = useCallback(async () => {
+    await historySave(historyEditHtml)
+  }, [historySave, historyEditHtml])
+
+  // ---- Delete handlers ----
+
+  const deletePendingEntry = useEntryDelete(pageId, true, showToast)
+  const deleteTodayEntry = useEntryDelete(pageId, false, showToast)
+
+  const handleDeletePending = useCallback(async () => {
+    const savedHtml = pendingHtml
+    await deletePendingEntry(
+      pendingEntryId, savedHtml, pendingEntry?.date, pendingEntry?.createdAt,
+      () => { pendingEntryId.current = undefined; setPendingHtml('') },
+      () => !!pendingEntryId.current,
+    )
+  }, [pendingHtml, pendingEntry, deletePendingEntry])
+
+  const handleDeleteToday = useCallback(async () => {
+    const savedHtml = todayHtml
+    await deleteTodayEntry(
+      todayEntryId, savedHtml, todayEntry?.date, todayEntry?.createdAt,
+      () => { todayEntryId.current = undefined; setTodayHtml('') },
+      () => !!todayEntryId.current,
+    )
+  }, [todayHtml, todayEntry, deleteTodayEntry])
+
+  // ---- Checkbox completion (moves pending line to today) ----
 
   async function handleCheckboxComplete(lineHtml: string, remainingHtml: string) {
     try {
-      const cleanText = stripCheckboxHtml(lineHtml).replace(/\u00A0/g, ' ').replace(/&nbsp;/g, ' ').trim()
+      const cleanText = stripCheckboxHtml(lineHtml).replace(/ /g, ' ').replace(/&nbsp;/g, ' ').trim()
       if (cleanText) {
         if (todayEntryId.current) {
           const currentText = todayHtml
@@ -272,152 +310,6 @@ export function TimelineView({ pageId, page }: TimelineViewProps) {
     } catch { showToast('Failed to save') }
   }
 
-  async function handleTodaySave() {
-    todayFocusedRef.current = false
-    try {
-      const plain = stripHtml(todayHtml).trim()
-
-      if (todayEntryId.current) {
-        if (!plain) {
-          await deleteEntry(todayEntryId.current)
-          todayEntryId.current = undefined
-        } else if (todayHtml !== (todayEntry?.text ?? '')) {
-          await updateEntry(todayEntryId.current, { text: todayHtml })
-        }
-      } else if (plain) {
-        const id = await addEntry({ pageId, text: todayHtml, isPending: false })
-        todayEntryId.current = id
-      }
-    } catch { showToast('Failed to save') }
-  }
-
-  const handleDeletePending = useCallback(async () => {
-    if (pendingEntryId.current) {
-      const entryId = pendingEntryId.current
-      const savedHtml = pendingHtml
-      const savedDate = pendingEntry?.date
-      const savedCreatedAt = pendingEntry?.createdAt
-      try {
-        await deleteEntry(entryId)
-      } catch { showToast('Failed to delete'); return }
-      pendingEntryId.current = undefined
-      setPendingHtml('')
-      showToast('Deleted', {
-        label: 'Undo',
-        onClick: async () => {
-          if (pendingEntryId.current) return
-          const id = await db.timelineEntries.add({
-            pageId, text: savedHtml, isPending: true,
-            date: savedDate ?? new Date(),
-            tagRefs: extractMentionPageIds(savedHtml),
-            createdAt: savedCreatedAt ?? new Date(),
-            updatedAt: new Date(),
-          })
-          pendingEntryId.current = id as number
-          setPendingHtml(savedHtml)
-        },
-      })
-    }
-  }, [pendingHtml, pendingEntry, pageId, showToast])
-
-  const handleDeleteToday = useCallback(async () => {
-    if (todayEntryId.current) {
-      const entryId = todayEntryId.current
-      const savedHtml = todayHtml
-      const savedDate = todayEntry?.date
-      const savedCreatedAt = todayEntry?.createdAt
-      try {
-        await deleteEntry(entryId)
-      } catch { showToast('Failed to delete'); return }
-      todayEntryId.current = undefined
-      setTodayHtml('')
-      showToast('Deleted', {
-        label: 'Undo',
-        onClick: async () => {
-          if (todayEntryId.current) return
-          const id = await db.timelineEntries.add({
-            pageId, text: savedHtml, isPending: false,
-            date: savedDate ?? new Date(),
-            tagRefs: extractMentionPageIds(savedHtml),
-            createdAt: savedCreatedAt ?? new Date(),
-            updatedAt: new Date(),
-          })
-          todayEntryId.current = id as number
-          setTodayHtml(savedHtml)
-        },
-      })
-    }
-  }, [todayHtml, todayEntry, pageId, showToast])
-
-  // Auto-save handlers (persist only, no UI state changes)
-  const autoSaveToday = useCallback(async (html: string) => {
-    try {
-      const plain = stripHtml(html).trim()
-      if (todayEntryId.current) {
-        if (!plain) {
-          await deleteEntry(todayEntryId.current)
-          todayEntryId.current = undefined
-        } else {
-          await updateEntry(todayEntryId.current, { text: html })
-        }
-      } else if (plain) {
-        const id = await addEntry({ pageId, text: html, isPending: false })
-        todayEntryId.current = id
-      }
-    } catch { /* auto-save failure — non-critical */ }
-  }, [pageId])
-
-  const autoSavePending = useCallback(async (html: string) => {
-    try {
-      const plain = stripHtml(html).replace(/\u00A0/g, '').trim()
-      if (pendingEntryId.current) {
-        if (!plain) {
-          await deleteEntry(pendingEntryId.current)
-          pendingEntryId.current = undefined
-        } else {
-          await updateEntry(pendingEntryId.current, { text: html })
-        }
-      } else if (plain) {
-        const htmlWithCheckboxes = ensureCheckboxes(html)
-        const id = await addEntry({ pageId, text: htmlWithCheckboxes || html, isPending: true })
-        pendingEntryId.current = id
-      }
-    } catch { /* auto-save failure — non-critical */ }
-  }, [pageId])
-
-  const handleHistorySave = useCallback(async () => {
-    try {
-      const plain = stripHtml(historyEditHtml).trim()
-      if (historyEntryIdRef.current) {
-        if (!plain) {
-          await deleteEntry(historyEntryIdRef.current)
-          historyEntryIdRef.current = undefined
-        } else {
-          await updateEntry(historyEntryIdRef.current, { text: historyEditHtml })
-        }
-      } else if (plain && historyEditDateRef.current) {
-        const id = await addEntry({ pageId, text: historyEditHtml, isPending: false, date: historyEditDateRef.current })
-        historyEntryIdRef.current = id
-      }
-    } catch { showToast('Failed to save') }
-  }, [historyEditHtml, pageId, showToast])
-
-  const autoSaveHistory = useCallback(async (html: string) => {
-    try {
-      const plain = stripHtml(html).trim()
-      if (historyEntryIdRef.current) {
-        if (!plain) {
-          await deleteEntry(historyEntryIdRef.current)
-          historyEntryIdRef.current = undefined
-        } else {
-          await updateEntry(historyEntryIdRef.current, { text: html })
-        }
-      } else if (plain && historyEditDateRef.current) {
-        const id = await addEntry({ pageId, text: html, isPending: false, date: historyEditDateRef.current })
-        historyEntryIdRef.current = id
-      }
-    } catch { /* auto-save failure — non-critical */ }
-  }, [pageId])
 
   const handleMentionClick = useNavigateToPage()
 
@@ -456,19 +348,13 @@ export function TimelineView({ pageId, page }: TimelineViewProps) {
   const handleDeleteHistory = useCallback(async (entry: TimelineEntry) => {
     const savedText = entry.text
     const savedDate = entry.date
-    const savedCreatedAt = entry.createdAt
     try {
       await deleteEntry(entry.id!)
     } catch { showToast('Failed to delete'); return }
     showToast('Deleted', {
       label: 'Undo',
       onClick: async () => {
-        await db.timelineEntries.add({
-          pageId, text: savedText, isPending: false,
-          date: savedDate,
-          tagRefs: extractMentionPageIds(savedText),
-          createdAt: savedCreatedAt, updatedAt: new Date(),
-        })
+        await addEntry({ pageId, text: savedText, isPending: false, date: savedDate })
       },
     })
   }, [pageId, showToast])
