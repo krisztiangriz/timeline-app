@@ -13,7 +13,7 @@ interface ColorPickerProps {
 
 export function ColorPicker({ colors, value, onChange, onClose, anchorRef, position = 'below' }: ColorPickerProps) {
   const ref = useRef<HTMLDivElement>(null)
-  const [pos, setPos] = useState<{ top: number; left: number } | null>(null)
+  const [pos, setPos] = useState<{ top?: number; bottom?: number; left: number } | null>(null)
   const [activeIndex, setActiveIndex] = useState(() => {
     const idx = value ? colors.indexOf(value) : -1
     return idx >= 0 ? idx : 0
@@ -25,17 +25,13 @@ export function ColorPicker({ colors, value, onChange, onClose, anchorRef, posit
       const el = anchorRef?.current
       if (!el) return
       const rect = el.getBoundingClientRect()
-      const pickerEl = ref.current
-      if (position === 'above' && pickerEl) {
-        setPos({ top: rect.top - pickerEl.offsetHeight - 4, left: rect.left })
-      } else if (position === 'above') {
-        setPos({ top: rect.top - 4, left: rect.left })
+      if (position === 'above') {
+        setPos({ bottom: window.innerHeight - rect.top + 4, left: rect.left })
       } else {
         setPos({ top: rect.bottom + 4, left: rect.left })
       }
     }
     update()
-    requestAnimationFrame(update)
     window.addEventListener('scroll', update, true)
     window.addEventListener('resize', update)
     return () => {
@@ -99,7 +95,7 @@ export function ColorPicker({ colors, value, onChange, onClose, anchorRef, posit
     <div
       ref={ref}
       className={styles.picker}
-      style={pos ? { position: 'fixed', top: pos.top, left: pos.left } : undefined}
+      style={pos ? { position: 'fixed', ...pos } : undefined}
       tabIndex={-1}
       role="listbox"
       aria-label="Pick a color"
