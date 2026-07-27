@@ -96,6 +96,13 @@ interface TimelineViewProps {
   page?: Page
 }
 
+function parseHistoricDate(value: string): Date | null {
+  const d = new Date(value + 'T00:00:00')
+  if (isNaN(d.getTime())) return null
+  if (d >= startOfDay(new Date())) return null
+  return d
+}
+
 export function TimelineView({ pageId, page }: TimelineViewProps) {
   const directEntries = useTimelineEntries(pageId)
   const crossRefEntries = useCrossRefEntries(pageId)
@@ -188,6 +195,11 @@ export function TimelineView({ pageId, page }: TimelineViewProps) {
   const historyEntryIdRef = useRef<number | undefined>(undefined)
   const historyEditDateRef = useRef<Date | undefined>(undefined)
 
+  // ---- Add historic entry state ----
+  const [showDateInput, setShowDateInput] = useState(false)
+  const [addingHistoricDate, setAddingHistoricDate] = useState<Date | null>(null)
+  const [dateInputError, setDateInputError] = useState(false)
+
 
   // ---- Save/auto-save hooks ----
 
@@ -221,6 +233,37 @@ export function TimelineView({ pageId, page }: TimelineViewProps) {
   const handleHistorySave = useCallback(async () => {
     await historySave(historyEditHtml)
   }, [historySave, historyEditHtml])
+
+  const handleHistoricEntrySave = useCallback(async () => {
+    await historySave(historyEditHtml)
+    setAddingHistoricDate(null)
+    setHistoryEditHtml('')
+    historyEditDateRef.current = undefined
+    historyEntryIdRef.current = undefined
+  }, [historySave, historyEditHtml])
+
+  const handleDateInputSubmit = useCallback((value: string) => {
+    const date = parseHistoricDate(value)
+    if (!date) {
+      setDateInputError(true)
+      return
+    }
+    setDateInputError(false)
+    setShowDateInput(false)
+    setAddingHistoricDate(date)
+    historyEditDateRef.current = date
+    historyEntryIdRef.current = undefined
+    setHistoryEditHtml('')
+  }, [])
+
+  const handleCancelHistoricEntry = useCallback(() => {
+    setShowDateInput(false)
+    setAddingHistoricDate(null)
+    setDateInputError(false)
+    historyEditDateRef.current = undefined
+    historyEntryIdRef.current = undefined
+    setHistoryEditHtml('')
+  }, [])
 
   // ---- Delete handlers ----
 
@@ -656,6 +699,59 @@ export function TimelineView({ pageId, page }: TimelineViewProps) {
           </div>
         )
       })}
+
+      {/* Add past entry */}
+      {!showDateInput && !addingHistoricDate && (
+        <button
+          className={styles.addHistoricButton}
+          onClick={() => setShowDateInput(true)}
+          tabIndex={0}
+        >
+          + Add past entry
+        </button>
+      )}
+      {showDateInput && (
+        <div className={styles.addHistoricRow}>
+          <input
+            className={`${styles.dateInput} ${dateInputError ? styles.dateInputError : ''}`}
+            type="text"
+            placeholder="YYYY-MM-DD"
+            aria-label="Entry date (YYYY-MM-DD format)"
+            autoFocus
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault()
+                handleDateInputSubmit((e.target as HTMLInputElement).value)
+              }
+              if (e.key === 'Escape') {
+                e.preventDefault()
+                handleCancelHistoricEntry()
+              }
+            }}
+            onBlur={handleCancelHistoricEntry}
+          />
+        </div>
+      )}
+      {addingHistoricDate && (
+        <div className={styles.section}>
+          <div className={styles.sectionContent}>
+            <RichTextEditor
+              value={historyEditHtml}
+              onChange={setHistoryEditHtml}
+              onBlur={handleHistoricEntrySave}
+              onAutoSave={autoSaveHistory}
+              onMentionClick={handleMentionClick}
+              onEscape={handleCancelHistoricEntry}
+              placeholder="Type here…"
+              autoFocus
+              collapseMentions
+            />
+          </div>
+          <div className={styles.sectionDateContainer}>
+            <span className={styles.sectionDate}>{formatEntryDate(addingHistoricDate)}</span>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
