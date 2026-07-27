@@ -153,6 +153,9 @@ git push         # triggers GitHub Actions deploy
 - `TimelineEntryRow` supports controlled `editing` prop from parent
 - Cross-ref rows skipped during keyboard navigation (read-only, no tabIndex)
 - Delete buttons have `tabIndex={-1}` — only accessible via hover/Backspace
+- **Add Past Entry:** opens `AddHistoricEntryModal` — date input + RichTextEditor
+  (supports entry tag reftagging via `!` trigger); entry written atomically on
+  confirm, no mid-edit DB writes or timeline re-sorting
 
 ### Charts
 - Recharts lazy-loaded via `ConfigurableViz` (separate vendor chunk: ~110KB gz)
@@ -185,6 +188,8 @@ git push         # triggers GitHub Actions deploy
   (respects roving tabIndex — buttons with tabIndex={-1} are skipped)
 - `overflow: hidden` on `.modal` is intentional — do NOT remove
 - Dropdowns inside modals MUST use `DropdownPortal` to escape overflow clipping
+- `bodyClassName` prop allows callers to override body styles (e.g.,
+  `overflow: visible` for modals containing RichTextEditor with mention dropdown)
 - `DropdownPortal` has `autoFocus` prop — when true, focuses first item on
   open, traps Tab/Escape within portal items, returns focus to anchor on exit
 
@@ -226,6 +231,7 @@ git push         # triggers GitHub Actions deploy
 - No emoji in commit messages
 
 ## File Structure Notes
+- `src/components/TimelineView/AddHistoricEntryModal.tsx` — modal for backdating entries
 - `src/hooks/useNavigateToPage.ts` — shared mention navigation
 - `src/hooks/useBlocks.ts` — `useBlocks` query hook + `updateBlock` plain export
 - `src/utils/safeStorage.ts` — safe localStorage wrapper

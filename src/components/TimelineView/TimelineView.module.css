@@ -172,23 +172,24 @@
 /* ---- Add past entry ---- */
 
 .addHistoricButton {
-  align-self: flex-start;
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
   font-size: var(--font-size-sm);
   line-height: var(--line-height-sm);
-  color: var(--color-text-placeholder);
-  background: none;
-  border: none;
-  padding: 0;
-  cursor: pointer;
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius-sm);
+  width: fit-content;
 }
 
 .addHistoricButton:hover {
-  color: var(--color-text-secondary);
+  background: var(--color-surface-hover);
 }
 
 .addHistoricButton:focus-visible {
   outline: 2px solid var(--color-focus);
   outline-offset: 2px;
-  border-radius: var(--radius-sm);
 }
 

@@ -30,6 +30,7 @@ Explore the app today!
 ### Daily workflow & task management
 
 - Daily Timeline / Work Log — Main timeline for daily entries with rich-text auto-save and chronological history
+- Add Past Entry — Modal for backdating entries with date picker and rich-text content (supports entry tag reftagging)
 - Pending Tasks (Checkbox List) — Auto-checkbox section; checking items moves text to Today's entry; [] to insert checkboxes
 - Filtered Pending — Non-main-timeline pages show only pending items that mention relevant pages, with cross-completion back to the main timeline
 - Cross-References — Entries mentioning a page appear inline on that page's timeline, filtered to relevant lines
