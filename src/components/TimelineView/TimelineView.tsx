@@ -59,7 +59,7 @@ const FilteredPendingSection = memo(function FilteredPendingSection({
         ))}
       </div>
       <div className={styles.sectionDateContainer}>
-        <span className={styles.sectionDate}>Pending</span>
+        <span className={styles.sectionDate}>Sticky</span>
       </div>
     </div>
   )
@@ -502,7 +502,7 @@ export function TimelineView({ pageId, page }: TimelineViewProps) {
           ref={(el) => { pendingSectionRef.current = el; setSectionRef('pending')(el) }}
           tabIndex={editingSection === 'pending' ? undefined : 0}
           role="region"
-          aria-label="Pending tasks"
+          aria-label="Sticky tasks"
           onKeyDown={(e) => handleSectionKeyDown('pending', e)}
           onClick={(e) => handleSectionClick('pending', e)}
         >
@@ -530,8 +530,8 @@ export function TimelineView({ pageId, page }: TimelineViewProps) {
             )}
           </div>
           <div className={styles.sectionDateContainer}>
-            <span className={styles.sectionDate}>Pending</span>
-            <button className={styles.sectionDeleteLabel} onClick={handleDeletePending} aria-label="Delete pending tasks" tabIndex={-1}>Delete</button>
+            <span className={styles.sectionDate}>Sticky</span>
+            <button className={styles.sectionDeleteLabel} onClick={handleDeletePending} aria-label="Delete sticky tasks" tabIndex={-1}>Delete</button>
           </div>
         </div>
       )}
