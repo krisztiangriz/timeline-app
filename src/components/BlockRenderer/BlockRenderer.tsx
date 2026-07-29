@@ -75,6 +75,7 @@ const BlockList = memo(function BlockList({ pageId, page, blocks, tabId }: {
   return (
     <div className={styles.blockList}>
       {blocks.map((block, idx) => {
+        if (block.type === 'visualization' && page.hideChart) return null
         const blockClass = block.type !== 'text' ? styles.componentBlock : undefined
         const isFirstText = idx === firstTextIdx
 

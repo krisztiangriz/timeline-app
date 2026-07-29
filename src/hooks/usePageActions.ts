@@ -23,7 +23,7 @@ export function usePageActions(
   const handleEditSubmit = useCallback(async (data: PageFormData) => {
     if (!page?.id) return
     try {
-      await updatePage(page.id, { name: data.name, mentionTrigger: data.mentionTrigger, mentionCollapsed: data.mentionCollapsed })
+      await updatePage(page.id, { name: data.name, mentionTrigger: data.mentionTrigger, mentionCollapsed: data.mentionCollapsed, hideChart: data.hideChart })
       await updateTabs(page.id, data.tabs)
       setEditPageOpen(false)
       showToast('Page updated')

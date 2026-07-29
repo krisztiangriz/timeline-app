@@ -18,6 +18,7 @@ export interface PageFormData {
   existingPageId?: number
   mentionTrigger?: string
   mentionCollapsed?: boolean
+  hideChart?: boolean
   inheritedTrigger?: string
   inheritedFrom?: string
 }
@@ -76,6 +77,7 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
   const [isHubType, setIsHubType] = useState(false)
   const [trigger, setTrigger] = useState('')
   const [collapsed, setCollapsed] = useState(false)
+  const [hideChart, setHideChart] = useState(false)
   const [blockDragIdx, setBlockDragIdx] = useState<{ group: string; idx: number } | null>(null)
   const prevOpen = useRef(false)
   const [createdHubId, setCreatedHubId] = useState<number | null>(null)
@@ -153,6 +155,7 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
       setIsHubType(false)
       setTrigger(initial?.mentionTrigger ?? '')
       setCollapsed(initial?.mentionCollapsed ?? false)
+      setHideChart(initial?.hideChart ?? false)
       setBlockDragIdx(null)
       setCreatedHubId(null)
       hubConfirmed.current = false
@@ -224,6 +227,7 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
           name: name.trim() || 'Untitled',
           mentionTrigger: trigger || undefined,
           mentionCollapsed: collapsed || undefined,
+          hideChart: hideChart || undefined,
           isDraft: undefined,
           updatedAt: new Date(),
         })
@@ -238,6 +242,7 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
           name, tabs: submitTabs, parentHubId: undefined, isHub: true,
           existingPageId: createdHubId,
           mentionTrigger: trigger || undefined, mentionCollapsed: collapsed || undefined,
+          hideChart: hideChart || undefined,
         })
       } catch {
         hubConfirmed.current = false
@@ -250,6 +255,7 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
     onSubmit({
       name, tabs: submitTabs, parentHubId: isHubType ? undefined : parentHubId, isHub: isHubType,
       mentionTrigger: trigger || undefined, mentionCollapsed: collapsed || undefined,
+      hideChart: hideChart || undefined,
     })
   }
 
@@ -314,6 +320,16 @@ export function PageForm({ open, onClose, onSubmit, initial, isEdit, isHub: isHu
               </div>
             </>
           )}
+        </div>
+      )}
+
+      {/* Hide charts (hub only) */}
+      {(isHubType || isHubProp) && (
+        <div className={styles.section}>
+          <button className={styles.labelToggle} onClick={() => setHideChart(!hideChart)} type="button" role="checkbox" aria-checked={hideChart} tabIndex={0} style={{ marginLeft: 0 }}>
+            <div className={styles.labelCheckbox} data-checked={hideChart} />
+            <span className={styles.labelText}>Hide charts</span>
+          </button>
         </div>
       )}
 

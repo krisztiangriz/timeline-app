@@ -48,6 +48,7 @@ export function HubPage({ role }: HubPageProps) {
     }),
     mentionTrigger: hub?.mentionTrigger,
     mentionCollapsed: hub?.mentionCollapsed,
+    hideChart: hub?.hideChart,
   }), [hub, tabs, allBlocks])
 
   if (!hub) return null
