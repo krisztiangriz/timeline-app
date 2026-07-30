@@ -386,6 +386,79 @@ export function RichTextEditor({
       return
     }
 
+    // Arrow key navigation around non-editable spans
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+      const sel = window.getSelection()
+      if (sel && sel.isCollapsed && sel.rangeCount > 0) {
+        const node = sel.anchorNode
+        const offset = sel.anchorOffset
+
+        if (e.key === 'ArrowLeft') {
+          if (node?.nodeType === Node.TEXT_NODE && offset === 0) {
+            const prev = node.previousSibling as HTMLElement | null
+            if (prev?.nodeType === Node.ELEMENT_NODE && prev.getAttribute('contenteditable') === 'false') {
+              e.preventDefault()
+              const range = document.createRange()
+              const beforePrev = prev.previousSibling
+              if (beforePrev?.nodeType === Node.TEXT_NODE) {
+                range.setStart(beforePrev, beforePrev.textContent?.length ?? 0)
+              } else {
+                range.setStart(node.parentNode!, Array.from(node.parentNode!.childNodes).indexOf(prev as ChildNode))
+              }
+              range.collapse(true)
+              sel.removeAllRanges()
+              sel.addRange(range)
+              return
+            }
+          }
+          if (node?.nodeType === Node.ELEMENT_NODE && offset > 0) {
+            const child = node.childNodes[offset - 1] as HTMLElement | undefined
+            if (child?.nodeType === Node.ELEMENT_NODE && child.getAttribute('contenteditable') === 'false') {
+              e.preventDefault()
+              const range = document.createRange()
+              range.setStart(node, offset - 1)
+              range.collapse(true)
+              sel.removeAllRanges()
+              sel.addRange(range)
+              return
+            }
+          }
+        }
+
+        if (e.key === 'ArrowRight') {
+          if (node?.nodeType === Node.TEXT_NODE && offset === (node.textContent?.length ?? 0)) {
+            const next = node.nextSibling as HTMLElement | null
+            if (next?.nodeType === Node.ELEMENT_NODE && next.getAttribute('contenteditable') === 'false') {
+              e.preventDefault()
+              const range = document.createRange()
+              const afterNext = next.nextSibling
+              if (afterNext?.nodeType === Node.TEXT_NODE) {
+                range.setStart(afterNext, 0)
+              } else {
+                range.setStart(node.parentNode!, Array.from(node.parentNode!.childNodes).indexOf(next as ChildNode) + 1)
+              }
+              range.collapse(true)
+              sel.removeAllRanges()
+              sel.addRange(range)
+              return
+            }
+          }
+          if (node?.nodeType === Node.ELEMENT_NODE) {
+            const child = node.childNodes[offset] as HTMLElement | undefined
+            if (child?.nodeType === Node.ELEMENT_NODE && child.getAttribute('contenteditable') === 'false') {
+              e.preventDefault()
+              const range = document.createRange()
+              range.setStart(node, offset + 1)
+              range.collapse(true)
+              sel.removeAllRanges()
+              sel.addRange(range)
+              return
+            }
+          }
+        }
+      }
+    }
+
     // Atomic deletion of non-editable spans (mentions) + checkbox line removal
     if (e.key === 'Backspace' || e.key === 'Delete') {
       const sel = window.getSelection()
