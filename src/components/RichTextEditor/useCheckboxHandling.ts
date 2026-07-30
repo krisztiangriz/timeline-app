@@ -178,6 +178,7 @@ export function useCheckboxHandling(
     const newDiv = document.createElement('div')
     const newCheckbox = document.createElement('span')
     newCheckbox.setAttribute('data-checkbox', 'false')
+    newCheckbox.setAttribute('contenteditable', 'false')
     newCheckbox.textContent = '​'
     newDiv.appendChild(newCheckbox)
 
@@ -237,6 +238,7 @@ export function useCheckboxHandling(
       const remaining = (before + after).trimStart() || '\u00A0'
       const checkbox = document.createElement('span')
       checkbox.setAttribute('data-checkbox', 'false')
+      checkbox.setAttribute('contenteditable', 'false')
       checkbox.textContent = '​'
       const parent = node.parentNode
       if (parent) {

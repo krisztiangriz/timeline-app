@@ -180,6 +180,7 @@
   cursor: pointer;
   height: var(--line-height-base);
   margin-right: 4px;
+  user-select: none;
 }
 
 .editor [data-checkbox]::before {

@@ -389,6 +389,53 @@ export function RichTextEditor({
     // Atomic deletion of non-editable spans (mentions) + checkbox line removal
     if (e.key === 'Backspace' || e.key === 'Delete') {
       const sel = window.getSelection()
+
+      // Handle non-collapsed selection wrapping a single atomic span (e.g., clicking a reftag)
+      if (sel && !sel.isCollapsed && sel.rangeCount > 0) {
+        const range = sel.getRangeAt(0)
+        const container = range.commonAncestorContainer
+        const targetSpan =
+          (container.nodeType === Node.ELEMENT_NODE &&
+            (container as HTMLElement).getAttribute('contenteditable') === 'false'
+            ? container as HTMLElement
+            : null) ||
+          (range.startContainer === range.endContainer &&
+            range.startContainer.nodeType === Node.ELEMENT_NODE
+            ? (() => {
+                const parent = range.startContainer as HTMLElement
+                const startChild = parent.childNodes[range.startOffset]
+                const endChild = parent.childNodes[range.endOffset - 1]
+                if (startChild === endChild &&
+                    startChild?.nodeType === Node.ELEMENT_NODE &&
+                    (startChild as HTMLElement).getAttribute('contenteditable') === 'false') {
+                  return startChild as HTMLElement
+                }
+                return null
+              })()
+            : null)
+
+        if (targetSpan) {
+          e.preventDefault()
+          const parent = targetSpan.parentNode!
+          const prev = targetSpan.previousSibling
+          const next = targetSpan.nextSibling
+          targetSpan.remove()
+          const newRange = document.createRange()
+          if (prev?.nodeType === Node.TEXT_NODE) {
+            newRange.setStart(prev, prev.textContent?.length ?? 0)
+          } else if (next?.nodeType === Node.TEXT_NODE) {
+            newRange.setStart(next, 0)
+          } else {
+            newRange.setStart(parent, 0)
+          }
+          newRange.collapse(true)
+          sel.removeAllRanges()
+          sel.addRange(newRange)
+          emitChange()
+          return
+        }
+      }
+
       if (sel && sel.isCollapsed && sel.rangeCount > 0) {
         const node = sel.anchorNode
         const offset = sel.anchorOffset
