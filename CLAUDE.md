@@ -188,8 +188,9 @@ git push         # triggers GitHub Actions deploy
   (respects roving tabIndex — buttons with tabIndex={-1} are skipped)
 - `overflow: hidden` on `.modal` is intentional — do NOT remove
 - Dropdowns inside modals MUST use `DropdownPortal` to escape overflow clipping
-- `bodyClassName` prop allows callers to override body styles (e.g.,
-  `overflow: visible` for modals containing RichTextEditor with mention dropdown)
+- `bodyClassName` prop allows callers to override body styles
+- Mention dropdown uses `createPortal` to `document.body` (`position: fixed`) —
+  escapes modal overflow without needing `bodyClassName` overrides
 - `DropdownPortal` has `autoFocus` prop — when true, focuses first item on
   open, traps Tab/Escape within portal items, returns focus to anchor on exit
 

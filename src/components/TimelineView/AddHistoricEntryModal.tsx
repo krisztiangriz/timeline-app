@@ -61,7 +61,7 @@ export function AddHistoricEntryModal({ open, onClose, pageId, onToast }: AddHis
   }
 
   return (
-    <Modal title="Add past entry" open={open} onClose={onClose} onConfirm={handleConfirm} confirmDisabled={!canConfirm} bodyClassName={styles.body}>
+    <Modal title="Add past entry" open={open} onClose={onClose} onConfirm={handleConfirm} confirmDisabled={!canConfirm}>
       <div className={styles.form}>
         <div className={styles.section}>
           <span className={styles.label}>When</span>

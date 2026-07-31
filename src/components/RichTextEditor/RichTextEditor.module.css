@@ -263,8 +263,8 @@
 /* ---- Mention autocomplete ---- */
 
 .mentionDropdown {
-  position: absolute;
-  z-index: 200;
+  position: fixed;
+  z-index: 9999;
   display: flex;
   flex-direction: column;
   min-width: 160px;

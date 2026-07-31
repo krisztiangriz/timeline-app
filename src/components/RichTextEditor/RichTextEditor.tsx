@@ -6,6 +6,7 @@ import {
   useState,
   type KeyboardEvent,
 } from 'react'
+import { createPortal } from 'react-dom'
 import { useAutocomplete } from '../../hooks/useAutocomplete'
 import { useEntryTags } from '../../hooks/useEntryTags'
 import { useModalContext } from '../../hooks/useAppContext'
@@ -758,7 +759,7 @@ export function RichTextEditor({
       )}
 
       {/* Mention autocomplete dropdown */}
-      {mentionQuery && autocompleteOptions.length > 0 && (
+      {mentionQuery && autocompleteOptions.length > 0 && createPortal(
         <div
           className={styles.mentionDropdown}
           style={{ top: mentionPos.top, left: mentionPos.left }}
@@ -779,11 +780,12 @@ export function RichTextEditor({
               {opt.name}
             </div>
           ))}
-        </div>
+        </div>,
+        document.body,
       )}
 
       {/* "Add page" option when no matches for a page-mention trigger lookup */}
-      {mentionQuery && autocompleteOptions.length === 0 && mentionQuery.prefix !== '!' && (
+      {mentionQuery && autocompleteOptions.length === 0 && mentionQuery.prefix !== '!' && createPortal(
         <div
           className={styles.mentionDropdown}
           style={{ top: mentionPos.top, left: mentionPos.left }}
@@ -798,7 +800,8 @@ export function RichTextEditor({
             <span className={styles.mentionPrefix}>+</span>
             Add &ldquo;{mentionQuery.text || 'page'}&rdquo;
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   )

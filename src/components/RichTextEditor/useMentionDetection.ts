@@ -118,7 +118,7 @@ export function useMentionDetection(
     const rect = range.getBoundingClientRect()
     const editorRect = editorRef.current?.getBoundingClientRect()
     if (editorRect) {
-      setMentionPos({ top: rect.bottom - editorRect.top + 4, left: rect.left - editorRect.left })
+      setMentionPos({ top: rect.bottom + 4, left: rect.left })
     }
 
     setMentionQuery({ prefix, text: query })
