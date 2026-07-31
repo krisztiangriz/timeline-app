@@ -404,7 +404,9 @@ export function RichTextEditor({
               if (beforePrev?.nodeType === Node.TEXT_NODE) {
                 range.setStart(beforePrev, beforePrev.textContent?.length ?? 0)
               } else {
-                range.setStart(node.parentNode!, Array.from(node.parentNode!.childNodes).indexOf(prev as ChildNode))
+                const zws = document.createTextNode('​')
+                node.parentNode!.insertBefore(zws, prev)
+                range.setStart(zws, 1)
               }
               range.collapse(true)
               sel.removeAllRanges()
@@ -417,7 +419,14 @@ export function RichTextEditor({
             if (child?.nodeType === Node.ELEMENT_NODE && child.getAttribute('contenteditable') === 'false') {
               e.preventDefault()
               const range = document.createRange()
-              range.setStart(node, offset - 1)
+              const prevSib = child.previousSibling
+              if (prevSib?.nodeType === Node.TEXT_NODE) {
+                range.setStart(prevSib, prevSib.textContent?.length ?? 0)
+              } else {
+                const zws = document.createTextNode('​')
+                node.insertBefore(zws, child)
+                range.setStart(zws, 1)
+              }
               range.collapse(true)
               sel.removeAllRanges()
               sel.addRange(range)

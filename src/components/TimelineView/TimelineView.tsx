@@ -68,11 +68,25 @@ const FilteredPendingSection = memo(function FilteredPendingSection({
 /** Ensure each line in pending HTML has a checkbox. Used when migrating old entries. */
 function ensureCheckboxes(html: string): string {
   if (!html.trim()) return ''
-  // If HTML already has checkboxes throughout, return as-is
   if (html.includes('data-checkbox')) return html
 
-  // Wrap plain text in a div with checkbox
-  return `<div><span data-checkbox="false">\u200B</span>${html}</div>`
+  const container = document.createElement('div')
+  container.innerHTML = html
+  const children = Array.from(container.children)
+
+  if (children.length === 0) {
+    return `<div><span data-checkbox="false">\u200B</span>${html}</div>`
+  }
+
+  for (const child of children) {
+    if (child.tagName === 'DIV' && !child.querySelector('[data-checkbox]')) {
+      const checkbox = document.createElement('span')
+      checkbox.setAttribute('data-checkbox', 'false')
+      checkbox.textContent = '\u200B'
+      child.insertBefore(checkbox, child.firstChild)
+    }
+  }
+  return container.innerHTML
 }
 
 /** Split pending HTML into individual line strings (inner content of each top-level <div>) */
@@ -176,6 +190,7 @@ export function TimelineView({ pageId, page }: TimelineViewProps) {
 
   // ---- Pending section state ----
   const { html: pendingHtml, setHtml: setPendingHtml, entryIdRef: pendingEntryId, focusedRef: pendingFocusedRef } = useEditorSync(pendingEntry)
+  const pendingWithCheckboxes = useMemo(() => pendingHtml ? ensureCheckboxes(pendingHtml) : '', [pendingHtml])
   const pendingSectionRef = useRef<HTMLDivElement>(null)
 
   // Onboarding: trigger pending-tasks guide on first focus
@@ -510,7 +525,7 @@ export function TimelineView({ pageId, page }: TimelineViewProps) {
             {editingSection === 'pending' ? (
               <div onFocus={() => { pendingFocusedRef.current = true; triggerGuide('pending-tasks') }}>
                 <RichTextEditor
-                  value={pendingHtml}
+                  value={pendingWithCheckboxes}
                   onChange={setPendingHtml}
                   onBlur={handlePendingSave}
                   onAutoSave={autoSavePending}
@@ -523,8 +538,8 @@ export function TimelineView({ pageId, page }: TimelineViewProps) {
                   collapseMentions
                 />
               </div>
-            ) : pendingHtml ? (
-              <RichTextDisplay html={pendingHtml} collapseMentions />
+            ) : pendingWithCheckboxes ? (
+              <RichTextDisplay html={pendingWithCheckboxes} collapseMentions />
             ) : (
               <span className={styles.placeholderText}>Add a task…</span>
             )}
