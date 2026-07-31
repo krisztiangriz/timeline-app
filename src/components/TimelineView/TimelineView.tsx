@@ -2,10 +2,8 @@ import { useState, useMemo, useRef, useCallback, memo } from 'react'
 import { stripHtml, stripCheckboxHtml } from '../../utils/stripHtml'
 import { filterHtmlToMentionLines } from '../../utils/mentionParser'
 
-import Dexie from 'dexie'
 import { useTimelineEntries, useCrossRefEntries, usePendingEntry, addEntry, updateEntry, deleteEntry } from '../../hooks/useTimeline'
 import { usePageByRole, useChildPages } from '../../hooks/usePages'
-import { db } from '../../db/database'
 import { useNavigateToPage } from '../../hooks/useNavigateToPage'
 import { useToast } from '../../hooks/useToast'
 import { useEntrySave, useEntryDelete } from '../../hooks/useEntryPersist'
@@ -34,27 +32,16 @@ const CrossRefRow = memo(function CrossRefRow({ html }: { html: string }) {
 const FilteredPendingSection = memo(function FilteredPendingSection({
   filteredLines,
   filteredOriginalIndices,
-  onComplete,
 }: {
   filteredLines: string[]
   filteredOriginalIndices: number[]
-  onComplete: (lineIndex: number) => void
 }) {
   return (
     <div className={styles.section}>
       <div className={styles.sectionContent}>
         {filteredLines.map((lineHtml, i) => (
           <div key={filteredOriginalIndices[i]} className={styles.filteredPendingLine}>
-            <span
-              className={styles.filteredCheckbox}
-              onClick={() => onComplete(i)}
-              role="checkbox"
-              aria-checked="false"
-              aria-label="Complete task"
-              tabIndex={0}
-              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onComplete(i) } }}
-            />
-            <RichTextDisplay html={stripCheckboxHtml(lineHtml)} collapseMentions />
+            <RichTextDisplay html={lineHtml} collapseMentions />
           </div>
         ))}
       </div>
@@ -64,30 +51,6 @@ const FilteredPendingSection = memo(function FilteredPendingSection({
     </div>
   )
 })
-
-/** Ensure each line in pending HTML has a checkbox. Used when migrating old entries. */
-function ensureCheckboxes(html: string): string {
-  if (!html.trim()) return ''
-  if (html.includes('data-checkbox')) return html
-
-  const container = document.createElement('div')
-  container.innerHTML = html
-  const children = Array.from(container.children)
-
-  if (children.length === 0) {
-    return `<div><span data-checkbox="false">\u200B</span>${html}</div>`
-  }
-
-  for (const child of children) {
-    if (child.tagName === 'DIV' && !child.querySelector('[data-checkbox]')) {
-      const checkbox = document.createElement('span')
-      checkbox.setAttribute('data-checkbox', 'false')
-      checkbox.textContent = '\u200B'
-      child.insertBefore(checkbox, child.firstChild)
-    }
-  }
-  return container.innerHTML
-}
 
 /** Split pending HTML into individual line strings (inner content of each top-level <div>) */
 function splitPendingLines(html: string): string[] {
@@ -190,7 +153,6 @@ export function TimelineView({ pageId, page }: TimelineViewProps) {
 
   // ---- Pending section state ----
   const { html: pendingHtml, setHtml: setPendingHtml, entryIdRef: pendingEntryId, focusedRef: pendingFocusedRef } = useEditorSync(pendingEntry)
-  const pendingWithCheckboxes = useMemo(() => pendingHtml ? ensureCheckboxes(pendingHtml) : '', [pendingHtml])
   const pendingSectionRef = useRef<HTMLDivElement>(null)
 
   // Onboarding: trigger pending-tasks guide on first focus
@@ -213,7 +175,7 @@ export function TimelineView({ pageId, page }: TimelineViewProps) {
   const pendingTextTransform = useCallback((html: string) => stripHtml(html).replace(/ /g, '').trim(), [])
   const { save: pendingSave, autoSave: autoSavePending } = useEntrySave(
     pendingEntryId,
-    { pageId, isPending: true, textTransform: pendingTextTransform, wrapOnCreate: ensureCheckboxes },
+    { pageId, isPending: true, textTransform: pendingTextTransform },
     showToast,
   )
   const { save: todaySave, autoSave: autoSaveToday } = useEntrySave(
@@ -460,53 +422,6 @@ export function TimelineView({ pageId, page }: TimelineViewProps) {
     return { filteredLines: filtered, filteredOriginalIndices: indices }
   }, [isMainTimeline, mainPendingEntry?.text, relevantIds])
 
-  // Handle completion of a filtered pending item
-  async function handleFilteredComplete(lineIndex: number) {
-    if (!mainPendingEntry?.id || !mainTimelinePage?.id) return
-    try {
-      // Re-read the pending entry from DB to avoid stale closure data
-      const freshEntry = await db.timelineEntries.get(mainPendingEntry.id)
-      if (!freshEntry) return
-      const freshLines = splitPendingLines(freshEntry.text)
-
-      const targetLine = filteredLines[lineIndex]
-      const cleanText = stripCheckboxHtml(targetLine).replace(/\u00A0/g, ' ').replace(/&nbsp;/g, ' ').trim()
-
-      // Use the pre-computed original index (avoids false matches on duplicate content)
-      const originalIndex = filteredOriginalIndices[lineIndex]
-      if (originalIndex == null || originalIndex >= freshLines.length) { showToast('Task was already completed'); return }
-      const remaining = [...freshLines]
-      remaining.splice(originalIndex, 1)
-      const newHtml = remaining.length > 0 ? remaining.map((l) => `<div>${l}</div>`).join('') : ''
-
-      // Update or delete the main timeline pending entry
-      const plain = stripHtml(newHtml).trim()
-      if (plain) {
-        await updateEntry(mainPendingEntry.id, { text: newHtml })
-      } else {
-        await deleteEntry(mainPendingEntry.id)
-      }
-
-      // Append to today's entry on the main timeline — use [pageId+date] index
-      if (cleanText) {
-        const todayStart = startOfDay(new Date())
-        const mainTodayEntries = await db.timelineEntries
-          .where('[pageId+date]')
-          .between([mainTimelinePage.id, todayStart], [mainTimelinePage.id, Dexie.maxKey])
-          .filter((e) => !e.isPending)
-          .toArray()
-        const mainTodayEntry = mainTodayEntries[0]
-        if (mainTodayEntry?.id) {
-          const newText = mainTodayEntry.text
-            ? mainTodayEntry.text + '<div>' + cleanText + '</div>'
-            : cleanText
-          await updateEntry(mainTodayEntry.id, { text: newText })
-        } else {
-          await addEntry({ pageId: mainTimelinePage.id, text: cleanText, isPending: false })
-        }
-      }
-    } catch { showToast('Failed to save') }
-  }
 
   return (
     <div className={styles.timeline}>
@@ -525,7 +440,7 @@ export function TimelineView({ pageId, page }: TimelineViewProps) {
             {editingSection === 'pending' ? (
               <div onFocus={() => { pendingFocusedRef.current = true; triggerGuide('pending-tasks') }}>
                 <RichTextEditor
-                  value={pendingWithCheckboxes}
+                  value={pendingHtml}
                   onChange={setPendingHtml}
                   onBlur={handlePendingSave}
                   onAutoSave={autoSavePending}
@@ -538,8 +453,8 @@ export function TimelineView({ pageId, page }: TimelineViewProps) {
                   collapseMentions
                 />
               </div>
-            ) : pendingWithCheckboxes ? (
-              <RichTextDisplay html={pendingWithCheckboxes} collapseMentions />
+            ) : pendingHtml ? (
+              <RichTextDisplay html={pendingHtml} collapseMentions />
             ) : (
               <span className={styles.placeholderText}>Add a task…</span>
             )}
@@ -557,7 +472,6 @@ export function TimelineView({ pageId, page }: TimelineViewProps) {
         <FilteredPendingSection
           filteredLines={filteredLines}
           filteredOriginalIndices={filteredOriginalIndices}
-          onComplete={handleFilteredComplete}
         />
       )}
 
