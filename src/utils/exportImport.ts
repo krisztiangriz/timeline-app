@@ -290,49 +290,6 @@ async function importData(jsonString: string): Promise<void> {
   )
 }
 
-// ---- Merge Import ----
-
-async function mergeImportData(jsonString: string, targetPageId: number): Promise<string> {
-  const raw: unknown = JSON.parse(jsonString)
-  if (!isObject(raw)) throw new Error('Invalid file: expected JSON object')
-
-  const timelineEntries = validateArray(raw.timelineEntries, validateTimelineEntry)
-
-  if (timelineEntries.length === 0) {
-    throw new Error('File contains no timeline entries to merge')
-  }
-
-  const targetPage = await db.pages.get(targetPageId)
-  if (!targetPage) {
-    throw new Error(`Target page with id ${targetPageId} does not exist`)
-  }
-
-  // Sanitize HTML content
-  const purify = await awaitPurify()
-  sanitizeHtml(timelineEntries, purify)
-
-  const now = new Date()
-
-  // Reassign all entries to target page, strip IDs for new records
-  const preparedEntries = timelineEntries.map((e) => ({
-    pageId: targetPageId,
-    date: e.date,
-    text: e.text,
-    tagRefs: e.tagRefs,
-    isPending: e.isPending,
-    createdAt: e.createdAt ?? now,
-    updatedAt: e.updatedAt ?? now,
-  }))
-
-  await db.transaction('rw', [db.timelineEntries], async () => {
-    if (preparedEntries.length > 0) {
-      await db.timelineEntries.bulkAdd(preparedEntries)
-    }
-  })
-
-  return `Merged ${preparedEntries.length} timeline ${preparedEntries.length === 1 ? 'entry' : 'entries'}`
-}
-
 // ---- File Picker UI ----
 
 function pickFile(): Promise<File | null> {
@@ -355,9 +312,3 @@ export async function triggerImport(): Promise<void> {
   await importData(text)
 }
 
-export async function triggerMergeImport(targetPageId: number): Promise<string> {
-  const file = await pickFile()
-  if (!file) return ''
-  const text = await file.text()
-  return mergeImportData(text, targetPageId)
-}

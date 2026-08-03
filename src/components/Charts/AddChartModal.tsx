@@ -173,7 +173,7 @@ export function AddChartModal({ open, onClose, onAdd, editing, onUpdate, pageId,
 
   return (
     <Modal
-      title={editing ? 'Edit chart' : 'Add chart'}
+      title={editing ? 'Edit Chart' : 'Add Chart'}
       open={open}
       onClose={onClose}
       onConfirm={handleConfirm}
@@ -235,7 +235,7 @@ export function AddChartModal({ open, onClose, onAdd, editing, onUpdate, pageId,
 
         {/* Data source */}
         <div className={styles.formSection}>
-          <span className={styles.formLabel}>Data source</span>
+          <span className={styles.formLabel}>Data Source</span>
           <div className={styles.scopeDropdown}>
             <button
               className={styles.scopeTrigger}
@@ -288,7 +288,7 @@ export function AddChartModal({ open, onClose, onAdd, editing, onUpdate, pageId,
 
         {/* Grouping */}
         <div className={styles.formSection}>
-          <span className={styles.formLabel}>Group by</span>
+          <span className={styles.formLabel}>Group By</span>
           <div className={styles.radioRow} role="radiogroup" aria-label="Group by">
             {ALL_GROUPINGS.map((g) => {
               const disabled = !validGroupings.includes(g)
@@ -305,7 +305,7 @@ export function AddChartModal({ open, onClose, onAdd, editing, onUpdate, pageId,
 
         {/* Chart type */}
         <div className={styles.formSection}>
-          <span className={styles.formLabel}>Chart type</span>
+          <span className={styles.formLabel}>Chart Type</span>
           <div ref={chartTypeGroupRef} className={styles.radioRow} role="radiogroup" aria-label="Chart type" onKeyDown={chartTypeKeyDown}>
             {ALL_CHART_TYPES.map((t) => {
               const disabled = !validTypes.includes(t)

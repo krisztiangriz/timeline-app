@@ -1,20 +1,14 @@
-import { useState, useMemo, useRef, useEffect } from 'react'
+import { useState } from 'react'
 import { useRadioGroupKeyboard } from '../../hooks/useRadioGroupKeyboard'
 import { Modal } from '../../components/Modal/Modal'
-import { useAutocomplete } from '../../hooks/useAutocomplete'
 import { useModalContext, usePreferences } from '../../hooks/useAppContext'
 import { useBackupSettings, type BackupFrequency } from '../../hooks/useAutoBackup'
 import { useOnboardingActions } from '../../hooks/useOnboardingGuides'
 import { onboardingGuides } from '../../config/onboardingGuides'
-import { TrashIcon, CheckIcon, PlusIcon, CloseIcon, SearchIcon, ResetIcon } from '../../components/Icons/Icons'
-import { downloadJson, triggerImport, triggerMergeImport } from '../../utils/exportImport'
-import { useChartPalette } from '../../hooks/useChartPalette'
-import { PALETTE_OPTIONS } from '../../constants/colors'
+import { TrashIcon, CheckIcon, PlusIcon, ResetIcon } from '../../components/Icons/Icons'
+import { downloadJson, triggerImport } from '../../utils/exportImport'
 import { useEntryTags, addEntryTag, updateEntryTag, deleteEntryTag } from '../../hooks/useEntryTags'
 import { useTheme, type Theme } from '../../hooks/useTheme'
-import { ColorPicker } from '../../components/ColorPicker/ColorPicker'
-import { DropdownPortal } from '../../components/DropdownPortal/DropdownPortal'
-import type { Page } from '../../types'
 import { safeRemoveItem } from '../../utils/safeStorage'
 import styles from './SettingsModal.module.css'
 
@@ -28,18 +22,14 @@ interface SettingsModalProps {
 }
 
 export function SettingsModal({ open, onClose, onToast }: SettingsModalProps) {
-  const { allPages } = useAutocomplete()
   const { showArchived, setShowArchived } = usePreferences()
   const { setOnboardingOpen } = useModalContext()
   const { frequency, setFrequency, lastBackup } = useBackupSettings()
   const { resetAllGuides, isGuideDismissed } = useOnboardingActions()
-  const { palette, updateColor, resetPalette } = useChartPalette()
   const entryTags = useEntryTags()
   const { theme, setTheme } = useTheme()
   const { groupRef: themeGroupRef, handleKeyDown: themeKeyDown } = useRadioGroupKeyboard(THEME_OPTIONS, theme, setTheme)
   const { groupRef: backupGroupRef, handleKeyDown: backupKeyDown } = useRadioGroupKeyboard(BACKUP_OPTIONS, frequency, setFrequency)
-  const [palettePickerIndex, setPalettePickerIndex] = useState<number | null>(null)
-  const paletteAnchorRef = useRef<HTMLButtonElement>(null)
 
   // Entry tag state
   const [addingTag, setAddingTag] = useState(false)
@@ -69,33 +59,6 @@ export function SettingsModal({ open, onClose, onToast }: SettingsModalProps) {
     } catch { onToast('Failed to rename tag') }
   }
 
-  // Merge import state
-  const [merging, setMerging] = useState(false)
-  const [mergePageId, setMergePageId] = useState<number | undefined>()
-  const [mergeQuery, setMergeQuery] = useState('')
-  const [mergeSelected, setMergeSelected] = useState<Page | null>(null)
-  const [mergeActiveIndex, setMergeActiveIndex] = useState(-1)
-  const mergeResultsRef = useRef<HTMLDivElement>(null)
-  const mergeSearchWrapperRef = useRef<HTMLDivElement>(null)
-
-  // Merge lookup: filter pages by search query
-  const mergeResults = useMemo(() => {
-    if (!mergeQuery.trim()) return []
-    const q = mergeQuery.toLowerCase()
-    return allPages.filter(
-      (p) => p.type !== 'hub' && p.name.toLowerCase().includes(q)
-    )
-  }, [mergeQuery, allPages])
-
-  // Reset active index when merge results change
-  useEffect(() => { setMergeActiveIndex(-1) }, [mergeResults.length])
-
-  // Scroll active merge result into view
-  useEffect(() => {
-    if (mergeActiveIndex < 0 || !mergeResultsRef.current) return
-    const el = mergeResultsRef.current.children[mergeActiveIndex] as HTMLElement | undefined
-    el?.scrollIntoView({ block: 'nearest' })
-  }, [mergeActiveIndex])
 
   async function handleExport() {
     await downloadJson('timeline-export')
@@ -109,55 +72,6 @@ export function SettingsModal({ open, onClose, onToast }: SettingsModalProps) {
     } catch {
       onToast('Import failed')
     }
-  }
-
-  async function handleMergeImport() {
-    const targetId = mergeSelected?.id ?? mergePageId
-    if (!targetId) return
-    try {
-      const summary = await triggerMergeImport(targetId)
-      if (summary) {
-        onToast(summary)
-        cancelMerge()
-        onClose()
-      }
-    } catch (err) {
-      onToast(err instanceof Error ? err.message : 'Merge failed')
-    }
-  }
-
-  function cancelMerge() {
-    setMergePageId(undefined)
-    setMergeQuery('')
-    setMergeSelected(null)
-    setMergeActiveIndex(-1)
-    setMerging(false)
-  }
-
-  function handleMergeKeyDown(e: React.KeyboardEvent) {
-    if (e.key === 'Escape' && mergeResults.length) {
-      e.preventDefault()
-      e.stopPropagation()
-      setMergeQuery('')
-      return
-    }
-    if (!mergeResults.length) return
-    if (e.key === 'ArrowDown') {
-      e.preventDefault()
-      setMergeActiveIndex((prev) => (prev < mergeResults.length - 1 ? prev + 1 : 0))
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault()
-      setMergeActiveIndex((prev) => (prev > 0 ? prev - 1 : mergeResults.length - 1))
-    } else if (e.key === 'Enter' && mergeActiveIndex >= 0) {
-      e.preventDefault()
-      selectMergePage(mergeResults[mergeActiveIndex])
-    }
-  }
-
-  function selectMergePage(page: Page) {
-    setMergeSelected(page)
-    setMergePageId(page.id)
-    setMergeQuery('')
   }
 
   return (
@@ -179,7 +93,7 @@ export function SettingsModal({ open, onClose, onToast }: SettingsModalProps) {
       <div className={styles.section}>
         <span className={styles.sectionTitle}>Data</span>
         <span className={styles.sectionDescription}>
-          Export or Import all your data as JSON. Import replaces all existing data. Merge adds entries from a file without removing existing data.
+          Export or Import all your data as JSON. Import replaces all existing data.
         </span>
         <div className={styles.buttonRow}>
           <button className={styles.iconButton} onClick={handleExport} tabIndex={0}>
@@ -194,72 +108,12 @@ export function SettingsModal({ open, onClose, onToast }: SettingsModalProps) {
             </svg>
             Import
           </button>
-          <button className={styles.iconButton} onClick={() => setMerging(true)} tabIndex={0}>
-            <svg width="16" height="16" viewBox="0 0 18 18" fill="none">
-              <path d="M9 1.5C9.414 1.5 9.75 1.836 9.75 2.25V8.25H15.75C16.164 8.25 16.5 8.586 16.5 9C16.5 9.414 16.164 9.75 15.75 9.75H9.75V15.75C9.75 16.164 9.414 16.5 9 16.5C8.586 16.5 8.25 16.164 8.25 15.75V9.75H2.25C1.836 9.75 1.5 9.414 1.5 9C1.5 8.586 1.836 8.25 2.25 8.25H8.25V2.25C8.25 1.836 8.586 1.5 9 1.5Z" fill="currentColor" />
-            </svg>
-            Merge
-          </button>
         </div>
-        {merging && (
-          <div className={styles.mergeRow}>
-            {mergeSelected ? (
-              <div className={styles.mergeSelectedPage}>
-                <span>{mergeSelected.name}</span>
-                <button
-                  className={styles.mergeClearButton}
-                  onClick={() => { setMergeSelected(null); setMergePageId(undefined) }}
-                  aria-label="Clear selection"
-                  tabIndex={0}
-                >
-                  <CloseIcon size={10} />
-                </button>
-              </div>
-            ) : (
-              <>
-              <div className={styles.mergeSearchWrapper} ref={mergeSearchWrapperRef}>
-                <SearchIcon />
-                <input
-                  className={styles.mergeSearchInput}
-                  type="text"
-                  value={mergeQuery}
-                  onChange={(e) => setMergeQuery(e.target.value)}
-                  onKeyDown={handleMergeKeyDown}
-                  placeholder="Look up a page"
-                  autoFocus
-                />
-                {mergeQuery && (
-                  <button className={styles.mergeClearButton} onClick={() => setMergeQuery('')} aria-label="Clear" tabIndex={0}>
-                    <PlusIcon size={12} />
-                  </button>
-                )}
-              </div>
-              <DropdownPortal anchorRef={mergeSearchWrapperRef} open={mergeResults.length > 0}>
-                <div className={styles.mergeSearchResults} ref={mergeResultsRef}>
-                  {mergeResults.map((page, i) => (
-                    <button
-                      key={page.id}
-                      className={i === mergeActiveIndex ? styles.mergeSearchResultActive : styles.mergeSearchResult}
-                      onClick={() => selectMergePage(page)}
-                      onMouseEnter={() => setMergeActiveIndex(i)}
-                    >
-                      {page.name}
-                    </button>
-                  ))}
-                </div>
-              </DropdownPortal>
-              </>
-            )}
-            <button className={styles.confirmButton} onClick={handleMergeImport} aria-label="Choose file" tabIndex={0}
-              style={{ opacity: mergeSelected ? 1 : 0.4, pointerEvents: mergeSelected ? 'auto' : 'none' }}>{<CheckIcon />}</button>
-            <button className={styles.deleteButton} onClick={cancelMerge} aria-label="Cancel merge" tabIndex={0}>{<TrashIcon />}</button>
-          </div>
-        )}
       </div>
 
-      {/* Auto-backup */}
+      {/* Auto-Backup */}
       <div className={styles.section}>
-        <span className={styles.sectionTitle}>Auto-backup</span>
+        <span className={styles.sectionTitle}>Auto-Backup</span>
         <div ref={backupGroupRef} className={styles.backupRow} role="radiogroup" aria-label="Auto-backup frequency" onKeyDown={backupKeyDown}>
           {BACKUP_OPTIONS.map((opt) => (
             <button key={opt} className={styles.checkboxRow} onClick={() => setFrequency(opt)} role="radio" aria-checked={frequency === opt} tabIndex={frequency === opt ? 0 : -1}>
@@ -273,47 +127,6 @@ export function SettingsModal({ open, onClose, onToast }: SettingsModalProps) {
             ? `Last backup: ${new Date(lastBackup).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}`
             : 'No backups yet'}
         </span>
-      </div>
-
-      {/* Chart colors */}
-      <div className={styles.section}>
-        <div className={styles.listHeader}>
-          <span className={styles.sectionTitle}>Chart colors</span>
-          <button className={styles.iconButton} onClick={resetPalette} tabIndex={0}>
-            <ResetIcon />
-            Reset
-          </button>
-        </div>
-        <div className={styles.paletteRow}>
-          {palette.map((color, i) => (
-            <div key={i} className={styles.colorSwatchWrapper}>
-              <button
-                className={styles.colorSwatch}
-                style={{ background: color }}
-                ref={palettePickerIndex === i ? paletteAnchorRef : undefined}
-                onClick={(e) => {
-                  if (palettePickerIndex === i) {
-                    setPalettePickerIndex(null)
-                  } else {
-                    paletteAnchorRef.current = e.currentTarget as HTMLButtonElement
-                    setPalettePickerIndex(i)
-                  }
-                }}
-                aria-label={`Color ${i + 1}`}
-                tabIndex={0}
-              />
-              {palettePickerIndex === i && (
-                <ColorPicker
-                  colors={PALETTE_OPTIONS}
-                  value={color}
-                  onChange={(c) => updateColor(i, c)}
-                  onClose={() => setPalettePickerIndex(null)}
-                  anchorRef={paletteAnchorRef}
-                />
-              )}
-            </div>
-          ))}
-        </div>
       </div>
 
       {/* Entry Tags */}
@@ -418,7 +231,7 @@ export function SettingsModal({ open, onClose, onToast }: SettingsModalProps) {
       {/* Archived pages */}
       <div className={styles.section}>
         <div className={styles.listHeader}>
-          <span className={styles.sectionTitle}>Archived pages</span>
+          <span className={styles.sectionTitle}>Archived Pages</span>
           <button className={styles.checkboxRow} onClick={() => setShowArchived(!showArchived)} role="checkbox" aria-checked={showArchived} tabIndex={0}>
             <div className={styles.checkbox} data-checked={showArchived} />
             <span className={styles.checkboxLabel}>Show archived</span>
