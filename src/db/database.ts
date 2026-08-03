@@ -399,7 +399,7 @@ class TimelineDB extends Dexie {
           }
           maxTabOrder++
           const tabName = getUniqueName(BLOCK_TYPE_NAMES[b.type] ?? 'Notes')
-          const tabId = await layouts.add({ pageId: page.id!, type: 'tab', name: tabName, order: maxTabOrder })
+          const tabId = await layouts.add({ pageId: page.id!, name: tabName, order: maxTabOrder })
           if (b.id) await blocks.update(b.id, { tabId: tabId as number })
         }
 
@@ -418,7 +418,7 @@ class TimelineDB extends Dexie {
             }
             maxTabOrder++
             const tabName = getUniqueName(BLOCK_TYPE_NAMES[b.type] ?? 'Notes')
-            const newTabId = await layouts.add({ pageId: page.id!, type: 'tab', name: tabName, order: maxTabOrder })
+            const newTabId = await layouts.add({ pageId: page.id!, name: tabName, order: maxTabOrder })
             if (b.id) await blocks.update(b.id, { tabId: newTabId as number })
           }
         }

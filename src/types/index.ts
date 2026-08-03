@@ -24,7 +24,6 @@ export interface Page {
 export interface Tab {
   id?: number
   pageId: number
-  type: 'tab'
   name: string
   order: number
 }

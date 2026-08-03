@@ -155,7 +155,7 @@ export async function updateTabs(pageId: number, tabs: { id?: number; name: stri
         await db.layouts.update(tab.id, { name: tab.name, order: i })
       } else {
         // New tab — create it + its block
-        const tabId = await db.layouts.add({ pageId, type: 'tab' as const, name: tab.name, order: i })
+        const tabId = await db.layouts.add({ pageId, name: tab.name, order: i })
         await db.blocks.add({ pageId, tabId: tabId as number, type: tab.type, ...(tab.type === 'text' ? { content: '' } : {}) })
       }
     }

@@ -24,7 +24,6 @@ interface ModalProps {
   compact?: boolean
   zIndex?: number
   descriptionId?: string
-  bodyClassName?: string
 }
 
 export function Modal({
@@ -39,7 +38,6 @@ export function Modal({
   compact,
   zIndex,
   descriptionId,
-  bodyClassName,
 }: ModalProps) {
   const bodyRef = useRef<HTMLDivElement>(null)
   const modalRef = useRef<HTMLDivElement>(null)
@@ -171,7 +169,7 @@ export function Modal({
           )}
         </div>
 
-        <div className={bodyClassName ? `${styles.body} ${bodyClassName}` : styles.body} ref={bodyRef} onScroll={checkOverflow}>{children}</div>
+        <div className={styles.body} ref={bodyRef} onScroll={checkOverflow}>{children}</div>
 
         {!hideFooter && (
           <div className={scrolledBottom ? styles.footerBorder : styles.footer}>

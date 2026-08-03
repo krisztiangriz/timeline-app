@@ -40,7 +40,7 @@ function useSeriesFilter(keys: string[]) {
 }
 
 
-export interface ChartRendererProps {
+interface ChartRendererProps {
   config: ChartConfig
   monthCount?: 0 | 3 | 6 | 12
   entries: TimelineEntry[]

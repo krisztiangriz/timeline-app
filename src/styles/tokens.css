@@ -20,7 +20,6 @@
 
   /* Overlays & shadows */
   --color-shadow: #5E6E8C33;
-  --color-overlay: rgba(51, 64, 85, 0.3);
   --color-overlay-light: rgba(255, 255, 255, 0.75);
 
   /* Typography */
@@ -90,6 +89,5 @@
 
   /* Overlays & shadows */
   --color-shadow: rgba(0, 0, 0, 0.4);
-  --color-overlay: rgba(0, 0, 0, 0.5);
   --color-overlay-light: rgba(26, 29, 35, 0.85);
 }

@@ -84,7 +84,6 @@ function validateTab(raw: unknown): Tab | null {
   return {
     ...(isNumber(raw.id) ? { id: raw.id } : {}),
     pageId: raw.pageId,
-    type: 'tab',
     name: isString(raw.name) ? raw.name : 'Untitled',
     order: isNumber(raw.order) ? raw.order : 0,
   }

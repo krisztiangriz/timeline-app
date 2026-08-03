@@ -2,9 +2,9 @@ import { useState, useMemo, useRef, useCallback } from 'react'
 import type { Page, EntryTag } from '../../types'
 import type { AddPageInitial } from '../../hooks/useAppContext'
 
-export const ENTRY_TAG_TRIGGER = '!'
+const ENTRY_TAG_TRIGGER = '!'
 
-export type AutocompleteOption =
+type AutocompleteOption =
   | { kind: 'mention'; id: number; name: string; prefix: string }
   | { kind: 'entryTag'; id: number; name: string; slug: string; prefix: string }
 
@@ -207,8 +207,6 @@ export function useMentionDetection(
     mentionPos,
     mentionIndex,
     setMentionIndex,
-    mentionRange,
-    hubTriggers,
     autocompleteOptions,
     detectMention,
     insertAutocomplete,

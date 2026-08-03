@@ -137,15 +137,6 @@
   font-style: italic;
 }
 
-/* ---- Section label (for embedded timelines) ---- */
-
-.sectionTitle {
-  font-size: var(--font-size-base);
-  line-height: var(--line-height-base);
-  font-weight: var(--font-weight-bold);
-  color: var(--color-text-primary);
-}
-
 /* ---- Filtered pending lines ---- */
 
 .filteredPendingLine {

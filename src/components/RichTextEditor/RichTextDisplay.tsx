@@ -9,22 +9,13 @@ import { subscribePurify, getPurifyLoaded, sanitizeForDisplay } from '../../util
 
 interface RichTextDisplayProps {
   html: string
-  className?: string
-  onClick?: () => void
   /** When true, mentions with collapsed hubs show only the trigger character */
   collapseMentions?: boolean
-  /** Optional: called when a mention is clicked. If not provided, navigates internally. */
-  onMentionClick?: (pageId: number) => void
 }
 
-/**
- * Read-only display of rich text HTML content.
- * Clicking a mention navigates to the referenced page (or calls onMentionClick if provided).
- */
-export const RichTextDisplay = memo(function RichTextDisplay({ html, className, onClick, collapseMentions, onMentionClick }: RichTextDisplayProps) {
+export const RichTextDisplay = memo(function RichTextDisplay({ html, collapseMentions }: RichTextDisplayProps) {
   const navigate = useNavigate()
   const { allPages } = useAutocomplete()
-  const displayClassName = [styles.editor, className].filter(Boolean).join(' ')
   const isLoaded = useSyncExternalStore(subscribePurify, getPurifyLoaded)
 
   const cleanHtml = useMemo(() => {
@@ -56,9 +47,7 @@ export const RichTextDisplay = memo(function RichTextDisplay({ html, className, 
     if (mention) {
       e.stopPropagation()
       navigateToMention(mention)
-      return
     }
-    onClick?.()
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
@@ -74,26 +63,21 @@ export const RichTextDisplay = memo(function RichTextDisplay({ html, className, 
   function navigateToMention(mention: HTMLElement) {
     const pageId = Number(mention.getAttribute('data-page-id'))
     if (pageId) {
-      if (onMentionClick) {
-        onMentionClick(pageId)
+      const page = allPages.find((p) => p.id === pageId)
+      if (page) {
+        navigate(getPagePath(page, allPages))
       } else {
-        const page = allPages.find((p) => p.id === pageId)
-        if (page) {
-          navigate(getPagePath(page, allPages))
-        } else {
-          navigate(`/page/${pageId}`)
-        }
+        navigate(`/page/${pageId}`)
       }
     }
   }
 
   return (
     <div
-      className={displayClassName}
+      className={styles.editor}
       dangerouslySetInnerHTML={{ __html: cleanHtml }}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
-      style={{ cursor: onClick ? 'text' : 'auto' }}
     />
   )
 })

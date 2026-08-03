@@ -1,11 +1,11 @@
 import { createContext, useContext, useState, useCallback, useMemo, useRef, type ReactNode } from 'react'
-import { safeGetItem, safeSetItem, safeRemoveItem } from '../utils/safeStorage'
+import { safeGetItem, safeSetItem } from '../utils/safeStorage'
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
 /* ------------------------------------------------------------------ */
 
-export interface GuideStep {
+interface GuideStep {
   description: string
   image?: string
   video?: string
@@ -32,15 +32,11 @@ interface OnboardingActionsContextValue {
   isGuideDismissed: (id: string) => boolean
   resetAllGuides: () => void
   getGuideDefinition: (id: string) => GuideDefinition | undefined
-  disableAllGuides: () => void
-  enableAllGuides: () => void
-  toggleGuides: () => void
 }
 
 interface OnboardingStateContextValue {
   /** The currently active guide (if any) */
   activeGuide: ActiveGuide | null
-  guidesDisabled: boolean
 }
 
 // Combined type for backward-compatible useOnboardingGuides hook
@@ -80,10 +76,8 @@ export function OnboardingGuidesProvider({ children }: { children: ReactNode }) 
   const [dismissed, setDismissed] = useState(getDismissedGuides)
   const [registry, setRegistry] = useState<Map<string, GuideDefinition>>(new Map())
   const [activeGuide, setActiveGuide] = useState<ActiveGuide | null>(null)
-  const [guidesDisabled, setGuidesDisabled] = useState(getGuidesDisabled)
 
-  const guidesDisabledRef = useRef(guidesDisabled)
-  guidesDisabledRef.current = guidesDisabled
+  const guidesDisabledRef = useRef(getGuidesDisabled())
   const dismissedRef = useRef(dismissed)
   dismissedRef.current = dismissed
   const registryRef = useRef(registry)
@@ -153,33 +147,6 @@ export function OnboardingGuidesProvider({ children }: { children: ReactNode }) 
     setDismissedGuides([])
   }, [])
 
-  const disableAllGuides = useCallback(() => {
-    setGuidesDisabled(true)
-    guidesDisabledRef.current = true
-    safeSetItem('onboarding-guides-disabled', 'true')
-    setActiveGuide(null)
-  }, [])
-
-  const enableAllGuides = useCallback(() => {
-    setGuidesDisabled(false)
-    guidesDisabledRef.current = false
-    safeRemoveItem('onboarding-guides-disabled')
-  }, [])
-
-  const toggleGuides = useCallback(() => {
-    setGuidesDisabled(prev => {
-      const next = !prev
-      guidesDisabledRef.current = next
-      if (next) {
-        safeSetItem('onboarding-guides-disabled', 'true')
-        setActiveGuide(null)
-      } else {
-        safeRemoveItem('onboarding-guides-disabled')
-      }
-      return next
-    })
-  }, [])
-
   const getGuideDefinition = useCallback((id: string) => {
     return registryRef.current.get(id)
   }, [])
@@ -193,15 +160,11 @@ export function OnboardingGuidesProvider({ children }: { children: ReactNode }) 
     isGuideDismissed,
     resetAllGuides,
     getGuideDefinition,
-    disableAllGuides,
-    enableAllGuides,
-    toggleGuides,
-  }), [registerGuide, triggerGuide, dismissGuide, nextStep, prevStep, isGuideDismissed, resetAllGuides, getGuideDefinition, disableAllGuides, enableAllGuides, toggleGuides])
+  }), [registerGuide, triggerGuide, dismissGuide, nextStep, prevStep, isGuideDismissed, resetAllGuides, getGuideDefinition])
 
   const stateValue = useMemo<OnboardingStateContextValue>(() => ({
     activeGuide,
-    guidesDisabled,
-  }), [activeGuide, guidesDisabled])
+  }), [activeGuide])
 
   return (
     <OnboardingActionsContext.Provider value={actionsValue}>
