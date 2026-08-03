@@ -158,7 +158,6 @@ function validateChartConfig(raw: unknown): ChartConfig | null {
     grouping: grouping as ChartConfig['grouping'],
     chartType: raw.chartType as ChartConfig['chartType'],
     scopes,
-    aggregateByHub: raw.aggregateByHub === true ? true : undefined,
     order: isNumber(raw.order) ? raw.order : 0,
   }
 }

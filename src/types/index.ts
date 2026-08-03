@@ -88,7 +88,6 @@ export interface ChartConfig {
   chartType: ChartType
   scopes?: ChartScope[]
   categories?: string[]
-  aggregateByHub?: boolean
   seriesColors?: Record<string, string>
   order: number
 }

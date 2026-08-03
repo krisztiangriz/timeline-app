@@ -48,12 +48,12 @@ export const ConfigurableViz = memo(function ConfigurableViz({ blockId, pageId }
     safeSetItem(`viz-range-${blockId}`, String(r))
   }
 
-  async function handleAdd(name: string, source: ChartSource, grouping: ChartGrouping, chartType: ChartType, scopes?: ChartScope[], aggregateByHub?: boolean, categories?: string[]) {
-    try { await addChartConfig(blockId, name, source, grouping, chartType, scopes, aggregateByHub, categories) } catch { showToast('Failed to add chart') }
+  async function handleAdd(name: string, source: ChartSource, grouping: ChartGrouping, chartType: ChartType, scopes?: ChartScope[], categories?: string[]) {
+    try { await addChartConfig(blockId, name, source, grouping, chartType, scopes, categories) } catch { showToast('Failed to add chart') }
   }
 
-  async function handleUpdate(id: number, name: string, source: ChartSource, grouping: ChartGrouping, chartType: ChartType, scopes?: ChartScope[], aggregateByHub?: boolean, categories?: string[]) {
-    try { await updateChartConfig(id, { name, source, grouping, chartType, scopes, aggregateByHub, categories }) } catch { showToast('Failed to update chart') }
+  async function handleUpdate(id: number, name: string, source: ChartSource, grouping: ChartGrouping, chartType: ChartType, scopes?: ChartScope[], categories?: string[]) {
+    try { await updateChartConfig(id, { name, source, grouping, chartType, scopes, categories }) } catch { showToast('Failed to update chart') }
   }
 
   async function handleDelete(id: number) {

@@ -45,15 +45,17 @@ function isScopeSelected(scopes: ChartScope[], scope: ChartScope): boolean {
 interface AddChartModalProps {
   open: boolean
   onClose: () => void
-  onAdd: (name: string, source: ChartSource, grouping: ChartGrouping, chartType: ChartType, scopes?: ChartScope[], aggregateByHub?: boolean, categories?: string[]) => void
+  onAdd: (name: string, source: ChartSource, grouping: ChartGrouping, chartType: ChartType, scopes?: ChartScope[], categories?: string[]) => void
   editing?: ChartConfig
-  onUpdate?: (id: number, name: string, source: ChartSource, grouping: ChartGrouping, chartType: ChartType, scopes?: ChartScope[], aggregateByHub?: boolean, categories?: string[]) => void
+  onUpdate?: (id: number, name: string, source: ChartSource, grouping: ChartGrouping, chartType: ChartType, scopes?: ChartScope[], categories?: string[]) => void
   pageId: number
   allPages: Page[]
   entryTags: EntryTag[]
 }
 
 const ALL_SOURCES: ChartSource[] = ['classify', 'entries', 'pages']
+const ALL_GROUPINGS: ChartGrouping[] = ['month', 'weekday']
+const ALL_CHART_TYPES: ChartType[] = ['bar', 'line', 'area', 'pie']
 
 export function AddChartModal({ open, onClose, onAdd, editing, onUpdate, pageId, allPages, entryTags }: AddChartModalProps) {
   const [name, setName] = useState('')
@@ -62,7 +64,6 @@ export function AddChartModal({ open, onClose, onAdd, editing, onUpdate, pageId,
   const [source, setSource] = useState<ChartSource>(editing?.source ?? 'classify')
   const [grouping, setGrouping] = useState<ChartGrouping>(editing?.grouping ?? 'month')
   const [type, setType] = useState<ChartType>(editing?.chartType ?? 'bar')
-  const [aggregateByHub, setAggregateByHub] = useState(editing?.aggregateByHub ?? false)
   const [scopeOpen, setScopeOpen] = useState(false)
   const [sourceOpen, setSourceOpen] = useState(false)
   const prevOpen = useRef(false)
@@ -140,7 +141,6 @@ export function AddChartModal({ open, onClose, onAdd, editing, onUpdate, pageId,
         setSource(editing.source)
         setGrouping(editing.grouping)
         setType(editing.chartType)
-        setAggregateByHub(editing.aggregateByHub ?? false)
         setCategories(editing.categories ?? [])
         userEditedName.current = true
       } else {
@@ -152,7 +152,6 @@ export function AddChartModal({ open, onClose, onAdd, editing, onUpdate, pageId,
         setSource('classify')
         setGrouping('month')
         setType('bar')
-        setAggregateByHub(false)
         setCategories([])
         userEditedName.current = false
       }
@@ -163,12 +162,11 @@ export function AddChartModal({ open, onClose, onAdd, editing, onUpdate, pageId,
   function handleConfirm() {
     const chartName = name.trim() || (SOURCE_LABELS[source] ?? 'Chart')
     const scopesValue = scopes.length > 0 ? scopes : undefined
-    const hubAgg = effectiveType === 'pie' && aggregateByHub ? true : undefined
     const cats = source === 'classify' && categories.length > 0 ? categories : undefined
     if (editing && onUpdate) {
-      onUpdate(editing.id!, chartName, source, effectiveGrouping, effectiveType, scopesValue, hubAgg, cats)
+      onUpdate(editing.id!, chartName, source, effectiveGrouping, effectiveType, scopesValue, cats)
     } else {
-      onAdd(chartName, source, effectiveGrouping, effectiveType, scopesValue, hubAgg, cats)
+      onAdd(chartName, source, effectiveGrouping, effectiveType, scopesValue, cats)
     }
     onClose()
   }
@@ -288,43 +286,38 @@ export function AddChartModal({ open, onClose, onAdd, editing, onUpdate, pageId,
           </div>
         )}
 
-        {/* Grouping — only show when >1 valid option */}
-        {validGroupings.length > 1 && (
-          <div className={styles.formSection}>
-            <span className={styles.formLabel}>Group by</span>
-            <div className={styles.radioRow} role="radiogroup" aria-label="Group by">
-              {validGroupings.map((g) => (
-                <button key={g} className={radio.radioOption} onClick={() => setGrouping(g)} role="radio" aria-checked={effectiveGrouping === g} tabIndex={effectiveGrouping === g ? 0 : -1}>
+        {/* Grouping */}
+        <div className={styles.formSection}>
+          <span className={styles.formLabel}>Group by</span>
+          <div className={styles.radioRow} role="radiogroup" aria-label="Group by">
+            {ALL_GROUPINGS.map((g) => {
+              const disabled = !validGroupings.includes(g)
+              return (
+                <button key={g} className={radio.radioOption} onClick={disabled ? undefined : () => setGrouping(g)} role="radio" aria-checked={effectiveGrouping === g} aria-disabled={disabled} tabIndex={disabled ? -1 : effectiveGrouping === g ? 0 : -1}>
                   <div className={radio.radioCircle} data-checked={effectiveGrouping === g} />
                   {GROUPING_LABELS[g]}
                 </button>
-              ))}
-            </div>
+              )
+            })}
           </div>
-        )}
+        </div>
 
 
         {/* Chart type */}
         <div className={styles.formSection}>
           <span className={styles.formLabel}>Chart type</span>
           <div ref={chartTypeGroupRef} className={styles.radioRow} role="radiogroup" aria-label="Chart type" onKeyDown={chartTypeKeyDown}>
-            {validTypes.map((t) => (
-              <button key={t} className={radio.radioOption} onClick={() => setType(t)} role="radio" aria-checked={effectiveType === t} tabIndex={effectiveType === t ? 0 : -1}>
-                <div className={radio.radioCircle} data-checked={effectiveType === t} />
-                {CHART_TYPE_LABELS[t]}
-              </button>
-            ))}
+            {ALL_CHART_TYPES.map((t) => {
+              const disabled = !validTypes.includes(t)
+              return (
+                <button key={t} className={radio.radioOption} onClick={disabled ? undefined : () => setType(t)} role="radio" aria-checked={effectiveType === t} aria-disabled={disabled} tabIndex={disabled ? -1 : effectiveType === t ? 0 : -1}>
+                  <div className={radio.radioCircle} data-checked={effectiveType === t} />
+                  {CHART_TYPE_LABELS[t]}
+                </button>
+              )
+            })}
           </div>
         </div>
-
-        {effectiveType === 'pie' && scopes.some((s) => s.type === 'hub') && source !== 'classify' && (
-          <div className={styles.formSection}>
-            <button className={styles.scopeOption} onClick={() => setAggregateByHub(!aggregateByHub)} type="button" role="checkbox" aria-checked={aggregateByHub} tabIndex={0}>
-              <div className={styles.scopeCheckbox} data-checked={aggregateByHub} />
-              Aggregate by hub
-            </button>
-          </div>
-        )}
       </div>
     </Modal>
   )
