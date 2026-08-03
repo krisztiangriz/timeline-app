@@ -6,7 +6,7 @@ import { useTimelineEntries, useCrossRefEntries, usePendingEntry, addEntry, upda
 import { usePageByRole, useChildPages } from '../../hooks/usePages'
 import { useNavigateToPage } from '../../hooks/useNavigateToPage'
 import { useToast } from '../../hooks/useToast'
-import { useEntrySave, useEntryDelete } from '../../hooks/useEntryPersist'
+import { useEntrySave } from '../../hooks/useEntryPersist'
 import { useEditorSync } from '../../hooks/useEditorSync'
 import { formatEntryDate, startOfDay } from '../../utils/dateUtils'
 import { TimelineEntryRow } from './TimelineEntryRow'
@@ -203,29 +203,6 @@ export function TimelineView({ pageId, page }: TimelineViewProps) {
     await historySave(historyEditHtml)
   }, [historySave, historyEditHtml])
 
-  // ---- Delete handlers ----
-
-  const deletePendingEntry = useEntryDelete(pageId, true, showToast)
-  const deleteTodayEntry = useEntryDelete(pageId, false, showToast)
-
-  const handleDeletePending = useCallback(async () => {
-    const savedHtml = pendingHtml
-    await deletePendingEntry(
-      pendingEntryId, savedHtml, pendingEntry?.date, pendingEntry?.createdAt,
-      () => { pendingEntryId.current = undefined; setPendingHtml('') },
-      () => !!pendingEntryId.current,
-    )
-  }, [pendingHtml, pendingEntry, deletePendingEntry])
-
-  const handleDeleteToday = useCallback(async () => {
-    const savedHtml = todayHtml
-    await deleteTodayEntry(
-      todayEntryId, savedHtml, todayEntry?.date, todayEntry?.createdAt,
-      () => { todayEntryId.current = undefined; setTodayHtml('') },
-      () => !!todayEntryId.current,
-    )
-  }, [todayHtml, todayEntry, deleteTodayEntry])
-
   // ---- Checkbox completion (moves pending line to today) ----
 
   async function handleCheckboxComplete(lineHtml: string, remainingHtml: string) {
@@ -293,19 +270,6 @@ export function TimelineView({ pageId, page }: TimelineViewProps) {
     el?.focus()
   }, [])
 
-  const handleDeleteHistory = useCallback(async (entry: TimelineEntry) => {
-    const savedText = entry.text
-    const savedDate = entry.date
-    try {
-      await deleteEntry(entry.id!)
-    } catch { showToast('Failed to delete'); return }
-    showToast('Deleted', {
-      label: 'Undo',
-      onClick: async () => {
-        await addEntry({ pageId, text: savedText, isPending: false, date: savedDate })
-      },
-    })
-  }, [pageId, showToast])
 
   const handleSectionKeyDown = useCallback((sectionKey: string, e: React.KeyboardEvent) => {
     // Only handle when the section div itself is focused (not a child editor)
@@ -355,23 +319,7 @@ export function TimelineView({ pageId, page }: TimelineViewProps) {
       return
     }
 
-    if (e.key === 'Backspace') {
-      e.preventDefault()
-      // Move focus to adjacent section before deleting
-      const idx = sectionKeys.indexOf(sectionKey)
-      const nextKey = sectionKeys[idx + 1] ?? sectionKeys[idx - 1]
-      if (nextKey) focusSection(nextKey)
-
-      if (sectionKey === 'pending') handleDeletePending()
-      else if (sectionKey === 'today') handleDeleteToday()
-      else if (sectionKey.startsWith('history-')) {
-        const dateKey = sectionKey.replace('history-', '')
-        const group = historyGroups.find(([k]) => k === dateKey)
-        const directEntry = group?.[1].find((ent) => directIds.has(ent.id!))
-        if (directEntry) handleDeleteHistory(directEntry)
-      }
-    }
-  }, [sectionKeys, focusSection, handleDeletePending, handleDeleteToday, handleDeleteHistory, historyGroups, directIds])
+  }, [sectionKeys, focusSection, historyGroups, directIds])
 
   const handleSectionEscape = useCallback((sectionKey: string) => {
     setEditingSection(null)
@@ -461,7 +409,6 @@ export function TimelineView({ pageId, page }: TimelineViewProps) {
           </div>
           <div className={styles.sectionDateContainer}>
             <span className={styles.sectionDate}>Sticky</span>
-            <button className={styles.sectionDeleteLabel} onClick={handleDeletePending} aria-label="Delete sticky tasks" tabIndex={-1}>Delete</button>
           </div>
         </div>
       )}
@@ -516,7 +463,6 @@ export function TimelineView({ pageId, page }: TimelineViewProps) {
         </div>
         <div className={styles.sectionDateContainer}>
           <span className={styles.sectionDate}>Today</span>
-          <button className={styles.sectionDeleteLabel} onClick={handleDeleteToday} aria-label="Delete today's entry" tabIndex={-1}>Delete</button>
         </div>
       </div>
 
@@ -582,9 +528,6 @@ export function TimelineView({ pageId, page }: TimelineViewProps) {
             </div>
             <div className={styles.sectionDateContainer}>
               <span className={styles.sectionDate}>{formatEntryDate(new Date(dateKey))}</span>
-              {directEntry && (
-                <button className={styles.sectionDeleteLabel} onClick={() => handleDeleteHistory(directEntry)} aria-label="Delete entry" tabIndex={-1}>Delete</button>
-              )}
             </div>
           </div>
         )
