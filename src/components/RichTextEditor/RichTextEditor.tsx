@@ -613,7 +613,7 @@ export function RichTextEditor({
                 parent.remove()
               } else {
                 target.remove()
-                node.remove()
+                ;(node as ChildNode).remove()
               }
               if (lineContainer && !lineContainer.textContent?.trim()) {
                 setCursorAtEndOfPrevLine(lineContainer, editorRef.current!, sel)
@@ -695,7 +695,7 @@ export function RichTextEditor({
                 (parent as HTMLElement).remove()
               } else {
                 target.remove()
-                node.remove()
+                ;(node as ChildNode).remove()
               }
               emitChange()
               return
