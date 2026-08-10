@@ -40,6 +40,10 @@ export function InteractiveLegend({ items, isActive, onToggle, onColorChange }: 
           key={item.name}
           className={`${styles.legendItem} ${!isActive(item.name) ? styles.legendItemFaded : ''}`}
           onClick={() => onToggle(item.name)}
+          tabIndex={0}
+          role="button"
+          aria-pressed={isActive(item.name)}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggle(item.name) } }}
         >
           <span
             className={styles.legendDot}
@@ -95,6 +99,10 @@ export function DonutWithLabels({ data, colorFn, containerClass, tooltipProps, i
               key={item.name}
               className={`${styles.pieLabelItem} ${onToggle ? styles.pieLabelClickable : ''} ${isActive && !isActive(item.name) ? styles.legendItemFaded : ''}`}
               onClick={onToggle ? () => onToggle(item.name) : undefined}
+              tabIndex={onToggle ? 0 : undefined}
+              role={onToggle ? 'button' : undefined}
+              aria-pressed={onToggle && isActive ? isActive(item.name) : undefined}
+              onKeyDown={onToggle ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggle(item.name) } } : undefined}
             >
               <span
                 className={styles.pieLabelDot}

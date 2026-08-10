@@ -4,6 +4,7 @@ import {
   useLayoutEffect,
   useCallback,
   useState,
+  useSyncExternalStore,
   type KeyboardEvent,
 } from 'react'
 import { createPortal } from 'react-dom'
@@ -11,7 +12,7 @@ import { useAutocomplete } from '../../hooks/useAutocomplete'
 import { useEntryTags } from '../../hooks/useEntryTags'
 import { useModalContext } from '../../hooks/useAppContext'
 import { enrichMentionHtml } from '../../utils/mentionEnricher'
-import { sanitizeForEditor, sanitizeForPaste } from '../../utils/domPurify'
+import { sanitizeForEditor, sanitizeForPaste, subscribePurify, getPurifyLoaded } from '../../utils/domPurify'
 import { normalizeExternalHtml } from '../../utils/pasteNormalizer'
 import { formatTableDate } from '../../utils/dateUtils'
 import { CloseIcon } from '../Icons/Icons'
@@ -90,6 +91,7 @@ export function RichTextEditor({
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout>>(null)
   const blurTimer = useRef<ReturnType<typeof setTimeout>>(null)
   const plainPasteRef = useRef(false)
+  const purifyReady = useSyncExternalStore(subscribePurify, getPurifyLoaded)
   const [showLinkInput, setShowLinkInput] = useState(false)
   const [linkUrl, setLinkUrl] = useState('')
   const [linkPos, setLinkPos] = useState({ top: 0, left: 0 })
@@ -158,12 +160,15 @@ export function RichTextEditor({
   } = useCheckboxHandling(editorRef, autoCheckbox, onCheckboxComplete, emitChange)
 
   // Sync external value → editor (useLayoutEffect prevents visible flash)
+  const didHydrate = useRef(false)
   useLayoutEffect(() => {
     const el = editorRef.current
     if (!el) return
-    if (value !== lastSetValue.current) {
+    const needsSync = value !== lastSetValue.current || (purifyReady && !didHydrate.current)
+    if (needsSync) {
       el.innerHTML = enrichMentionHtml(sanitizeForEditor(value), allPages, collapseMentions)
       lastSetValue.current = value
+      if (purifyReady) didHydrate.current = true
     }
     const text = el.textContent?.trim() ?? ''
     const hasElements = el.querySelector('[data-checkbox], [data-mention], [data-entry-tag]') !== null
@@ -172,7 +177,7 @@ export function RichTextEditor({
     } else if (text !== '' || hasElements) {
       el.removeAttribute('data-empty')
     }
-  }, [value, collapseMentions, allPages])
+  }, [value, collapseMentions, allPages, purifyReady])
 
   // Use <br> for line breaks instead of wrapping in <div>
   useEffect(() => {

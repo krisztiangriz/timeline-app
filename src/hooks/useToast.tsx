@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 
 export interface ToastAction {
   label: string
@@ -54,8 +54,10 @@ export function ToastProvider({ children, duration = 3000 }: { children: ReactNo
     [duration]
   )
 
+  const value = useMemo(() => ({ toasts, show }), [toasts, show])
+
   return (
-    <ToastContext.Provider value={{ toasts, show }}>
+    <ToastContext.Provider value={value}>
       {children}
     </ToastContext.Provider>
   )

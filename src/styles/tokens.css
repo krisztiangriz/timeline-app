@@ -5,7 +5,7 @@
   --color-text-primary: #334055;       /* N900 */
   --color-text-secondary: #5E6E8C;     /* N600 */
   --color-text-body: #485670;          /* N700 */
-  --color-text-placeholder: #8B9BB5;   /* N400 — meets 4.5:1 on white */
+  --color-text-placeholder: #8B9BB5;   /* N400 */
   --color-border: #B8C5DB;             /* N300 */
   --color-border-light: #ECF1F9;       /* N100 */
   --color-surface-hover: #ECF1F9;      /* N100 */
@@ -16,7 +16,7 @@
   --color-focus: var(--color-text-primary);
 
   /* Semantic — used in visualizations & feedback only */
-  --color-negative: #E53E3E;           /* Error — meets 4.5:1 on white */
+  --color-negative: #D63031;           /* Error */
 
   /* Overlays & shadows */
   --color-shadow: #5E6E8C33;

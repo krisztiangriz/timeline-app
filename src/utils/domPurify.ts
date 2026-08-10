@@ -24,7 +24,7 @@ export function sanitizeForDisplay(html: string): string {
 }
 
 export function sanitizeForEditor(html: string): string {
-  if (!purifyInstance) return html
+  if (!purifyInstance) return ''
   return purifyInstance.sanitize(html, { ADD_ATTR: ['contenteditable', 'target'] })
 }
 
