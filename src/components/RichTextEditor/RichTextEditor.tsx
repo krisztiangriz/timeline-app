@@ -35,6 +35,41 @@ interface RichTextEditorProps {
   onEscape?: () => void
 }
 
+function findNonEditable(el: HTMLElement | null): HTMLElement | null {
+  if (!el || el.nodeType !== Node.ELEMENT_NODE) return null
+  if (el.getAttribute('contenteditable') === 'false') return el
+  const first = el.firstChild as HTMLElement | null
+  if (first?.nodeType === Node.ELEMENT_NODE && first.getAttribute('contenteditable') === 'false') return first
+  return null
+}
+
+function findLineContainer(el: Node, editorEl: HTMLElement): HTMLElement | null {
+  let current = el as HTMLElement
+  while (current && current.parentNode !== editorEl) {
+    current = current.parentNode as HTMLElement
+    if (!current) return null
+  }
+  return current === editorEl ? null : current
+}
+
+function setCursorAtEndOfPrevLine(lineDiv: HTMLElement, editorEl: HTMLElement, sel: Selection): void {
+  const prevLine = lineDiv.previousElementSibling as HTMLElement | null
+  lineDiv.remove()
+  const range = document.createRange()
+  if (prevLine) {
+    if (prevLine.lastChild?.nodeType === Node.TEXT_NODE) {
+      range.setStart(prevLine.lastChild, prevLine.lastChild.textContent?.length ?? 0)
+    } else {
+      range.setStart(prevLine, prevLine.childNodes.length)
+    }
+  } else {
+    range.setStart(editorEl, 0)
+  }
+  range.collapse(true)
+  sel.removeAllRanges()
+  sel.addRange(range)
+}
+
 export function RichTextEditor({
   value,
   onChange,
@@ -397,15 +432,17 @@ export function RichTextEditor({
         if (e.key === 'ArrowLeft') {
           if (node?.nodeType === Node.TEXT_NODE && offset === 0) {
             const prev = node.previousSibling as HTMLElement | null
-            if (prev?.nodeType === Node.ELEMENT_NODE && prev.getAttribute('contenteditable') === 'false') {
+            const target = findNonEditable(prev)
+            if (target) {
               e.preventDefault()
+              const skipEl = prev!
               const range = document.createRange()
-              const beforePrev = prev.previousSibling
+              const beforePrev = skipEl.previousSibling
               if (beforePrev?.nodeType === Node.TEXT_NODE) {
                 range.setStart(beforePrev, beforePrev.textContent?.length ?? 0)
               } else {
                 const zws = document.createTextNode('​')
-                node.parentNode!.insertBefore(zws, prev)
+                node.parentNode!.insertBefore(zws, skipEl)
                 range.setStart(zws, 1)
               }
               range.collapse(true)
@@ -416,15 +453,17 @@ export function RichTextEditor({
           }
           if (node?.nodeType === Node.ELEMENT_NODE && offset > 0) {
             const child = node.childNodes[offset - 1] as HTMLElement | undefined
-            if (child?.nodeType === Node.ELEMENT_NODE && child.getAttribute('contenteditable') === 'false') {
+            const target = findNonEditable(child ?? null)
+            if (target) {
+              const skipEl = child!
               e.preventDefault()
               const range = document.createRange()
-              const prevSib = child.previousSibling
+              const prevSib = skipEl.previousSibling
               if (prevSib?.nodeType === Node.TEXT_NODE) {
                 range.setStart(prevSib, prevSib.textContent?.length ?? 0)
               } else {
                 const zws = document.createTextNode('​')
-                node.insertBefore(zws, child)
+                node.insertBefore(zws, skipEl)
                 range.setStart(zws, 1)
               }
               range.collapse(true)
@@ -438,14 +477,16 @@ export function RichTextEditor({
         if (e.key === 'ArrowRight') {
           if (node?.nodeType === Node.TEXT_NODE && offset === (node.textContent?.length ?? 0)) {
             const next = node.nextSibling as HTMLElement | null
-            if (next?.nodeType === Node.ELEMENT_NODE && next.getAttribute('contenteditable') === 'false') {
+            const target = findNonEditable(next)
+            if (target) {
               e.preventDefault()
+              const skipEl = next!
               const range = document.createRange()
-              const afterNext = next.nextSibling
+              const afterNext = skipEl.nextSibling
               if (afterNext?.nodeType === Node.TEXT_NODE) {
                 range.setStart(afterNext, 0)
               } else {
-                range.setStart(node.parentNode!, Array.from(node.parentNode!.childNodes).indexOf(next as ChildNode) + 1)
+                range.setStart(node.parentNode!, Array.from(node.parentNode!.childNodes).indexOf(skipEl as ChildNode) + 1)
               }
               range.collapse(true)
               sel.removeAllRanges()
@@ -455,7 +496,8 @@ export function RichTextEditor({
           }
           if (node?.nodeType === Node.ELEMENT_NODE) {
             const child = node.childNodes[offset] as HTMLElement | undefined
-            if (child?.nodeType === Node.ELEMENT_NODE && child.getAttribute('contenteditable') === 'false') {
+            const target = findNonEditable(child as HTMLElement | null)
+            if (target) {
               e.preventDefault()
               const range = document.createRange()
               range.setStart(node, offset + 1)
@@ -530,23 +572,59 @@ export function RichTextEditor({
             return
           }
 
-          // Check if previous sibling is a non-editable span
+          // Check if previous sibling is a non-editable span (or wrapper containing one)
           if (node?.nodeType === Node.TEXT_NODE && offset === 0) {
             const prev = node.previousSibling as HTMLElement | null
-            if (prev?.nodeType === Node.ELEMENT_NODE && prev.getAttribute('contenteditable') === 'false') {
+            const target = findNonEditable(prev)
+            if (target) {
               e.preventDefault()
-              const anchor = prev.previousSibling
-              prev.remove()
-              // Position cursor at the end of the preceding text node, or start of current
-              const range = document.createRange()
-              if (anchor?.nodeType === Node.TEXT_NODE) {
-                range.setStart(anchor, anchor.textContent?.length ?? 0)
+              const wrapper = prev !== target ? prev : null
+              const removedEl = wrapper ?? target
+              const lineContainer = findLineContainer(removedEl, editorRef.current!)
+              if (wrapper) {
+                wrapper.remove()
               } else {
-                range.setStart(node, 0)
+                target.remove()
               }
-              range.collapse(true)
-              sel.removeAllRanges()
-              sel.addRange(range)
+              if (lineContainer && !lineContainer.textContent?.trim()) {
+                setCursorAtEndOfPrevLine(lineContainer, editorRef.current!, sel)
+              } else {
+                const range = document.createRange()
+                range.setStart(node, 0)
+                range.collapse(true)
+                sel.removeAllRanges()
+                sel.addRange(range)
+              }
+              emitChange()
+              return
+            }
+          }
+          // Backspace in a whitespace-only text node adjacent to a non-editable span:
+          // delete the mention (and spacer) atomically
+          if (node?.nodeType === Node.TEXT_NODE && offset > 0 && node.textContent?.trim() === '') {
+            const prev = node.previousSibling as HTMLElement | null
+            const target = findNonEditable(prev)
+            if (target) {
+              e.preventDefault()
+              const parent = node.parentNode as HTMLElement
+              const lineContainer = findLineContainer(node, editorRef.current!)
+              const isWrapper = parent !== editorRef.current && parent !== lineContainer
+              if (isWrapper) {
+                parent.remove()
+              } else {
+                target.remove()
+                node.remove()
+              }
+              if (lineContainer && !lineContainer.textContent?.trim()) {
+                setCursorAtEndOfPrevLine(lineContainer, editorRef.current!, sel)
+              } else {
+                const range = document.createRange()
+                const cursorTarget = lineContainer ?? editorRef.current!
+                range.setStart(cursorTarget, 0)
+                range.collapse(true)
+                sel.removeAllRanges()
+                sel.addRange(range)
+              }
               emitChange()
               return
             }
@@ -554,23 +632,34 @@ export function RichTextEditor({
           // Check if cursor is right after a non-editable element within parent
           if (node?.nodeType === Node.ELEMENT_NODE) {
             const child = (node as HTMLElement).childNodes[offset - 1] as HTMLElement | undefined
-            if (child?.nodeType === Node.ELEMENT_NODE && child.getAttribute('contenteditable') === 'false') {
+            const target = findNonEditable(child ?? null)
+            if (target) {
               e.preventDefault()
-              const prevNode = child.previousSibling
-              const nextNode = child.nextSibling
-              child.remove()
-              // Position cursor between adjacent nodes
-              const range = document.createRange()
-              if (prevNode?.nodeType === Node.TEXT_NODE) {
-                range.setStart(prevNode, prevNode.textContent?.length ?? 0)
-              } else if (nextNode?.nodeType === Node.TEXT_NODE) {
-                range.setStart(nextNode, 0)
+              const wrapper = child !== target ? child! : null
+              const removeEl = wrapper ?? target
+              const lineContainer = findLineContainer(removeEl, editorRef.current!)
+              const prevNode = removeEl.previousSibling
+              const nextNode = removeEl.nextSibling
+              if (wrapper) {
+                wrapper.remove()
               } else {
-                range.setStart(node, offset - 1)
+                target.remove()
               }
-              range.collapse(true)
-              sel.removeAllRanges()
-              sel.addRange(range)
+              if (lineContainer && !lineContainer.textContent?.trim()) {
+                setCursorAtEndOfPrevLine(lineContainer, editorRef.current!, sel)
+              } else {
+                const range = document.createRange()
+                if (prevNode?.nodeType === Node.TEXT_NODE) {
+                  range.setStart(prevNode, prevNode.textContent?.length ?? 0)
+                } else if (nextNode?.nodeType === Node.TEXT_NODE) {
+                  range.setStart(nextNode, 0)
+                } else {
+                  range.setStart(node, Math.max(0, offset - 1))
+                }
+                range.collapse(true)
+                sel.removeAllRanges()
+                sel.addRange(range)
+              }
               emitChange()
               return
             }
@@ -578,21 +667,51 @@ export function RichTextEditor({
         }
 
         if (e.key === 'Delete') {
-          // Check if next sibling is a non-editable span
+          // Check if next sibling is a non-editable span (or wrapper containing one)
           if (node?.nodeType === Node.TEXT_NODE && offset === (node.textContent?.length ?? 0)) {
             const next = node.nextSibling as HTMLElement | null
-            if (next?.nodeType === Node.ELEMENT_NODE && next.getAttribute('contenteditable') === 'false') {
+            const target = findNonEditable(next)
+            if (target) {
               e.preventDefault()
-              next.remove()
+              const wrapper = next !== target ? next : null
+              if (wrapper) {
+                wrapper.remove()
+              } else {
+                target.remove()
+              }
+              emitChange()
+              return
+            }
+          }
+          // Forward-delete in a whitespace-only text node adjacent to a non-editable span
+          if (node?.nodeType === Node.TEXT_NODE && offset < (node.textContent?.length ?? 0) && node.textContent?.trim() === '') {
+            const next = node.nextSibling as HTMLElement | null
+            const target = findNonEditable(next)
+            if (target) {
+              e.preventDefault()
+              const parent = node.parentNode!
+              const isWrapper = parent !== editorRef.current && parent.nodeType === Node.ELEMENT_NODE
+              if (isWrapper) {
+                (parent as HTMLElement).remove()
+              } else {
+                target.remove()
+                node.remove()
+              }
               emitChange()
               return
             }
           }
           if (node?.nodeType === Node.ELEMENT_NODE) {
             const child = (node as HTMLElement).childNodes[offset] as HTMLElement | undefined
-            if (child?.nodeType === Node.ELEMENT_NODE && child.getAttribute('contenteditable') === 'false') {
+            const target = findNonEditable(child as HTMLElement | null)
+            if (target) {
               e.preventDefault()
-              child.remove()
+              const wrapper = child !== target ? child! : null
+              if (wrapper) {
+                wrapper.remove()
+              } else {
+                target.remove()
+              }
               emitChange()
               return
             }

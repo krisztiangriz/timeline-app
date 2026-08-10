@@ -50,14 +50,14 @@ export function enrichMentionHtml(html: string, allPages: Page[], collapse = fal
 
       // Skip if already has data-trigger (re-enrichment safety)
       if (attrs.includes('data-trigger')) {
-        // Still update collapsed state
-        const cleaned = attrs.replace(/ data-collapsed="[^"]*"/g, '')
-        return `<span${cleaned}${collapsedAttr}>${textContent}</span>`
+        // Still update collapsed state and ensure contenteditable="false"
+        const cleaned = attrs.replace(/ data-collapsed="[^"]*"/g, '').replace(/ contenteditable="[^"]*"/g, '')
+        return `<span${cleaned} contenteditable="false"${collapsedAttr}>${textContent}</span>`
       }
 
       const safeTrigger = info.trigger.replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
       const safeTitle = textContent.replace(/&/g, '&amp;').replace(/"/g, '&quot;')
-      return `<span${attrs} data-trigger="${safeTrigger}" title="${safeTitle}" tabindex="0" role="link"${collapsedAttr}>${textContent}</span>`
+      return `<span${attrs} contenteditable="false" data-trigger="${safeTrigger}" title="${safeTitle}" tabindex="0" role="link"${collapsedAttr}>${textContent}</span>`
     }
   )
 }
