@@ -36,7 +36,6 @@ export const tickStyle = { fontSize: 10, fill: 'var(--color-text-body)' }
 export const VALID_GROUPINGS: Record<ChartSource, ChartGrouping[]> = {
   classify: ['month', 'weekday'],
   entries:  ['month', 'weekday'],
-  pages:    ['month'],
 }
 
 export const CHART_TYPES_FOR_GROUPING: Record<ChartGrouping, ChartType[]> = {
@@ -47,7 +46,6 @@ export const CHART_TYPES_FOR_GROUPING: Record<ChartGrouping, ChartType[]> = {
 export const SOURCE_LABELS: Record<ChartSource, string> = {
   classify: 'By category',
   entries:  'Timeline entries',
-  pages:    'Pages',
 }
 
 export const GROUPING_LABELS: Record<ChartGrouping, string> = {

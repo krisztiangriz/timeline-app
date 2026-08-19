@@ -362,47 +362,6 @@ function aggregateEntriesByStrategy(
   return aggregateEntriesSimple(entries, strategy, monthCount)
 }
 
-// ---- Aggregation: pages by month ----
-
-function aggregatePagesByMonth(
-  pages: Page[], scopes: ChartScope[], monthCount: number,
-): UnifiedChartData {
-  const months = buildMonthKeys(monthCount, pages.map((p) => ({ date: p.createdAt })))
-  const cutoff = getCutoff(monthCount)
-
-  let scopedPages: Page[]
-  if (scopes.length > 0) {
-    const hubIds = new Set<number>()
-    const pageIds = new Set<number>()
-    for (const s of scopes) {
-      if (s.type === 'hub') hubIds.add(s.hubId)
-      else if (s.type === 'page') {
-        const page = pages.find((p) => p.id === s.pageId)
-        if (page?.type === 'hub') hubIds.add(page.id!)
-        else if (page?.parentId) pageIds.add(page.id!)
-      }
-    }
-    scopedPages = pages.filter((p) =>
-      (p.parentId && hubIds.has(p.parentId)) || pageIds.has(p.id!)
-    )
-  } else {
-    scopedPages = pages.filter((p) => p.parentId && p.type !== 'hub')
-  }
-
-  const monthToIdx = new Map(months.map((m, i) => [m, i]))
-  const data = months.map((m) => ({ month: formatMonthLabel(m), count: 0 } as Record<string, string | number>))
-
-  for (const p of scopedPages) {
-    if (!p.createdAt) continue
-    const d = new Date(p.createdAt)
-    if (d < cutoff) continue
-    const key = formatMonthKey(d)
-    const idx = monthToIdx.get(key)
-    if (idx !== undefined) data[idx].count = (Number(data[idx].count) || 0) + 1
-  }
-
-  return { data, keys: ['count'], xKey: 'month' }
-}
 
 // ---- Unified dispatcher hook ----
 
@@ -437,10 +396,6 @@ export function useUnifiedChartData(
     if (source === 'entries' && grouping === 'weekday') {
       return aggregateEntriesByStrategy(scopedEntries, pages, scopes, weekdayStrategy, monthCount)
     }
-    if (source === 'pages' && grouping === 'month') {
-      return aggregatePagesByMonth(pages, scopes, monthCount)
-    }
-
     return { data: [], keys: [], xKey: 'month' }
   }, [config, scopedEntries, pages, scopes, entryTags, monthCount])
 }

@@ -172,7 +172,7 @@ git push         # triggers GitHub Actions deploy
 - **Line-scoped classification:** for page-scoped charts, cross-ref entries only
   count lines that mention the scoped page(s); direct entries count all lines.
   `scopeLines()` + `resolveScopePageIds()` handle this filtering in `useChartData.ts`
-- Chart sources: `classify` (by category), `entries`, `pages`
+- Chart sources: `classify` (by category), `entries`
 - `ChartConfig.categories?: string[]` filters classify charts to selected categories
 
 ### Modal System

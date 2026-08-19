@@ -69,7 +69,7 @@ export interface EntryTag {
 
 // ---- Chart Configuration ----
 
-export type ChartSource = 'classify' | 'entries' | 'pages'
+export type ChartSource = 'classify' | 'entries'
 export type ChartGrouping = 'month' | 'weekday'
 export type ChartType = 'bar' | 'line' | 'area' | 'pie'
 

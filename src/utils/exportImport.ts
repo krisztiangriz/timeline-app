@@ -31,7 +31,7 @@ interface ExportData {
 const VALID_PAGE_TYPES = new Set(['general', 'candidate', 'colleague', 'project', 'hub'])
 const VALID_PAGE_ROLES = new Set(['colleague-hub', 'candidate-hub', 'project-hub', 'main-timeline'])
 const VALID_BLOCK_TYPES = new Set(['text', 'timeline', 'table', 'visualization'])
-const VALID_CHART_SOURCES = new Set(['classify', 'entries', 'pages'])
+const VALID_CHART_SOURCES = new Set(['classify', 'entries'])
 const VALID_CHART_GROUPINGS = new Set(['month', 'weekday'])
 const VALID_CHART_TYPES = new Set(['bar', 'line', 'area', 'pie'])
 

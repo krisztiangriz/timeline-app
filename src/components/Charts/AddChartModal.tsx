@@ -53,7 +53,7 @@ interface AddChartModalProps {
   entryTags: EntryTag[]
 }
 
-const ALL_SOURCES: ChartSource[] = ['classify', 'entries', 'pages']
+const ALL_SOURCES: ChartSource[] = ['classify', 'entries']
 const ALL_GROUPINGS: ChartGrouping[] = ['month', 'weekday']
 const ALL_CHART_TYPES: ChartType[] = ['bar', 'line', 'area', 'pie']
 
